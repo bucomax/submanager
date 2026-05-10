@@ -15,6 +15,7 @@ const FORM_ID = "team-invite-user-form";
 type TeamInviteUserDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onInvited?: () => void;
 };
 
 type ManualPasswordState = {
@@ -24,7 +25,7 @@ type ManualPasswordState = {
   email: string;
 };
 
-export function TeamInviteUserDialog({ open, onOpenChange }: TeamInviteUserDialogProps) {
+export function TeamInviteUserDialog({ open, onOpenChange, onInvited }: TeamInviteUserDialogProps) {
   const [manualPassword, setManualPassword] = useState<ManualPasswordState>({
     open: false,
     userId: "",
@@ -45,7 +46,10 @@ export function TeamInviteUserDialog({ open, onOpenChange }: TeamInviteUserDialo
   );
 
   const { form, onSubmit, canInvite, sessionStatus, roleOptions, t } = useInviteUserForm({
-    onSuccess: () => onOpenChange(false),
+    onSuccess: () => {
+      onOpenChange(false);
+      onInvited?.();
+    },
     onEmailNotSent: handleEmailNotSent,
   });
 

@@ -4,6 +4,7 @@ import { digitsOnlyCep } from "@/lib/validators/cep";
 import { digitsOnlyPhone } from "@/lib/validators/phone";
 import { digitsOnlyTaxDocument } from "@/lib/validators/tax-document";
 import { profileImageFormFieldSchema } from "@/lib/validators/profile";
+import { portalPasswordSchema } from "@/lib/validators/patient-portal-auth";
 
 export const inviteUserFormSchema = z.object({
   email: z.string().email("Email inválido."),
@@ -23,7 +24,7 @@ export type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export const changePasswordFormSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe a senha atual."),
-    newPassword: z.string().min(8, "Mínimo 8 caracteres."),
+    newPassword: portalPasswordSchema,
     confirmPassword: z.string().min(1, "Confirme a nova senha."),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

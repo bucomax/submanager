@@ -14,6 +14,7 @@ export function UsersManagementPanel() {
   const canManage =
     session?.user?.tenantRole === "tenant_admin" || session?.user?.globalRole === "super_admin";
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   if (status === "loading") {
     return null;
@@ -30,8 +31,12 @@ export function UsersManagementPanel() {
           {t("addUser")}
         </Button>
       </div>
-      <TeamInviteUserDialog open={inviteOpen} onOpenChange={setInviteOpen} />
-      <TenantMembersCard />
+      <TeamInviteUserDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onInvited={() => setReloadKey((k) => k + 1)}
+      />
+      <TenantMembersCard key={reloadKey} />
     </div>
   );
 }
