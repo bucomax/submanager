@@ -54,7 +54,7 @@
     "forbiddenTenantAccess": "No access to this tenant.",
     "memberNotFoundInTenant": "Member not found in this tenant.",
     "userNotFound": "User not found.",
-    "userAlreadyHasPassword": "This user already has a password set.",
+    "cannotResetOwnPassword": "You cannot reset your own password here — use the change password flow instead.",
     "membershipNotFound": "User is not a member of this tenant.",
     "superAdminOnly": "Super admin only.",
     "invitePermissionDenied": "No permission to invite in this tenant.",

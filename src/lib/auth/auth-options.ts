@@ -90,13 +90,36 @@ export const authOptions: NextAuthOptions = {
         select: { activeTenantId: true, globalRole: true },
       });
 
-      if (!row?.activeTenantId) return session;
+      if (!row) return session;
+
+      let activeTenantId = row.activeTenantId;
+
+      // Auto-resolve: usuário sem activeTenantId mas com exatamente uma membership.
+      // Cobre primeiro login pós-convite e contas legacy sem tenant ativo.
+      if (!activeTenantId) {
+        const memberships = await prisma.tenantMembership.findMany({
+          where: { userId },
+          select: { tenantId: true },
+          take: 2,
+        });
+        if (memberships.length === 1) {
+          activeTenantId = memberships[0]!.tenantId;
+          await prisma.user
+            .update({
+              where: { id: userId },
+              data: { activeTenantId },
+            })
+            .catch(() => undefined);
+        }
+      }
+
+      if (!activeTenantId) return session;
 
       const membership = await prisma.tenantMembership.findUnique({
         where: {
           userId_tenantId: {
             userId,
-            tenantId: row.activeTenantId,
+            tenantId: activeTenantId,
           },
         },
         include: {
@@ -112,10 +135,10 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (row.globalRole === "super_admin") {
-        session.user.tenantId = row.activeTenantId;
+        session.user.tenantId = activeTenantId;
         session.user.tenantRole = null;
         const tenant = await prisma.tenant.findUnique({
-          where: { id: row.activeTenantId },
+          where: { id: activeTenantId },
           select: { name: true },
         });
         session.user.tenantName = tenant?.name ?? null;

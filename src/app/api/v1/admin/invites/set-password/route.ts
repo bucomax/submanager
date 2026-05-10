@@ -8,8 +8,10 @@ import { runAdminSetInviteePassword } from "@/application/use-cases/admin/set-in
 export const dynamic = "force-dynamic";
 
 /**
- * Define senha manualmente para um convidado pendente (sem senha).
+ * Define ou redefine a senha de qualquer membro do tenant.
+ * Funciona tanto para convites pendentes (sem senha) quanto para overrides emergenciais.
  * Requer: super_admin ou tenant_admin do tenant informado.
+ * O actor não pode redefinir a própria senha por esta rota.
  */
 export async function POST(request: Request) {
   const apiT = await getApiT(request);
@@ -50,10 +52,10 @@ export async function POST(request: Request) {
     switch (result.code) {
       case "USER_NOT_FOUND":
         return jsonError("NOT_FOUND", apiT("errors.userNotFound"), 404);
-      case "USER_HAS_PASSWORD":
-        return jsonError("CONFLICT", apiT("errors.userAlreadyHasPassword"), 409);
       case "MEMBERSHIP_MISSING":
         return jsonError("NOT_FOUND", apiT("errors.membershipNotFound"), 404);
+      case "SELF_NOT_ALLOWED":
+        return jsonError("FORBIDDEN", apiT("errors.cannotResetOwnPassword"), 403);
     }
   }
 

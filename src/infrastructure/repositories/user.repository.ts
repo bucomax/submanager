@@ -138,6 +138,13 @@ export class UserPrismaRepository implements IUserRepository {
         });
       }
 
+      // Garante activeTenantId quando o usuário ainda não tem um — evita que o primeiro login
+      // venha sem tenant resolvido na sessão.
+      await tx.user.updateMany({
+        where: { id: userId, activeTenantId: null },
+        data: { activeTenantId: tenantId },
+      });
+
       await tx.tenantMembership.create({
         data: {
           userId,
@@ -180,6 +187,8 @@ export class UserPrismaRepository implements IUserRepository {
           name: name?.trim() || null,
           passwordHash: null,
           globalRole: GlobalRole.user,
+          // Já deixa o tenant do convite como ativo — primeiro login resolve sessão sem 400.
+          activeTenantId: tenantId,
         },
       });
 

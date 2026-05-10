@@ -54,7 +54,7 @@
     "forbiddenTenantAccess": "Sem acesso a este tenant.",
     "memberNotFoundInTenant": "Membro não encontrado neste tenant.",
     "userNotFound": "Usuário não encontrado.",
-    "userAlreadyHasPassword": "Este usuário já possui senha definida.",
+    "cannotResetOwnPassword": "Você não pode redefinir sua própria senha por aqui — use o fluxo de alteração de senha.",
     "membershipNotFound": "Usuário não possui vínculo ativo com este tenant.",
     "superAdminOnly": "Apenas super_admin.",
     "invitePermissionDenied": "Sem permissão para convidar neste tenant.",

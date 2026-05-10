@@ -171,6 +171,7 @@ export function TenantMembersCard() {
           tenantId={tenantId}
           email={memberToSetPassword.email}
           name={memberToSetPassword.name}
+          hasExistingPassword={memberToSetPassword.hasPassword}
           onSuccess={() => void reload()}
         />
       ) : null}
@@ -224,14 +225,14 @@ export function TenantMembersCard() {
                       </SelectContent>
                     </Select>
                     <div className="flex items-center justify-end gap-1">
-                      {!isSelf && !member.hasPassword ? (
+                      {!isSelf ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           disabled={busy}
                           onClick={() => openSetPasswordDialog(member.userId)}
-                          aria-label={t("setPassword")}
+                          aria-label={member.hasPassword ? t("resetPassword") : t("setPassword")}
                         >
                           <KeyRound className="size-4" />
                         </Button>

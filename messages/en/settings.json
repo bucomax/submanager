@@ -93,7 +93,8 @@
     "removeDialogAlertBody": "Access is revoked right away. To return, a new invite must be sent.",
     "roleUpdated": "Role updated.",
     "memberRemoved": "Member removed.",
-    "setPassword": "Set password"
+    "setPassword": "Set password",
+    "resetPassword": "Reset password"
   },
   "clinic": {
     "title": "Clinic",
@@ -182,13 +183,17 @@
   },
   "manualSetPassword": {
     "title": "Set password manually",
+    "titleReset": "Reset password",
     "description": "The invite email was not sent to {displayName}. Set a password now to grant access immediately.",
+    "descriptionReset": "Set a new password for {displayName}. Their current password will be replaced immediately.",
+    "overrideAlert": "This user's current password will be overwritten. After resetting, they must use the new password to sign in.",
     "passwordLabel": "New password",
     "confirmPasswordLabel": "Confirm password",
     "cancel": "Cancel",
     "submit": "Set password",
+    "submitReset": "Reset password",
     "successToast": "Password set. The user can now sign in with their email and the new password.",
-    "errorUserHasPassword": "This user already has a password set.",
+    "successToastReset": "Password reset. The user must use the new password on their next sign in.",
     "errorUserNotFound": "User not found."
   },
   "tenants": {

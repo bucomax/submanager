@@ -25,6 +25,7 @@ export type ManualSetPasswordFormValues = z.infer<typeof manualSetPasswordSchema
 type UseManualSetPasswordOptions = {
   userId: string;
   tenantId: string;
+  mode?: "set" | "reset";
   onSuccess?: () => void;
   onOpenChange: (open: boolean) => void;
 };
@@ -32,6 +33,7 @@ type UseManualSetPasswordOptions = {
 export function useManualSetPassword({
   userId,
   tenantId,
+  mode = "set",
   onSuccess,
   onOpenChange,
 }: UseManualSetPasswordOptions) {
@@ -46,7 +48,7 @@ export function useManualSetPassword({
 
   async function onSubmit(values: ManualSetPasswordFormValues) {
     await setInviteePassword({ userId, tenantId, password: values.password });
-    toast.success(t("successToast"));
+    toast.success(mode === "reset" ? t("successToastReset") : t("successToast"));
     onOpenChange(false);
     onSuccess?.();
   }

@@ -3,11 +3,12 @@
 import { useEffect } from "react";
 import { useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
-import { KeyRound, Loader2, X } from "lucide-react";
+import { KeyRound, Loader2, TriangleAlert, X } from "lucide-react";
 
 import { useManualSetPassword } from "@/features/settings/app/hooks/use-manual-set-password";
 import { Form, FormPassword } from "@/shared/components/forms";
 import { PasswordStrengthIndicator } from "@/shared/components/forms/password-strength-indicator";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
 
@@ -20,6 +21,7 @@ export type ManualSetPasswordDialogProps = {
   tenantId: string;
   email: string;
   name?: string | null;
+  hasExistingPassword?: boolean;
   onSuccess?: () => void;
 };
 
@@ -30,14 +32,18 @@ export function ManualSetPasswordDialog({
   tenantId,
   email,
   name,
+  hasExistingPassword = false,
   onSuccess,
 }: ManualSetPasswordDialogProps) {
   const t = useTranslations("settings.manualSetPassword");
   const tStrength = useTranslations("clients.selfRegister.passwordStrength");
 
+  const mode = hasExistingPassword ? "reset" : "set";
+
   const { form, onSubmit, isSubmitting } = useManualSetPassword({
     userId,
     tenantId,
+    mode,
     onSuccess,
     onOpenChange,
   });
@@ -63,8 +69,12 @@ export function ManualSetPasswordDialog({
         <StandardDialogContent
           size="default"
           showCloseButton={!isSubmitting}
-          title={t("title")}
-          description={t("description", { displayName })}
+          title={hasExistingPassword ? t("titleReset") : t("title")}
+          description={
+            hasExistingPassword
+              ? t("descriptionReset", { displayName })
+              : t("description", { displayName })
+          }
           footer={
             <>
               <Button
@@ -88,13 +98,19 @@ export function ManualSetPasswordDialog({
                 ) : (
                   <KeyRound className="size-4 shrink-0" aria-hidden />
                 )}
-                {t("submit")}
+                {hasExistingPassword ? t("submitReset") : t("submit")}
               </Button>
             </>
           }
         >
           <Form {...form}>
             <form id={FORM_ID} onSubmit={onSubmit} className="space-y-4">
+              {hasExistingPassword ? (
+                <Alert variant="warning">
+                  <TriangleAlert aria-hidden />
+                  <AlertDescription>{t("overrideAlert")}</AlertDescription>
+                </Alert>
+              ) : null}
               <div className="bg-muted/40 space-y-4 rounded-lg border p-4">
                 <div className="space-y-4">
                   <FormPassword

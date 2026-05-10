@@ -93,7 +93,8 @@
     "removeDialogAlertBody": "O acesso é revogado na hora. Para voltar, será necessário enviar um novo convite.",
     "roleUpdated": "Papel atualizado.",
     "memberRemoved": "Membro removido.",
-    "setPassword": "Definir senha"
+    "setPassword": "Definir senha",
+    "resetPassword": "Redefinir senha"
   },
   "clinic": {
     "title": "Clínica",
@@ -182,13 +183,17 @@
   },
   "manualSetPassword": {
     "title": "Definir senha manualmente",
+    "titleReset": "Redefinir senha",
     "description": "O e-mail de convite não foi enviado para {displayName}. Defina uma senha agora para liberar o acesso imediatamente.",
+    "descriptionReset": "Defina uma nova senha para {displayName}. A senha atual será substituída imediatamente.",
+    "overrideAlert": "A senha atual deste usuário será sobrescrita. Após a redefinição, ele precisará usar a nova senha para entrar.",
     "passwordLabel": "Nova senha",
     "confirmPasswordLabel": "Confirmar senha",
     "cancel": "Cancelar",
     "submit": "Definir senha",
+    "submitReset": "Redefinir senha",
     "successToast": "Senha definida. O usuário já pode entrar com o e-mail e a senha cadastrados.",
-    "errorUserHasPassword": "Este usuário já possui senha definida.",
+    "successToastReset": "Senha redefinida. O usuário deve usar a nova senha no próximo acesso.",
     "errorUserNotFound": "Usuário não encontrado."
   },
   "tenants": {
