@@ -11,8 +11,11 @@ import {
   clinicSettingsFormSchema,
   type ClinicSettingsFormValues,
 } from "@/features/settings/app/utils/schemas";
+import { digitsOnlyCep } from "@/lib/validators/cep";
+import { digitsOnlyPhone } from "@/lib/validators/phone";
+import { digitsOnlyTaxDocument } from "@/lib/validators/tax-document";
 import { toast } from "@/lib/toast";
-import { Form, FormInput, FormTextarea } from "@/shared/components/forms";
+import { Form, FormCep, FormInput, FormPhoneNumber, FormTaxDocument, FormTextarea } from "@/shared/components/forms";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -65,13 +68,16 @@ export function ClinicSettingsCard() {
 
   async function onSubmit(values: ClinicSettingsFormValues) {
     try {
+      const taxIdDigits = digitsOnlyTaxDocument(values.taxId ?? "");
+      const phoneDigits = digitsOnlyPhone(values.phone ?? "");
+      const cepDigits = digitsOnlyCep(values.postalCode ?? "");
       await saveClinicSettings({
         name: values.name,
-        taxId: values.taxId ?? "",
-        phone: values.phone ?? "",
+        taxId: taxIdDigits.length > 0 ? taxIdDigits : "",
+        phone: phoneDigits.length > 0 ? phoneDigits : "",
         addressLine: values.addressLine ?? "",
         city: values.city ?? "",
-        postalCode: values.postalCode ?? "",
+        postalCode: cepDigits.length === 8 ? cepDigits : "",
         affiliatedHospitals: values.affiliatedHospitals ?? "",
       });
       toast.success(t("saved"));
@@ -136,19 +142,21 @@ export function ClinicSettingsCard() {
             {error ? <p className="text-destructive text-sm">{error}</p> : null}
             <div className="grid gap-4 lg:grid-cols-2">
               <FormInput name="name" label={t("name")} disabled={saving || !canEdit} />
-              <FormInput
+              <FormTaxDocument
                 name="taxId"
                 label={t("taxId")}
                 placeholder={t("taxIdPlaceholder")}
+                className="tabular-nums"
                 disabled={saving || !canEdit}
               />
-              <FormInput
+              <FormPhoneNumber
                 name="phone"
                 label={t("phone")}
                 placeholder={t("phonePlaceholder")}
+                className="tabular-nums"
                 disabled={saving || !canEdit}
               />
-              <FormInput
+              <FormCep
                 name="postalCode"
                 label={t("postalCode")}
                 placeholder={t("postalCodePlaceholder")}

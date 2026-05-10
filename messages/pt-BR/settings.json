@@ -92,7 +92,8 @@
     "removeDialogAlertTitle": "Esta ação tem efeito imediato",
     "removeDialogAlertBody": "O acesso é revogado na hora. Para voltar, será necessário enviar um novo convite.",
     "roleUpdated": "Papel atualizado.",
-    "memberRemoved": "Membro removido."
+    "memberRemoved": "Membro removido.",
+    "setPassword": "Definir senha"
   },
   "clinic": {
     "title": "Clínica",
@@ -176,7 +177,19 @@
     "dialogCancel": "Cancelar",
     "success": "Convite enviado com sucesso.",
     "sentTo": "Convite enviado para {email}.",
+    "emailNotSentWarning": "Usuário criado, mas o e-mail para {email} não foi enviado. Uma janela foi aberta para você definir a senha manualmente.",
     "genericError": "Não foi possível enviar o convite."
+  },
+  "manualSetPassword": {
+    "title": "Definir senha manualmente",
+    "description": "O e-mail de convite não foi enviado para {displayName}. Defina uma senha agora para liberar o acesso imediatamente.",
+    "passwordLabel": "Nova senha",
+    "confirmPasswordLabel": "Confirmar senha",
+    "cancel": "Cancelar",
+    "submit": "Definir senha",
+    "successToast": "Senha definida. O usuário já pode entrar com o e-mail e a senha cadastrados.",
+    "errorUserHasPassword": "Este usuário já possui senha definida.",
+    "errorUserNotFound": "Usuário não encontrado."
   },
   "tenants": {
     "title": "Tenants",
@@ -253,7 +266,8 @@
       "reviewIdentification": "Identificação",
       "reviewAddress": "Endereço",
       "reviewAdmin": "Administrador",
-      "createdWithAdmin": "Tenant \"{name}\" criado. Convite ou vínculo para {email}."
+      "createdWithAdmin": "Tenant \"{name}\" criado. Convite ou vínculo para {email}.",
+      "emailNotSentWarning": "Tenant criado, mas o convite para {email} não foi enviado. Uma janela foi aberta para definir a senha manualmente."
     }
   },
   "whatsapp": {

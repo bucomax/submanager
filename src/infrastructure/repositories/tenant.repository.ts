@@ -178,6 +178,7 @@ export class TenantPrismaRepository implements ITenantRepository {
             name: true,
             image: true,
             deletedAt: true,
+            passwordHash: true,
           },
         },
       },
@@ -194,6 +195,7 @@ export class TenantPrismaRepository implements ITenantRepository {
         role: r.role,
         restrictedToAssignedOnly: r.restrictedToAssignedOnly,
         linkedOpmeSupplierId: r.linkedOpmeSupplierId,
+        hasPassword: r.user.passwordHash !== null,
       }));
   }
 

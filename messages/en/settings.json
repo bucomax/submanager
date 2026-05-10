@@ -92,7 +92,8 @@
     "removeDialogAlertTitle": "This takes effect immediately",
     "removeDialogAlertBody": "Access is revoked right away. To return, a new invite must be sent.",
     "roleUpdated": "Role updated.",
-    "memberRemoved": "Member removed."
+    "memberRemoved": "Member removed.",
+    "setPassword": "Set password"
   },
   "clinic": {
     "title": "Clinic",
@@ -176,7 +177,19 @@
     "dialogCancel": "Cancel",
     "success": "Invite sent successfully.",
     "sentTo": "Invite sent to {email}.",
+    "emailNotSentWarning": "User created, but the email to {email} could not be sent. A window has opened so you can set the password manually.",
     "genericError": "Could not send invite."
+  },
+  "manualSetPassword": {
+    "title": "Set password manually",
+    "description": "The invite email was not sent to {displayName}. Set a password now to grant access immediately.",
+    "passwordLabel": "New password",
+    "confirmPasswordLabel": "Confirm password",
+    "cancel": "Cancel",
+    "submit": "Set password",
+    "successToast": "Password set. The user can now sign in with their email and the new password.",
+    "errorUserHasPassword": "This user already has a password set.",
+    "errorUserNotFound": "User not found."
   },
   "tenants": {
     "title": "Tenants",
@@ -253,7 +266,8 @@
       "reviewIdentification": "Identity",
       "reviewAddress": "Address",
       "reviewAdmin": "Administrator",
-      "createdWithAdmin": "Tenant \"{name}\" created. Invite or link for {email}."
+      "createdWithAdmin": "Tenant \"{name}\" created. Invite or link for {email}.",
+      "emailNotSentWarning": "Tenant created, but the invite for {email} could not be sent. A window has opened to set the password manually."
     }
   },
   "whatsapp": {

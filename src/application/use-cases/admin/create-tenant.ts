@@ -21,7 +21,15 @@ export type CreateTenantParams = {
 export type CreateTenantUseCaseErrorCode = "SLUG_CONFLICT" | InviteTenantMemberErrorCode;
 
 export type CreateTenantUseCaseResult =
-  | { ok: true; tenant: CreatedTenantRow; adminCreated: boolean; adminEmail: string | null }
+  | {
+      ok: true;
+      tenant: CreatedTenantRow;
+      adminCreated: boolean;
+      adminEmail: string | null;
+      adminUserId: string | null;
+      emailDispatched: boolean;
+      emailError?: string;
+    }
   | { ok: false; code: CreateTenantUseCaseErrorCode };
 
 /**
@@ -67,6 +75,8 @@ export async function runCreateTenant(params: CreateTenantParams): Promise<Creat
       tenant,
       adminCreated: false,
       adminEmail: null,
+      adminUserId: null,
+      emailDispatched: false,
     };
   }
 
@@ -85,10 +95,15 @@ export async function runCreateTenant(params: CreateTenantParams): Promise<Creat
     return inviteResult;
   }
 
+  const inviteData = inviteResult.data;
+
   return {
     ok: true,
     tenant,
     adminCreated: !hadUserBefore,
     adminEmail,
+    adminUserId: inviteData.userId,
+    emailDispatched: inviteData.kind === "invite" ? inviteData.emailDispatched : false,
+    emailError: inviteData.kind === "invite" ? inviteData.emailError : undefined,
   };
 }

@@ -54,7 +54,11 @@ export interface IUserRepository {
 
   inviteExistingUserToTenant(params: InviteExistingUserToTenantParams): Promise<void>;
 
-  inviteNewUserToTenant(params: InviteNewUserToTenantParams): Promise<void>;
+  /** Returns the newly created user id. */
+  inviteNewUserToTenant(params: InviteNewUserToTenantParams): Promise<string>;
+
+  /** Sets the initial password hash and invalidates all active INVITE_SET_PASSWORD tokens. */
+  setInitialPasswordForUser(params: { userId: string; passwordHash: string }): Promise<void>;
 
   findActiveUserForPasswordReset(emailNorm: string): Promise<{
     id: string;

@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { ManualSetPasswordDialog } from "@/features/settings/app/components/manual-set-password-dialog";
 import { TeamMemberRemoveDialog } from "@/features/settings/app/components/team-member-remove-dialog";
 import { getTenantClinicSettings } from "@/features/settings/app/services/tenant-settings.service";
 import { useTenantMembers } from "@/features/settings/app/hooks/use-tenant-members";
@@ -31,6 +32,7 @@ export function TenantMembersCard() {
   const t = useTranslations("settings.members");
   const { data: session } = useSession();
   const [memberToRemove, setMemberToRemove] = useState<TenantMemberRow | null>(null);
+  const [memberToSetPassword, setMemberToSetPassword] = useState<TenantMemberRow | null>(null);
   const [tenantNameFromApi, setTenantNameFromApi] = useState<string | null>(null);
   const {
     sessionStatus,
@@ -88,6 +90,12 @@ export function TenantMembersCard() {
     const member = sortedRows.find((row) => row.userId === memberUserId);
     if (!member) return;
     setMemberToRemove(member);
+  }
+
+  function openSetPasswordDialog(memberUserId: string) {
+    const member = sortedRows.find((row) => row.userId === memberUserId);
+    if (!member) return;
+    setMemberToSetPassword(member);
   }
 
   async function handleConfirmRemove() {
@@ -153,6 +161,19 @@ export function TenantMembersCard() {
         busy={memberToRemove !== null && busyId === memberToRemove.userId}
         onConfirm={handleConfirmRemove}
       />
+      {memberToSetPassword && tenantId ? (
+        <ManualSetPasswordDialog
+          open={memberToSetPassword !== null}
+          onOpenChange={(open) => {
+            if (!open) setMemberToSetPassword(null);
+          }}
+          userId={memberToSetPassword.userId}
+          tenantId={tenantId}
+          email={memberToSetPassword.email}
+          name={memberToSetPassword.name}
+          onSuccess={() => void reload()}
+        />
+      ) : null}
       <CardHeader>
         <CardTitle>{t("title")}</CardTitle>
         <CardDescription>{t("description", { tenantName })}</CardDescription>
@@ -202,7 +223,19 @@ export function TenantMembersCard() {
                         <SelectItem value="tenant_user">{t("roleUser")}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-end gap-1">
+                      {!isSelf && !member.hasPassword ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={busy}
+                          onClick={() => openSetPasswordDialog(member.userId)}
+                          aria-label={t("setPassword")}
+                        >
+                          <KeyRound className="size-4" />
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="ghost"

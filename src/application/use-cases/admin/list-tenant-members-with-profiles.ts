@@ -20,6 +20,7 @@ export async function listTenantMembersWithProfiles(params: { tenantId: string }
         role: r.role,
         restrictedToAssignedOnly: r.restrictedToAssignedOnly,
         linkedOpmeSupplierId: r.linkedOpmeSupplierId,
+        hasPassword: r.hasPassword,
       };
     }),
   );

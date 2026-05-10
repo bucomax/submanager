@@ -63,8 +63,6 @@ export async function POST(request: Request) {
         return jsonError("CONFLICT", apiT("errors.emailDisabledAccount"), 409);
       case "USER_ALREADY_MEMBER":
         return jsonError("CONFLICT", apiT("errors.userAlreadyMember"), 409);
-      case "EMAIL_SEND_FAILED":
-        return jsonError("EMAIL_SEND_FAILED", apiT("errors.emailSendFailedAfterUser"), 500);
       case "TENANT_NOT_FOUND":
         return jsonError("INTERNAL_ERROR", apiT("errors.internalError"), 500);
       default:
@@ -77,6 +75,9 @@ export async function POST(request: Request) {
       tenant: result.tenant,
       adminCreated: result.adminCreated,
       adminEmail: result.adminEmail,
+      adminUserId: result.adminUserId,
+      emailDispatched: result.emailDispatched,
+      emailError: result.emailError ?? null,
     },
     { status: 201 },
   );

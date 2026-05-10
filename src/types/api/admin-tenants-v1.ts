@@ -44,4 +44,8 @@ export type CreateAdminTenantResponseData = {
   };
   adminCreated: boolean;
   adminEmail: string | null;
+  /** userId do admin convidado; null quando nenhum admin foi informado. */
+  adminUserId: string | null;
+  emailDispatched: boolean;
+  emailError?: string | null;
 };

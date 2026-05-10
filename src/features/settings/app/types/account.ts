@@ -22,6 +22,7 @@ export type TenantMemberRow = {
   image: string | null;
   imageUrl: string | null;
   role: TenantRole;
+  hasPassword: boolean;
 };
 
 export type AdminInviteInput = {
@@ -34,6 +35,10 @@ export type AdminInviteInput = {
 export type AdminInviteResult = {
   message: string;
   email: string;
+  /** userId do usuário convidado ou readicionado. */
+  userId: string;
   /** Quando false, nenhum e-mail foi enviado (ex.: usuário já tinha senha e só foi readicionado ao tenant). */
   emailDispatched?: boolean;
+  /** Presente quando emailDispatched === false e havia e-mail a enviar. */
+  emailError?: string | null;
 };

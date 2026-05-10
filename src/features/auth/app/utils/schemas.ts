@@ -34,3 +34,10 @@ export const setPasswordFormSchema = z
     message: zodApiMsg("errors.validationPortalPasswordMismatch"),
     path: ["confirmPassword"],
   });
+
+/** Body do endpoint admin para definir senha de convidado pendente. */
+export const adminSetInviteePasswordSchema = z.object({
+  userId: z.string().cuid(),
+  tenantId: z.string().cuid(),
+  password: portalPasswordSchema,
+});

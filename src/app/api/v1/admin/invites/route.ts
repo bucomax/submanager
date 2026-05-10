@@ -45,8 +45,6 @@ export async function POST(request: Request) {
         return jsonError("CONFLICT", apiT("errors.emailDisabledAccount"), 409);
       case "USER_ALREADY_MEMBER":
         return jsonError("CONFLICT", apiT("errors.userAlreadyMember"), 409);
-      case "EMAIL_SEND_FAILED":
-        return jsonError("EMAIL_SEND_FAILED", apiT("errors.emailSendFailedAfterUser"), 500);
     }
   }
 
@@ -57,7 +55,9 @@ export async function POST(request: Request) {
     {
       message,
       email: data.email,
+      userId: data.userId,
       emailDispatched: data.kind === "invite" ? data.emailDispatched : false,
+      emailError: data.kind === "invite" ? (data.emailError ?? null) : null,
     },
     { status: 201 },
   );

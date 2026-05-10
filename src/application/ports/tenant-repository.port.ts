@@ -15,6 +15,7 @@ export type TenantMembershipListRow = {
   role: string;
   restrictedToAssignedOnly: boolean;
   linkedOpmeSupplierId: string | null;
+  hasPassword: boolean;
 };
 
 export type CreateTenantInput = {

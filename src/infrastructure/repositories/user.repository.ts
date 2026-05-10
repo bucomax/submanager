@@ -169,11 +169,11 @@ export class UserPrismaRepository implements IUserRepository {
     });
   }
 
-  async inviteNewUserToTenant(params: InviteNewUserToTenantParams) {
+  async inviteNewUserToTenant(params: InviteNewUserToTenantParams): Promise<string> {
     const { emailNorm, name, tenantId, role, token, expiresAt } = params;
     const prismaRole = role === "tenant_admin" ? TenantRole.tenant_admin : TenantRole.tenant_user;
 
-    await prisma.$transaction(async (tx) => {
+    const userId = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email: emailNorm,
@@ -200,7 +200,29 @@ export class UserPrismaRepository implements IUserRepository {
           expiresAt,
         },
       });
+
+      return user.id;
     });
+
+    return userId;
+  }
+
+  async setInitialPasswordForUser(params: { userId: string; passwordHash: string }): Promise<void> {
+    const { userId, passwordHash } = params;
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      }),
+      prisma.userAuthToken.updateMany({
+        where: {
+          userId,
+          purpose: AuthTokenPurpose.INVITE_SET_PASSWORD,
+          usedAt: null,
+        },
+        data: { usedAt: new Date() },
+      }),
+    ]);
   }
 
   async findActiveUserForPasswordReset(emailNorm: string) {

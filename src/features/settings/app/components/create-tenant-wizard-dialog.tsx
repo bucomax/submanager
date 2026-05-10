@@ -6,6 +6,8 @@ import { ArrowLeft, ArrowRight, Loader2, Save, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useForm, useWatch } from "react-hook-form";
 
+import { ManualSetPasswordDialog } from "@/features/settings/app/components/manual-set-password-dialog";
+
 import {
   createTenantWizardSchema,
   type CreateTenantWizardValues,
@@ -101,6 +103,14 @@ function buildRequestBody(v: CreateTenantWizardValues): CreateAdminTenantRequest
   };
 }
 
+type ManualPasswordState = {
+  open: boolean;
+  userId: string;
+  tenantId: string;
+  email: string;
+  name?: string | null;
+};
+
 export function CreateTenantWizardDialog({
   open,
   onOpenChange,
@@ -112,6 +122,12 @@ export function CreateTenantWizardDialog({
 
   const [step, setStep] = useState<Step>(1);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [manualPassword, setManualPassword] = useState<ManualPasswordState>({
+    open: false,
+    userId: "",
+    tenantId: "",
+    email: "",
+  });
 
   const form = useForm<CreateTenantWizardValues>({
     resolver: zodResolver(createTenantWizardSchema),
@@ -150,12 +166,24 @@ export function CreateTenantWizardDialog({
     const v = form.getValues();
     try {
       const res = await createTenant(buildRequestBody(v));
+      onOpenChange(false);
       toast.success(
         res.adminEmail
           ? t("wizard.createdWithAdmin", { name: res.tenant.name, email: res.adminEmail })
           : t("created", { name: res.tenant.name }),
       );
-      onOpenChange(false);
+      if (res.adminEmail && res.emailDispatched === false) {
+        toast.warning(t("wizard.emailNotSentWarning", { email: res.adminEmail }));
+        if (res.adminUserId) {
+          setManualPassword({
+            open: true,
+            userId: res.adminUserId,
+            tenantId: res.tenant.id,
+            email: res.adminEmail,
+            name: v.adminName?.trim() || null,
+          });
+        }
+      }
     } catch {
       /* apiClient / toast global */
     }
@@ -198,7 +226,16 @@ export function CreateTenantWizardDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <>
+      <ManualSetPasswordDialog
+        open={manualPassword.open}
+        onOpenChange={(next) => setManualPassword((s) => ({ ...s, open: next }))}
+        userId={manualPassword.userId}
+        tenantId={manualPassword.tenantId}
+        email={manualPassword.email}
+        name={manualPassword.name}
+      />
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       {open ? (
         <StandardDialogContent
           size="lg"
@@ -442,6 +479,7 @@ export function CreateTenantWizardDialog({
           </Form>
         </StandardDialogContent>
       ) : null}
-    </Dialog>
+      </Dialog>
+    </>
   );
 }

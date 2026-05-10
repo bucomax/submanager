@@ -20,19 +20,21 @@ export type InviteTenantMemberErrorCode =
   | "EMAIL_NOT_CONFIGURED"
   | "TENANT_NOT_FOUND"
   | "EMAIL_DISABLED_ACCOUNT"
-  | "USER_ALREADY_MEMBER"
-  | "EMAIL_SEND_FAILED";
+  | "USER_ALREADY_MEMBER";
 
 export type InviteTenantMemberSuccess =
   | {
       kind: "readded";
+      userId: string;
       email: string;
       emailDispatched: false;
     }
   | {
       kind: "invite";
+      userId: string;
       email: string;
       emailDispatched: boolean;
+      emailError?: string;
     };
 
 function buildInviteEmailSubject(clinicName: string): string {
@@ -119,22 +121,33 @@ export async function runInviteTenantMember(input: InviteTenantMemberInput): Pro
         ok: true,
         data: {
           kind: "readded",
+          userId: existing.id,
           email: emailNorm,
           emailDispatched: false,
         },
       };
     }
 
-    const { error } = await sendInviteSetPasswordEmail(emailNorm, name, token, tenantForEmail);
-    if (error) {
-      console.error("Erro ao enviar convite:", error);
-      return { ok: false, code: "EMAIL_SEND_FAILED" };
+    const { error: sendError } = await sendInviteSetPasswordEmail(emailNorm, name, token, tenantForEmail);
+    if (sendError) {
+      console.error("Erro ao enviar convite:", sendError);
+      return {
+        ok: true,
+        data: {
+          kind: "invite",
+          userId: existing.id,
+          email: emailNorm,
+          emailDispatched: false,
+          emailError: sendError.message,
+        },
+      };
     }
 
     return {
       ok: true,
       data: {
         kind: "invite",
+        userId: existing.id,
         email: emailNorm,
         emailDispatched: true,
       },
@@ -148,7 +161,7 @@ export async function runInviteTenantMember(input: InviteTenantMemberInput): Pro
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
-  await userPrismaRepository.inviteNewUserToTenant({
+  const newUserId = await userPrismaRepository.inviteNewUserToTenant({
     emailNorm,
     name: name?.trim() || null,
     tenantId,
@@ -157,16 +170,26 @@ export async function runInviteTenantMember(input: InviteTenantMemberInput): Pro
     expiresAt,
   });
 
-  const { error } = await sendInviteSetPasswordEmail(emailNorm, name, token, tenantForEmail);
-  if (error) {
-    console.error("Erro ao enviar convite:", error);
-    return { ok: false, code: "EMAIL_SEND_FAILED" };
+  const { error: sendError } = await sendInviteSetPasswordEmail(emailNorm, name, token, tenantForEmail);
+  if (sendError) {
+    console.error("Erro ao enviar convite:", sendError);
+    return {
+      ok: true,
+      data: {
+        kind: "invite",
+        userId: newUserId,
+        email: emailNorm,
+        emailDispatched: false,
+        emailError: sendError.message,
+      },
+    };
   }
 
   return {
     ok: true,
     data: {
       kind: "invite",
+      userId: newUserId,
       email: emailNorm,
       emailDispatched: true,
     },

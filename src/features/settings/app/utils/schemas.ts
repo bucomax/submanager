@@ -35,11 +35,47 @@ export type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
 
 export const clinicSettingsFormSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome da clínica.").max(120),
-  taxId: z.string().max(32, "Máximo de 32 caracteres.").optional(),
-  phone: z.string().max(32, "Máximo de 32 caracteres.").optional(),
+  /** Apenas dígitos (FormTaxDocument); vazio, CPF (11) ou CNPJ (14). */
+  taxId: z
+    .string()
+    .max(14)
+    .or(z.literal(""))
+    .refine(
+      (v) => {
+        const d = digitsOnlyTaxDocument(v ?? "");
+        return d.length === 0 || d.length === 11 || d.length === 14;
+      },
+      { message: "Informe CPF (11 dígitos) ou CNPJ (14 dígitos), ou deixe em branco." },
+    )
+    .optional(),
+  /** Apenas dígitos (FormPhoneNumber); vazio ou 10–11 dígitos (BR com DDD). */
+  phone: z
+    .string()
+    .max(11)
+    .or(z.literal(""))
+    .refine(
+      (v) => {
+        const d = digitsOnlyPhone(v ?? "");
+        return d.length === 0 || (d.length >= 10 && d.length <= 11);
+      },
+      { message: "Telefone: informe DDD + número (10 ou 11 dígitos) ou deixe em branco." },
+    )
+    .optional(),
   addressLine: z.string().max(255, "Máximo de 255 caracteres.").optional(),
   city: z.string().max(120, "Máximo de 120 caracteres.").optional(),
-  postalCode: z.string().max(32, "Máximo de 32 caracteres.").optional(),
+  /** 8 dígitos (FormCep); vazio ou CEP completo. */
+  postalCode: z
+    .string()
+    .max(8)
+    .or(z.literal(""))
+    .refine(
+      (v) => {
+        const d = digitsOnlyCep(v ?? "");
+        return d.length === 0 || d.length === 8;
+      },
+      { message: "CEP: informe 8 dígitos ou deixe em branco." },
+    )
+    .optional(),
   affiliatedHospitals: z.string().max(10_000, "Máximo de 10000 caracteres.").optional(),
 });
 

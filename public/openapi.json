@@ -311,11 +311,117 @@
           }
         },
         "responses": {
-          "201": { "description": "Criado (tenant com campos de clínica; adminCreated e adminEmail quando aplicável)" },
+          "201": { "description": "Criado. Inclui `tenant`, `adminCreated`, `adminEmail`, `adminUserId` (string|null), `emailDispatched` (bool) e `emailError` (string|null). `emailDispatched: false` indica sucesso parcial: tenant criado mas e-mail de convite não enviado — abrir `POST /api/v1/admin/invites/set-password` para definir senha manualmente." },
           "403": { "description": "Não é super_admin" },
           "409": { "description": "Slug duplicado ou conflito de convite (email desativado, já membro)" },
           "503": { "description": "Convites por email não configurados (quando necessário)" },
           "401": { "description": "Não autenticado" }
+        }
+      }
+    },
+    "/api/v1/admin/invites": {
+      "post": {
+        "summary": "Convida usuário ao tenant (super_admin ou tenant_admin)",
+        "tags": ["Admin"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "tenantId", "role"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "name": { "type": "string", "maxLength": 120 },
+                  "tenantId": { "type": "string", "description": "cuid do tenant" },
+                  "role": { "type": "string", "enum": ["tenant_admin", "tenant_user"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Convite enviado ou usuário readicionado. Inclui `message`, `email`, `userId`, `emailDispatched` (bool) e `emailError` (string|null). `emailDispatched: false` indica sucesso parcial: use `POST /api/v1/admin/invites/set-password` para definir a senha manualmente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": { "type": "string" },
+                        "email": { "type": "string", "format": "email" },
+                        "userId": { "type": "string" },
+                        "emailDispatched": { "type": "boolean" },
+                        "emailError": { "type": ["string", "null"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão para convidar neste tenant" },
+          "409": { "description": "Email de conta desativada ou usuário já é membro" },
+          "422": { "description": "Validação" },
+          "503": { "description": "Convites por email não configurados" }
+        }
+      }
+    },
+    "/api/v1/admin/invites/set-password": {
+      "post": {
+        "summary": "Define senha manualmente para convidado pendente (sem senha)",
+        "description": "Permite ao admin (super_admin ou tenant_admin) definir a senha de um usuário convidado cujo e-mail de convite não foi entregue. Só funciona quando o usuário ainda não tem senha (`passwordHash === null`). Invalida todos os tokens `INVITE_SET_PASSWORD` ativos após o set.",
+        "tags": ["Admin"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId", "tenantId", "password"],
+                "properties": {
+                  "userId": { "type": "string", "description": "cuid do usuário convidado" },
+                  "tenantId": { "type": "string", "description": "cuid do tenant" },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "description": "Senha forte: ≥8 chars, maiúscula, minúscula, dígito e caractere especial"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Senha definida. Tokens antigos invalidados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "userId": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (não é super_admin nem tenant_admin do tenant)" },
+          "404": { "description": "Usuário não encontrado ou sem membership no tenant" },
+          "409": { "description": "Usuário já possui senha definida" },
+          "422": { "description": "Validação (senha fraca, userId/tenantId inválidos)" }
         }
       }
     },
@@ -334,7 +440,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Lista de membros (`userId`, `email`, `name`, `image`, `role`, `restrictedToAssignedOnly`, `linkedOpmeSupplierId`)"
+            "description": "Lista de membros (`userId`, `email`, `name`, `image`, `imageUrl`, `role`, `restrictedToAssignedOnly`, `linkedOpmeSupplierId`, `hasPassword`)"
           },
           "401": { "description": "Não autenticado" },
           "403": { "description": "Sem permissão" },
