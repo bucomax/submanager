@@ -88,6 +88,7 @@
     "eslint-config-next": "16.2.1",
     "patch-package": "^8.0.1",
     "prisma": "^6.8.2",
+    "supabase": "^2.101.0",
     "tailwindcss": "^4",
     "tsx": "^4.19.4",
     "typescript": "^5"
