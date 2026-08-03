@@ -7,7 +7,6 @@ import {
   presignPutObject,
   publicUrlForKey,
 } from "@/infrastructure/storage/gcs-storage";
-import { prisma } from "@/infrastructure/database/prisma";
 import { reorderScreenshotsBodySchema } from "@/lib/validators/app";
 import { randomUUID } from "crypto";
 import { z } from "zod";
@@ -73,27 +72,22 @@ export async function POST(request: Request, context: RouteContext) {
       return jsonError("LIMIT_EXCEEDED", "Máximo de 8 screenshots.", 422);
     }
 
-    const fileAsset = await prisma.fileAsset.create({
-      data: {
-        tenantId: "platform",
-        r2Key: key,
+    const { fileId, screenshot } = await appPrismaRepository.addScreenshotFromUpload(
+      appId,
+      {
+        key,
         fileName,
         mimeType,
         sizeBytes,
         uploadedById: auth.session!.user.id,
       },
-    });
-
-    const screenshot = await appPrismaRepository.addScreenshot(
-      appId,
-      fileAsset.id,
       caption ?? undefined,
     );
 
     return jsonSuccess({
       screenshot: {
         id: screenshot.id,
-        fileId: fileAsset.id,
+        fileId,
         imageUrl: publicUrlForKey(key),
         caption: screenshot.caption,
         sortOrder: screenshot.sortOrder,
@@ -143,9 +137,10 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   // Verify screenshot belongs to this app
-  const screenshot = await prisma.appScreenshot.findFirst({
-    where: { id: parsed.data.screenshotId, appId },
-  });
+  const screenshot = await appPrismaRepository.findScreenshotInApp(
+    appId,
+    parsed.data.screenshotId,
+  );
   if (!screenshot) {
     return jsonError("NOT_FOUND", "Screenshot não encontrado.", 404);
   }

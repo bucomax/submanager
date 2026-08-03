@@ -13,6 +13,18 @@ const appWithScreenshots = {
   iconFile: true,
 } satisfies Prisma.AppInclude;
 
+/** Ativos do catálogo (ícone/screenshots) não pertencem a nenhuma clínica. */
+const PLATFORM_TENANT_ID = "platform";
+
+/** Arquivo já enviado ao storage, pendente de registro como `FileAsset`. */
+type AppUploadedFile = {
+  key: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedById: string;
+};
+
 function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -143,6 +155,22 @@ export const appPrismaRepository = {
     });
   },
 
+  // ─── Ativos de plataforma (ícone/screenshots) ─────────────────────
+
+  async createPlatformFileAsset(file: AppUploadedFile) {
+    return prisma.fileAsset.create({
+      data: {
+        tenantId: PLATFORM_TENANT_ID,
+        r2Key: file.key,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        uploadedById: file.uploadedById,
+      },
+      select: { id: true },
+    });
+  },
+
   // ─── Icon ─────────────────────────────────────────────────────────
 
   async setIcon(appId: string, fileId: string | null) {
@@ -151,6 +179,13 @@ export const appPrismaRepository = {
       data: { iconFileId: fileId },
       include: appWithScreenshots,
     });
+  },
+
+  /** Registra o arquivo enviado e o define como ícone do app. */
+  async setIconFromUpload(appId: string, file: AppUploadedFile) {
+    const fileAsset = await this.createPlatformFileAsset(file);
+    await this.setIcon(appId, fileAsset.id);
+    return { fileId: fileAsset.id };
   },
 
   // ─── Screenshots ──────────────────────────────────────────────────
@@ -165,6 +200,23 @@ export const appPrismaRepository = {
     return prisma.appScreenshot.create({
       data: { appId, fileId, caption: caption ?? undefined, sortOrder },
       include: { file: true },
+    });
+  },
+
+  /** Registra o arquivo enviado e o anexa como screenshot do app. */
+  async addScreenshotFromUpload(
+    appId: string,
+    file: AppUploadedFile,
+    caption?: Prisma.InputJsonValue,
+  ) {
+    const fileAsset = await this.createPlatformFileAsset(file);
+    const screenshot = await this.addScreenshot(appId, fileAsset.id, caption);
+    return { fileId: fileAsset.id, screenshot };
+  },
+
+  async findScreenshotInApp(appId: string, screenshotId: string) {
+    return prisma.appScreenshot.findFirst({
+      where: { id: screenshotId, appId },
     });
   },
 

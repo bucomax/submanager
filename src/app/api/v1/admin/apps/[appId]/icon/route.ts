@@ -7,7 +7,6 @@ import {
   presignPutObject,
   publicUrlForKey,
 } from "@/infrastructure/storage/gcs-storage";
-import { prisma } from "@/infrastructure/database/prisma";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
@@ -56,21 +55,16 @@ export async function POST(request: Request, context: RouteContext) {
   if (registerParsed.success) {
     const { key, fileName, mimeType, sizeBytes } = registerParsed.data;
 
-    const fileAsset = await prisma.fileAsset.create({
-      data: {
-        tenantId: "platform",
-        r2Key: key,
-        fileName,
-        mimeType,
-        sizeBytes,
-        uploadedById: auth.session!.user.id,
-      },
+    const { fileId } = await appPrismaRepository.setIconFromUpload(appId, {
+      key,
+      fileName,
+      mimeType,
+      sizeBytes,
+      uploadedById: auth.session!.user.id,
     });
 
-    await appPrismaRepository.setIcon(appId, fileAsset.id);
-
     return jsonSuccess({
-      fileId: fileAsset.id,
+      fileId,
       publicUrl: publicUrlForKey(key),
     });
   }
