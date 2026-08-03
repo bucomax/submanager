@@ -38,7 +38,7 @@ export async function rateLimit(
   if (
     preset === "api" &&
     process.env.NODE_ENV !== "production" &&
-    process.env.BUCOMAX_LOAD_TEST_DISABLE_API_RL === "1"
+    process.env.LOAD_TEST_DISABLE_API_RL === "1"
   ) {
     return null;
   }

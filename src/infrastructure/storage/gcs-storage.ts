@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "crypto";
 import { Storage } from "@google-cloud/storage";
 
 import { UPLOAD_URL_TTL_SECONDS } from "@/lib/constants/file-upload";
-import { BUCOMAX_GCS_PROJECT_ID } from "@/lib/constants/gcs";
+import { getExpectedGcsProjectId } from "@/lib/constants/gcs";
 
 type GcpServiceAccountJson = {
   type?: string;
@@ -31,10 +31,14 @@ function bucketNameOrThrow(): string {
   return name;
 }
 
-function assertBucomaxGcsProject(projectId: string): void {
-  if (projectId !== BUCOMAX_GCS_PROJECT_ID) {
+function assertAllowedGcsProject(projectId: string): void {
+  const expected = getExpectedGcsProjectId();
+  if (!expected) {
+    throw new Error("GCS: defina GCS_PROJECT_ID com o projeto GCP dono do bucket.");
+  }
+  if (projectId !== expected) {
     throw new Error(
-      `GCS: este app só usa o projeto GCP "${BUCOMAX_GCS_PROJECT_ID}" para o bucket; recebido "${projectId}". Ajuste a service account ou GCS_PROJECT_ID.`,
+      `GCS: a credencial pertence ao projeto "${projectId}", mas GCS_PROJECT_ID declara "${expected}". Ajuste a service account ou a variável.`,
     );
   }
 }
@@ -62,7 +66,7 @@ function getStorage(): Storage {
     if (!projectId) {
       throw new Error("GCS: inclua project_id no JSON da service account ou defina GCS_PROJECT_ID.");
     }
-    assertBucomaxGcsProject(projectId);
+    assertAllowedGcsProject(projectId);
     const privateKey = sa.private_key.replace(/\\n/g, "\n");
     storageClient = new Storage({
       projectId,
@@ -75,10 +79,10 @@ function getStorage(): Storage {
     const projectId = process.env.GCS_PROJECT_ID?.trim();
     if (!projectId) {
       throw new Error(
-        `GCS: defina GCS_PROJECT_ID=${BUCOMAX_GCS_PROJECT_ID} ao usar GOOGLE_APPLICATION_CREDENTIALS ou ADC.`,
+        "GCS: defina GCS_PROJECT_ID com o projeto GCP do bucket ao usar GOOGLE_APPLICATION_CREDENTIALS ou ADC.",
       );
     }
-    assertBucomaxGcsProject(projectId);
+    assertAllowedGcsProject(projectId);
     storageClient = new Storage({ projectId });
   }
   return storageClient;
@@ -89,16 +93,18 @@ export function isGcsConfigured(): boolean {
   if (!process.env.GCS_BUCKET_NAME?.trim()) {
     return false;
   }
+  const expected = getExpectedGcsProjectId();
+  if (!expected) {
+    return false;
+  }
   const sa = parseServiceAccountJson();
   if (sa) {
     if (!sa.client_email || !sa.private_key) {
       return false;
     }
-    const projectId = resolveEffectiveGcsProjectId();
-    return projectId === BUCOMAX_GCS_PROJECT_ID;
+    return resolveEffectiveGcsProjectId() === expected;
   }
-  const projectId = resolveEffectiveGcsProjectId();
-  if (!projectId || projectId !== BUCOMAX_GCS_PROJECT_ID) {
+  if (resolveEffectiveGcsProjectId() !== expected) {
     return false;
   }
   return Boolean(

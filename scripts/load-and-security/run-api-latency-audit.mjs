@@ -23,7 +23,7 @@
  *
  * Rate limit (Redis): API autenticada ≈ 120 req/min por usuário (`src/lib/api/rate-limit.ts`).
  *   Se quase tudo vira 429, use smoke: LATENCY_AUDIT_CONCURRENCY=1 LATENCY_AUDIT_ITERATIONS=12
- *   Medição sem RL na API autenticada (só dev): coloque BUCOMAX_LOAD_TEST_DISABLE_API_RL=1 no .env.local
+ *   Medição sem RL na API autenticada (só dev): coloque LOAD_TEST_DISABLE_API_RL=1 no .env.local
  *   e **reinicie o Next** (a flag vale no servidor, não neste script Node).
  *
  * Endpoints extras (JSON no disco):
@@ -465,7 +465,7 @@ Cookie:        ${cookie ? "sim" : "não"}
 
   console.log("\nNotas:");
   console.log("- Muitos 429 = rate limit da API (~120/min por userId com Redis).");
-  console.log("- Sem RL em dev: BUCOMAX_LOAD_TEST_DISABLE_API_RL=1 no .env + reinício do Next.");
+  console.log("- Sem RL em dev: LOAD_TEST_DISABLE_API_RL=1 no .env + reinício do Next.");
   console.log("- err = timeout/rede; GET /health não usa o mesmo rateLimit(api).");
   console.log("- SQL: npm run audit:prisma-queries | Postgres pg_stat_statements.");
 }

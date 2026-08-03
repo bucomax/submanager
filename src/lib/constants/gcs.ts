@@ -1,5 +1,13 @@
 /**
- * ID do projeto GCP onde vive o bucket de arquivos (Cloud Storage) do Bucomax.
- * O cliente em `gcs-storage` só opera se o projeto efetivo coincidir com este valor.
+ * Projeto GCP autorizado para o bucket de arquivos (Cloud Storage).
+ *
+ * Vem de `GCS_PROJECT_ID` — não é fixo no código, para o app subir em qualquer
+ * projeto sem alteração de código.
+ *
+ * O cliente em `gcs-storage` recusa operar quando o projeto da service account
+ * diverge deste valor: evita gravar arquivo clínico no projeto errado quando a
+ * credencial é trocada por engano.
  */
-export const BUCOMAX_GCS_PROJECT_ID = "bucomax";
+export function getExpectedGcsProjectId(): string | null {
+  return process.env.GCS_PROJECT_ID?.trim() || null;
+}
