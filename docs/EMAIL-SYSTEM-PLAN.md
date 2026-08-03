@@ -1,4 +1,4 @@
-# Plano de Evolução do Sistema de E-mail — Bucomax
+# Plano de Evolução do Sistema de E-mail — SubManager
 
 > Diagnóstico completo + plano de ajustes para disparo de e-mails em todos os momentos relevantes e configuração de domínio próprio por clínica.
 
@@ -19,7 +19,7 @@
 ### 1.2 Configuração Atual
 
 - **Resend API key global** via `process.env.RESEND_API_KEY`
-- **Remetente fixo**: `process.env.EMAIL_FROM` (default `Bucomax <onboarding@resend.dev>`)
+- **Remetente fixo**: `process.env.EMAIL_FROM` (default `SubManager <onboarding@resend.dev>`)
 - **Sem configuração por tenant** — todos os e-mails saem do mesmo domínio
 - **Sem fila/retry** — fire-and-forget com `.catch()` (diferente do WhatsApp que usa BullMQ)
 - **Sem tracking de entrega** — Resend retorna `id` mas não é salvo; sem webhook de bounce/open
@@ -331,7 +331,7 @@ Para e-mails que não são de transição (SLA, checklist), criar tabela leve `E
 
 ### 5.1 Conceito
 
-Cada clínica (tenant) pode configurar seu próprio domínio de e-mail para que os alertas saiam como `notificacoes@clinicadrdanilo.com.br` em vez de `noreply@bucomax.com`.
+Cada clínica (tenant) pode configurar seu próprio domínio de e-mail para que os alertas saiam como `notificacoes@clinicadrdanilo.com.br` em vez de `noreply@submanager.com`.
 
 ### 5.2 Como Funciona no Resend
 
@@ -401,7 +401,7 @@ export async function resolveTenantSender(tenantId: string): Promise<{
 
   // Fallback: remetente global da plataforma
   return {
-    from: process.env.EMAIL_FROM ?? "Bucomax <noreply@bucomax.com>",
+    from: process.env.EMAIL_FROM ?? "SubManager <noreply@submanager.com>",
     isCustomDomain: false,
   };
 }
@@ -469,7 +469,7 @@ case "email":
 │  [Configurar domínio]                               │
 │                                                     │
 │  ℹ️  Sem domínio próprio, os e-mails serão          │
-│     enviados como noreply@bucomax.com               │
+│     enviados como noreply@submanager.com               │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -615,9 +615,9 @@ src/types/api/
 
 Quando o tenant tem domínio próprio verificado, os templates devem:
 
-1. Usar o nome da clínica no header (em vez de "Bucomax")
+1. Usar o nome da clínica no header (em vez de "SubManager")
 2. Usar o nome da clínica no footer
-3. Manter o layout/tema visual Bucomax (é a plataforma, não white-label completo)
+3. Manter o layout/tema visual SubManager (é a plataforma, não white-label completo)
 
 Ajuste no `baseLayout` de `email-templates.ts`:
 
@@ -625,7 +625,7 @@ Ajuste no `baseLayout` de `email-templates.ts`:
 function baseLayout(content: string, preheader?: string, options?: {
   brandName?: string;  // Nome da clínica (se custom domain)
 }): string {
-  const brand = options?.brandName ?? "Bucomax";
+  const brand = options?.brandName ?? "SubManager";
   // ... usar `brand` no header e footer
 }
 ```

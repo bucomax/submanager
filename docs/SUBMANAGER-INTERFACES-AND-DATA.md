@@ -1,9 +1,9 @@
-# Bucomax — interfaces de referência (`arquivos-interfaces`) × dados × UI
+# SubManager — interfaces de referência (`arquivos-interfaces`) × dados × UI
 
-> **Índice unificado do produto Bucomax (colunas DnD + dashboard):** [`docs/bucomax/README.md`](./bucomax/README.md) — aponta para todos os documentos por parte.  
-> **O que cada entrega exige de front e de back:** [`docs/bucomax/frontend-backend-scope.md`](./bucomax/frontend-backend-scope.md).  
-> **Doc detalhada por página do mock (`arquivos-interfaces`):** [`docs/bucomax/pages/README.md`](./bucomax/pages/README.md).  
-> **Paginação (todas as listagens, inclusive cards por coluna do Kanban) e filtros por tela:** [`docs/bucomax/listings-pagination-and-filters.md`](./bucomax/listings-pagination-and-filters.md).
+> **Índice unificado do produto SubManager (colunas DnD + dashboard):** [`docs/submanager/README.md`](./submanager/README.md) — aponta para todos os documentos por parte.  
+> **O que cada entrega exige de front e de back:** [`docs/submanager/frontend-backend-scope.md`](./submanager/frontend-backend-scope.md).  
+> **Doc detalhada por página do mock (`arquivos-interfaces`):** [`docs/submanager/pages/README.md`](./submanager/pages/README.md).  
+> **Paginação (todas as listagens, inclusive cards por coluna do Kanban) e filtros por tela:** [`docs/submanager/listings-pagination-and-filters.md`](./submanager/listings-pagination-and-filters.md).
 
 Este documento deriva dos protótipos HTML em [`arquivos-interfaces/`](../arquivos-interfaces/) e alinha com o **tema existente** do painel Next.js (`src/app/globals.css`, tokens Shadcn/Tailwind, componentes em `src/shared/components/ui`) e com o **modelo de jornada** já previsto no repositório (`CarePathway`, `PathwayVersion`, `PathwayStage`, `PatientPathway`, `StageTransition` — ver `docs/ARCHITECTURE.md`).
 
@@ -11,15 +11,15 @@ Este documento deriva dos protótipos HTML em [`arquivos-interfaces/`](../arquiv
 
 ## 1. Kanban, configuração de fases e ferramentas de UI
 
-**Decisão atual do produto:** o **cadastro de fases** em Configurações usa **apenas drag-and-drop** para criar e ordenar **colunas** (lista de etapas). O **dashboard** exibe as colunas conforme essa configuração publicada. Detalhes de implementação: [`docs/bucomax/README.md`](./bucomax/README.md).
+**Decisão atual do produto:** o **cadastro de fases** em Configurações usa **apenas drag-and-drop** para criar e ordenar **colunas** (lista de etapas). O **dashboard** exibe as colunas conforme essa configuração publicada. Detalhes de implementação: [`docs/submanager/README.md`](./submanager/README.md).
 
 | Onde | O que a UI faz | Implementação |
 |------|----------------|---------------|
-| **Configurações → Fases** | Definir etapas como colunas, ordem dinâmica | **Lista ordenável (DnD)** — sem `@xyflow/react` nesta tela. Ver [bucomax/column-editor-drag-drop.md](./bucomax/column-editor-drag-drop.md). |
-| **Dashboard** — página inteira (`index.html`) | Métricas, alertas, ações, filtros, **pipeline** Kanban, modais | Escopo completo em [bucomax/pages/page-dashboard.md](./bucomax/pages/page-dashboard.md). O **pipeline** sozinho: [bucomax/dashboard-kanban-dynamic-columns.md](./bucomax/dashboard-kanban-dynamic-columns.md). |
+| **Configurações → Fases** | Definir etapas como colunas, ordem dinâmica | **Lista ordenável (DnD)** — sem `@xyflow/react` nesta tela. Ver [submanager/column-editor-drag-drop.md](./submanager/column-editor-drag-drop.md). |
+| **Dashboard** — página inteira (`index.html`) | Métricas, alertas, ações, filtros, **pipeline** Kanban, modais | Escopo completo em [submanager/pages/page-dashboard.md](./submanager/pages/page-dashboard.md). O **pipeline** sozinho: [submanager/dashboard-kanban-dynamic-columns.md](./submanager/dashboard-kanban-dynamic-columns.md). |
 | **Detalhe do paciente** — linha do tempo | Timeline linear | Somente leitura a partir de `PathwayStage.sortOrder` + `PatientPathway` + `StageTransition`. |
 
-**Nota:** `@xyflow/react` permanece útil se no futuro existir **editor de grafo** (ramificações, nós especiais); para o escopo **colunas via DnD**, não é obrigatório. Persistência e API: [bucomax/persistence-api-and-transitions.md](./bucomax/persistence-api-and-transitions.md).
+**Nota:** `@xyflow/react` permanece útil se no futuro existir **editor de grafo** (ramificações, nós especiais); para o escopo **colunas via DnD**, não é obrigatório. Persistência e API: [submanager/persistence-api-and-transitions.md](./submanager/persistence-api-and-transitions.md).
 
 ---
 
@@ -42,7 +42,7 @@ Este documento deriva dos protótipos HTML em [`arquivos-interfaces/`](../arquiv
   - **Badges de fluxo / fase / OPME** → `Badge` com variantes ou `className` usando `bg-primary/10 text-primary` (ou cor de gráfico `chart-*` se quiser distinguir categorias).
   - **Status ok | warning | danger** → combinação `Badge` + borda lateral no card (`border-l-4 border-l-emerald-500` / `amber-500` / `red-500`) como no mock.
   - **Modais** → `Dialog` do shadcn; **toasts** → `sonner` (já importado no projeto).
-- Se a marca Bucomax **exigir azul** como no HTML de referência, ajustar **só** `--primary` (e derivados) em `globals.css` para manter um único sistema de tokens; evitar hex soltos nos novos ecrãs.
+- Se a marca SubManager **exigir azul** como no HTML de referência, ajustar **só** `--primary` (e derivados) em `globals.css` para manter um único sistema de tokens; evitar hex soltos nos novos ecrãs.
 
 ---
 
@@ -50,7 +50,7 @@ Este documento deriva dos protótipos HTML em [`arquivos-interfaces/`](../arquiv
 
 ### 3.1 `index.html` — Dashboard
 
-Ordem vertical do mock: **métricas → alertas → barra de ações → filtros → pipeline → modais**. Detalhe de componentes, endpoints e checklist: [bucomax/pages/page-dashboard.md](./bucomax/pages/page-dashboard.md).
+Ordem vertical do mock: **métricas → alertas → barra de ações → filtros → pipeline → modais**. Detalhe de componentes, endpoints e checklist: [submanager/pages/page-dashboard.md](./submanager/pages/page-dashboard.md).
 
 | Bloco UI | Dados necessários | Origem no banco (atual ou planejada) |
 |----------|-------------------|--------------------------------------|
@@ -87,7 +87,7 @@ Ordem vertical do mock: **métricas → alertas → barra de ações → filtros
 |-------|-------------------|------------|
 | Perfil | Nome, CRO, e-mail, telefone, especialidade | `User` + metadados (perfil clínico pode ser JSON ou tabela `UserProfile` / `Tenant`) |
 | Clínica | Nome, CNPJ, endereço, hospitais | `Tenant` estendido ou `TenantSettings` (gap) |
-| **Fases do Tratamento** | Limite de dias por fase, contagem de documentos | Metadados por `PathwayStage`; **ordem e colunas** via **editor DnD** — [bucomax/column-editor-drag-drop.md](./bucomax/column-editor-drag-drop.md) |
+| **Fases do Tratamento** | Limite de dias por fase, contagem de documentos | Metadados por `PathwayStage`; **ordem e colunas** via **editor DnD** — [submanager/column-editor-drag-drop.md](./submanager/column-editor-drag-drop.md) |
 | Notificações | Toggles | `TenantSettings` / preferências por usuário (gap) |
 | Equipe | Lista, papéis | `TenantMembership` + `User` (já existe) |
 | Fornecedores OPME | CRUD, contagem de pacientes | `OpmeSupplier` + FK em `Client` |
@@ -118,7 +118,7 @@ Ordem vertical do mock: **métricas → alertas → barra de ações → filtros
 
 ## 5. Gaps de banco sugeridos (para cobrir os mocks)
 
-**Lista consolidada com prioridades P0–P3 e tabelas:** [`docs/bucomax/database-backlog.md`](./bucomax/database-backlog.md).
+**Lista consolidada com prioridades P0–P3 e tabelas:** [`docs/submanager/database-backlog.md`](./submanager/database-backlog.md).
 
 Resumo histórico (nomes indicativos; validar com produto e LGPD):
 
@@ -137,7 +137,7 @@ Cada novo dado sensível deve seguir as regras de **tenantId** e minimização d
 
 ## 6. Editor de fases (atual: DnD de colunas)
 
-O fluxo principal de configuração está documentado em [**bucomax/column-editor-drag-drop.md**](./bucomax/column-editor-drag-drop.md) e [**bucomax/persistence-api-and-transitions.md**](./bucomax/persistence-api-and-transitions.md).
+O fluxo principal de configuração está documentado em [**submanager/column-editor-drag-drop.md**](./submanager/column-editor-drag-drop.md) e [**submanager/persistence-api-and-transitions.md**](./submanager/persistence-api-and-transitions.md).
 
 ### 6.1 Se no futuro houver editor com `@xyflow/react`
 
@@ -155,14 +155,14 @@ O fluxo principal de configuração está documentado em [**bucomax/column-edito
 
 - **Listar pacientes no Kanban**: filtrar `PatientPathway` por `tenantId`, incluir `client`, `currentStage`, `pathwayVersion`.
 - **Transição** (botão, modal ou drag): caso de uso único `TransitionPatientStage` — valida aresta ou próxima etapa, persiste `PatientPathway`, grava `StageTransition`, dispara pacote de documentos / WhatsApp (pipeline existente em evolução).
-- **Editor de fases (DnD)**: salvar rascunho da lista ordenada de etapas; **publicar** persiste `PathwayStage` + `sortOrder` (ver [bucomax/persistence-api-and-transitions.md](./bucomax/persistence-api-and-transitions.md)).
+- **Editor de fases (DnD)**: salvar rascunho da lista ordenada de etapas; **publicar** persiste `PathwayStage` + `sortOrder` (ver [submanager/persistence-api-and-transitions.md](./submanager/persistence-api-and-transitions.md)).
 - **Relatórios**: endpoints de agregação somente leitura com mesmos filtros do mock.
 
 ---
 
 ## 8. Referências no repositório
 
-- **Índice Bucomax:** [`docs/bucomax/README.md`](./bucomax/README.md)
+- **Índice SubManager:** [`docs/submanager/README.md`](./submanager/README.md)
 - Protótipos: [`arquivos-interfaces/`](../arquivos-interfaces/)
 - Arquitetura e §8 modelo de dados: [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
 - Tema e componentes: `src/app/globals.css`, `src/shared/components/ui/`, layout `src/shared/components/layout/app-shell.tsx`

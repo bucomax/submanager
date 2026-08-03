@@ -1,4 +1,4 @@
-# Bucomax
+# SubManager
 
 Painel clínico **multi-tenant** para orquestrar a **jornada do paciente**: fluxos por etapas (editor visual), Kanban, SLA, arquivos em nuvem e equipe com papéis definidos.
 
@@ -65,4 +65,4 @@ Build de produção: `npm run build` → `npm run start`. Orientações gerais: 
 
 ---
 
-*Bucomax — da entrada do paciente ao acompanhamento por etapas, com um único painel por clínica (tenant).*
+*SubManager — da entrada do paciente ao acompanhamento por etapas, com um único painel por clínica (tenant).*

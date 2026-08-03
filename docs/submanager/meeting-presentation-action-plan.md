@@ -1,4 +1,4 @@
-# Plano de ação — alinhamento às transcrições (Bucomax)
+# Plano de ação — alinhamento às transcrições (SubManager)
 
 Documento operacional para **sequenciar entregas** após as reuniões e mensagens consolidadas em [`meeting-presentation-gap-analysis.md`](./meeting-presentation-gap-analysis.md). Complementa [`execution-plan.md`](./execution-plan.md) (fases já entregues e **integrações congeladas**).
 

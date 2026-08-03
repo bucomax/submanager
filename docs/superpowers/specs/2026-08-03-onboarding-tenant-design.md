@@ -21,7 +21,7 @@ Levantamento em 2026-08-03, contra o código:
 | Afirmação | Verdade |
 |---|---|
 | Wizard de criação de 4 etapas | **Existe.** `create-tenant-wizard-dialog.tsx`. `docs/TENANT-CREATION-IMPROVEMENT.md` está concluído |
-| `PathwayTemplate` (catálogo de jornadas da plataforma) | **Não existe.** Citado em `.claude/rules/multi-tenant-journey.md`, em `application-layer.md` (use case `ClonePathwayFromTemplate`) e em `PRODUCT-SCOPE.md`, mas ausente do schema e de todo o código. Já registrado em `docs/bucomax/meeting-presentation-gap-analysis.md:199` |
+| `PathwayTemplate` (catálogo de jornadas da plataforma) | **Não existe.** Citado em `.claude/rules/multi-tenant-journey.md`, em `application-layer.md` (use case `ClonePathwayFromTemplate`) e em `PRODUCT-SCOPE.md`, mas ausente do schema e de todo o código. Já registrado em `docs/submanager/meeting-presentation-gap-analysis.md:199` |
 | Endereço do tenant perde dados no wizard | **Falso.** `mergeTenantAddressLine` concatena rua, número, complemento e bairro em `addressLine`, e cidade + UF em `city` como `"São Paulo · SP"`. Nada é perdido, mas o resultado é string não parseável — limitação conhecida, fora deste escopo |
 | Envio de e-mail sem passar pelo Resend | **Existe.** `emailOutboundMode: "smtp"` usa Nodemailer direto em `sendEmailViaSmtp` |
 | Nome do remetente configurável no modo padrão | **Não.** No modo `platform`, `resolveTenantSender` devolve `process.env.EMAIL_FROM` inteiro, nome incluído |
@@ -202,7 +202,7 @@ A armadilha é a parte que importa. É onde as clínicas travam, e nenhuma delas
 | 2 | mesma tela | ID da conta do WhatsApp Business → *WABA ID* |
 | 3 | Meta Business → Configurações → Usuários do sistema | Gerar token permanente → *Access Token* |
 | 4 | Meta → app → Webhooks | Colar a Callback URL que a tela exibe |
-| 5 | Bucomax | Botão **Testar conexão**, que já existe |
+| 5 | SubManager | Botão **Testar conexão**, que já existe |
 
 **Armadilha:** a tela de Configuração da API exibe um token temporário de 24 horas, e é o que todo mundo copia. O token que funciona vem de Usuário do Sistema.
 

@@ -94,5 +94,5 @@ A doc [../dashboard-kanban-dynamic-columns.md](../dashboard-kanban-dynamic-colum
 - [../listings-pagination-and-filters.md](../listings-pagination-and-filters.md) — paginação e filtros transversais.  
 - [../execution-plan.md](../execution-plan.md) — Fase 0 (API núcleo); Fase 2 deve contemplar **dashboard completo**, não só Kanban.  
 - [../persistence-api-and-transitions.md](../persistence-api-and-transitions.md)  
-- [../BUCOMAX-INTERFACES-AND-DATA.md](../../BUCOMAX-INTERFACES-AND-DATA.md)  
+- [../SUBMANAGER-INTERFACES-AND-DATA.md](../../SUBMANAGER-INTERFACES-AND-DATA.md)  
 - Wizard: `src/features/clients/app/components/new-client-wizard.tsx`

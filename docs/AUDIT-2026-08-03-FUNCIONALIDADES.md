@@ -1,4 +1,4 @@
-# Resumo de Funcionalidades — Bucomax
+# Resumo de Funcionalidades — SubManager
 
 **Data:** 2026-08-03
 **Base:** 91 endpoints `/api/v1`, 28 páginas, 96 use cases, 29 modelos Prisma

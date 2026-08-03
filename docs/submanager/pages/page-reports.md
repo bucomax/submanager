@@ -89,5 +89,5 @@ Visão **analítica** do tenant: indicadores no período, distribuição por fas
 
 - [../listings-pagination-and-filters.md](../listings-pagination-and-filters.md)
 - [page-dashboard.md](./page-dashboard.md) (métricas podem compartilhar lógica)
-- [../BUCOMAX-INTERFACES-AND-DATA.md](../../BUCOMAX-INTERFACES-AND-DATA.md) (gaps)
+- [../SUBMANAGER-INTERFACES-AND-DATA.md](../../SUBMANAGER-INTERFACES-AND-DATA.md) (gaps)
 - [page-patients-list.md](./page-patients-list.md)

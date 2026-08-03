@@ -171,7 +171,7 @@ Isso é **uma jornada**; no painel, o médico/atendente **posiciona o paciente**
 
 ### 3.6 Portal web do paciente (MVP técnico)
 
-Área **fora** do painel staff: sessão por **magic link** (cookie dedicado, sem misturar NextAuth da equipe). O paciente enxerga **resumo da clínica e da jornada ativa**, **linha do tempo** somente leitura (dados sanitizados para LGPD) e **documentos** — listagem, envio de arquivo e download apenas quando a clínica **liberou** o arquivo (uploads feitos pelo próprio portal entram como pendentes até aceite ou recusa na ficha). Rotas de produto: `/patient`, `/patient/enter`. Detalhe de APIs e modelo em `docs/ARCHITECTURE.md` e `docs/bucomax/meeting-presentation-action-plan.md` (Fase 8).
+Área **fora** do painel staff: sessão por **magic link** (cookie dedicado, sem misturar NextAuth da equipe). O paciente enxerga **resumo da clínica e da jornada ativa**, **linha do tempo** somente leitura (dados sanitizados para LGPD) e **documentos** — listagem, envio de arquivo e download apenas quando a clínica **liberou** o arquivo (uploads feitos pelo próprio portal entram como pendentes até aceite ou recusa na ficha). Rotas de produto: `/patient`, `/patient/enter`. Detalhe de APIs e modelo em `docs/ARCHITECTURE.md` e `docs/submanager/meeting-presentation-action-plan.md` (Fase 8).
 
 **Fora deste MVP:** conta própria com senha/OTP, assinatura de termos no portal, escolha explícita de canal (web vs WhatsApp) para trâmite, formulários dinâmicos e notificação automática à equipe em todo envio (podem entrar como evoluções).
 

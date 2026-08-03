@@ -112,7 +112,7 @@ Ou uma única página com `Tabs`/`Sidebar` client-side (como o mock).
 
 | Mock | Notas |
 |------|--------|
-| WhatsApp, Google Calendar, financeiro, prontuário | **Flags** em `TenantSettings`; integrações reais em fases posteriores ([../../BUCOMAX-INTERFACES-AND-DATA.md](../../BUCOMAX-INTERFACES-AND-DATA.md)). **Decisão atual:** esta seção pode permanecer como **“em desenvolvimento”** / placeholder, sem fechamento funcional nesta rodada. |
+| WhatsApp, Google Calendar, financeiro, prontuário | **Flags** em `TenantSettings`; integrações reais em fases posteriores ([../../SUBMANAGER-INTERFACES-AND-DATA.md](../../SUBMANAGER-INTERFACES-AND-DATA.md)). **Decisão atual:** esta seção pode permanecer como **“em desenvolvimento”** / placeholder, sem fechamento funcional nesta rodada. |
 
 **Backend:** `PATCH` settings JSON.  
 **Frontend:** `Switch` + texto explicativo, ou bloco apenas informativo/placeholder enquanto as integrações reais não entram.

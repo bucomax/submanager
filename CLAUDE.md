@@ -1,8 +1,8 @@
-# CLAUDE.md — Bucomax
+# CLAUDE.md — SubManager
 
 Instruções obrigatórias para Claude Code neste repositório.
 
-## O que é o Bucomax
+## O que é o SubManager
 
 SaaS multi-tenant de orquestração de jornadas clínicas (cirurgia bucomaxilofacial). Painel para clínicas gerenciarem pacientes, fluxos de etapas, documentos, checklists, notificações e integrações com WhatsApp/IA.
 
@@ -26,7 +26,7 @@ SaaS multi-tenant de orquestração de jornadas clínicas (cirurgia bucomaxilofa
 |-----------|-------------|
 | `docs/ARCHITECTURE.md` | Arquitetura, modelo de dados (§8), auth, RBAC, subdomínios, notificações |
 | `docs/PRODUCT-SCOPE.md` | Escopo de produto, jornada do paciente, fases |
-| `docs/bucomax/business-logic.md` | Regras de negócio consolidadas |
+| `docs/submanager/business-logic.md` | Regras de negócio consolidadas |
 | `docs/DEV-PHASES.md` | Fases de implementação e status |
 | `docs/API-DOCS.md` | Documentação API (Scalar + OpenAPI) |
 

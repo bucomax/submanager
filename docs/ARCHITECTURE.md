@@ -563,7 +563,7 @@ Eventos de domínio (opcional): após `TransitionPatientStage`, worker assíncro
 2. ~~Introduzir `ChannelDispatch` e cliente HTTP real do canal.~~ **Implementado** — WhatsApp Business Cloud API via `ChannelDispatch`.  
 3. Introduzir `AiJob` + webhooks.  
 4. Evoluir notas e regras de topologia do fluxo.  
-5. Ampliar `AuditEvent` (ex. assinaturas, dispatch real). **RBAC fino** na leitura (lista/ficha/Kanban/notificações) está em `src/application/use-cases/shared/load-client-visibility-scope.ts` — ver Fase 7 em `docs/bucomax/meeting-presentation-action-plan.md`.  
+5. Ampliar `AuditEvent` (ex. assinaturas, dispatch real). **RBAC fino** na leitura (lista/ficha/Kanban/notificações) está em `src/application/use-cases/shared/load-client-visibility-scope.ts` — ver Fase 7 em `docs/submanager/meeting-presentation-action-plan.md`.  
 
 ### 8.7 Resumo
 

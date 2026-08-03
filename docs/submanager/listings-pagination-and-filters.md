@@ -1,6 +1,6 @@
 # Listagens: paginação obrigatória + filtros por página (mocks)
 
-Este documento fixa **requisitos transversais** do produto Bucomax: **nenhuma listagem “infinita”** vinda de API sem paginação (ou estratégia equivalente documentada), e **filtros** alinhados aos HTML em [`arquivos-interfaces/`](../../arquivos-interfaces/).
+Este documento fixa **requisitos transversais** do produto SubManager: **nenhuma listagem “infinita”** vinda de API sem paginação (ou estratégia equivalente documentada), e **filtros** alinhados aos HTML em [`arquivos-interfaces/`](../../arquivos-interfaces/).
 
 **Contrato sugerido (API):** `page` + `pageSize` (máx. definido, ex. 50) **ou** `cursor` + `limit` para listas de alto volume; resposta inclui `total` ou `hasMore` + `nextCursor` conforme o padrão escolhido. **Sempre** filtrar por `tenantId` do contexto autenticado.
 
@@ -19,7 +19,7 @@ Este documento fixa **requisitos transversais** do produto Bucomax: **nenhuma li
 | **Detalhe do paciente** — atividades, documentos, transições | **Obrigatória por bloco** | Timeline completa pode ser longa; histórico de `StageTransition`, anexos e atividades com paginação ou “carregar anteriores”. |
 | **Relatórios** — tabela de críticos / drill-downs | **Obrigatória** | Filtros de período não eliminam necessidade de paginar a tabela exportável. |
 | **Configurações** — equipe, OPME, convites | **Obrigatória** quando a lista passar do limite da primeira página | CRUDs de tabela devem seguir o mesmo padrão. |
-| **Admin / tenants (super_admin)** | **Obrigatória** | Fora do mock Bucomax, mas mesma regra no painel. |
+| **Admin / tenants (super_admin)** | **Obrigatória** | Fora do mock SubManager, mas mesma regra no painel. |
 
 **Métricas agregadas** (cards com totais, gráficos): não são “listagem”; podem usar endpoints dedicados com **contagens** sem paginar linhas — mas as **listas** que alimentam drill-down (ex. “ver lista” de um alerta) paginam.
 

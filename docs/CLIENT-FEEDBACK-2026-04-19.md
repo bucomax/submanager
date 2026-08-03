@@ -192,7 +192,7 @@ Todos os itens foram entendidos. São ajustes de layout e componentes existentes
 
 ### O que entendemos
 
-Este é um módulo novo completo que transformaria o Bucomax de gestor de fluxo em plataforma clínica.
+Este é um módulo novo completo que transformaria o SubManager de gestor de fluxo em plataforma clínica.
 
 ---
 

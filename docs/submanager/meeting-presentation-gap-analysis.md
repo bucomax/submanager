@@ -2,7 +2,7 @@
 
 Documento de alinhamento entre a **transcrição da reunião de apresentação** e o **estado do repositório** (Prisma, APIs, UI). Serve para priorizar backlog e evitar expectativa desalinhada com o que já está implementado.
 
-**Referências internas:** `packages/prisma/schema.prisma`, `docs/ARCHITECTURE.md` (modelo e notificações), `docs/bucomax/execution-plan.md` (escopo congelado de integrações).
+**Referências internas:** `packages/prisma/schema.prisma`, `docs/ARCHITECTURE.md` (modelo e notificações), `docs/submanager/execution-plan.md` (escopo congelado de integrações).
 
 **Plano de ação detalhado (fases, tarefas, aceite):** [`meeting-presentation-action-plan.md`](./meeting-presentation-action-plan.md).
 
@@ -274,4 +274,4 @@ Texto recebido por mensagem, alinhado ao que já estava na ata e ao código. Cad
 
 ---
 
-*Gerado a partir da transcrição fornecida e da leitura do repositório Bucomax; revisar após mudanças em schema ou `execution-plan.md`.*
+*Gerado a partir da transcrição fornecida e da leitura do repositório SubManager; revisar após mudanças em schema ou `execution-plan.md`.*

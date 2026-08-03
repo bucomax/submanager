@@ -1,6 +1,6 @@
 # Interfaces de referência (HTML estático)
 
-Protótipos **BucoMax** usados como referência visual e de fluxo para o painel Next.js do monorepo.
+Protótipos **SubManager** usados como referência visual e de fluxo para o painel Next.js do monorepo.
 
 | Arquivo | Conteúdo |
 |---------|----------|
@@ -13,9 +13,9 @@ Protótipos **BucoMax** usados como referência visual e de fluxo para o painel 
 
 ## Documentação técnica no repositório
 
-- **Índice Bucomax:** [`docs/bucomax/README.md`](../docs/bucomax/README.md)  
-- **Uma doc por página desta pasta (migração FE/BE):** [`docs/bucomax/pages/README.md`](../docs/bucomax/pages/README.md)  
-- **Matriz modelo Prisma × páginas:** [`docs/bucomax/pages/entity-to-pages-matrix.md`](../docs/bucomax/pages/entity-to-pages-matrix.md)  
-- **Migrations (o que criar no banco):** [`docs/bucomax/database-backlog.md`](../docs/bucomax/database-backlog.md)  
-- **Ordem de execução / primeira etapa:** [`docs/bucomax/execution-plan.md`](../docs/bucomax/execution-plan.md)  
-- Referência visual, tema e gaps gerais: [`docs/BUCOMAX-INTERFACES-AND-DATA.md`](../docs/BUCOMAX-INTERFACES-AND-DATA.md)
+- **Índice SubManager:** [`docs/submanager/README.md`](../submanager/README.md)  
+- **Uma doc por página desta pasta (migração FE/BE):** [`docs/submanager/pages/README.md`](../submanager/pages/README.md)  
+- **Matriz modelo Prisma × páginas:** [`docs/submanager/pages/entity-to-pages-matrix.md`](../submanager/pages/entity-to-pages-matrix.md)  
+- **Migrations (o que criar no banco):** [`docs/submanager/database-backlog.md`](../submanager/database-backlog.md)  
+- **Ordem de execução / primeira etapa:** [`docs/submanager/execution-plan.md`](../submanager/execution-plan.md)  
+- Referência visual, tema e gaps gerais: [`docs/SUBMANAGER-INTERFACES-AND-DATA.md`](../SUBMANAGER-INTERFACES-AND-DATA.md)

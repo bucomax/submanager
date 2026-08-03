@@ -11,7 +11,7 @@ Mantém a documentação do repositório alinhada ao código e ao produto.
 | `docs/ARCHITECTURE.md` | Novas tabelas Prisma, rotas `/api/v1`, mudança em §8, auth, subdomínios, notificações |
 | `public/openapi.json` | Toda alteração de contrato em `/api/v1` (paths, schemas, security) — Scalar deve refletir |
 | `docs/PRODUCT-SCOPE.md` | Regra de negócio visível ao usuário (jornada, documentos por etapa, fases) |
-| `docs/bucomax/business-logic.md` | Regras de negócio consolidadas, decisões de produto |
+| `docs/submanager/business-logic.md` | Regras de negócio consolidadas, decisões de produto |
 | `README.md` | Stack, links de docs, como rodar o projeto |
 | `docs/DEV-PHASES.md` | Reordenar ou marcar fases concluídas quando mudar o plano |
 

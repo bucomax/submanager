@@ -1,6 +1,6 @@
 # Etapas de desenvolvimento
 
-Ordem geral histórica: **backend** (APIs, dados, e-mail, storage) → **frontend** (login → perfil → shell → jornada). **Estado atual:** núcleo B0–B11 e F1–F8 está **entregue**; evolução segue [docs/bucomax/execution-plan.md](./bucomax/execution-plan.md).
+Ordem geral histórica: **backend** (APIs, dados, e-mail, storage) → **frontend** (login → perfil → shell → jornada). **Estado atual:** núcleo B0–B11 e F1–F8 está **entregue**; evolução segue [docs/submanager/execution-plan.md](./submanager/execution-plan.md).
 
 **E-mail:** referência de layout kaber.ai; no repo iDoctor: `src/infrastructure/email/email-templates.ts`. Variáveis Resend/GCS só em `.env` (ver `.env.example`).
 
@@ -123,4 +123,4 @@ npm run dev
 
 ## Próximo passo
 
-Alinhado ao [execution-plan.md](./bucomax/execution-plan.md): refinamentos de **4.2** sob demanda; **4.1.4** como placeholder; gaps clínicos leves e backlog; **I1–I2** e dispatch real só após reabrir integrações.
+Alinhado ao [execution-plan.md](./submanager/execution-plan.md): refinamentos de **4.2** sob demanda; **4.1.4** como placeholder; gaps clínicos leves e backlog; **I1–I2** e dispatch real só após reabrir integrações.

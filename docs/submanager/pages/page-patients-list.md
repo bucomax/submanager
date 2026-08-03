@@ -3,7 +3,7 @@
 ## Origem do mock
 
 - **Arquivo:** [`arquivos-interfaces/pacientes.html`](../../../arquivos-interfaces/pacientes.html)
-- **Título no mock:** BucoMax — Lista de Pacientes.
+- **Título no mock:** SubManager — Lista de Pacientes.
 
 ## Objetivo no produto
 
@@ -114,4 +114,4 @@ Listar **todos os pacientes** do tenant com **busca**, **filtros** (fase, status
 - [../listings-pagination-and-filters.md](../listings-pagination-and-filters.md)
 - [page-patient-detail.md](./page-patient-detail.md)
 - [page-dashboard.md](./page-dashboard.md) (pipeline complementar)
-- [../BUCOMAX-INTERFACES-AND-DATA.md](../../BUCOMAX-INTERFACES-AND-DATA.md)
+- [../SUBMANAGER-INTERFACES-AND-DATA.md](../../SUBMANAGER-INTERFACES-AND-DATA.md)

@@ -1,4 +1,4 @@
-# Auditoria de Segurança — Bucomax
+# Auditoria de Segurança — SubManager
 
 **Data:** 2026-08-03
 **Escopo:** `src/**`, `packages/prisma/schema.prisma`, `next.config.ts`, `src/proxy.ts`, dependências de produção

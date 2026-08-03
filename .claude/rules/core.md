@@ -8,7 +8,7 @@ Aplica-se a **todos os arquivos** do projeto.
 |-----------|----------|
 | `docs/ARCHITECTURE.md` | Arquitetura, modelo de dados (§8), auth, RBAC, notificações |
 | `docs/PRODUCT-SCOPE.md` | Escopo de produto, jornada do paciente, fases |
-| `docs/bucomax/business-logic.md` | Regras de negócio consolidadas |
+| `docs/submanager/business-logic.md` | Regras de negócio consolidadas |
 | `docs/DEV-PHASES.md` | Fases de implementação e status |
 | `docs/API-DOCS.md` | Documentação API (Scalar + OpenAPI) |
 

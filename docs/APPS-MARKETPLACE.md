@@ -1,12 +1,12 @@
 # Apps Marketplace — Documentação de Implementação
 
-> Sistema de integração de aplicativos externos ao painel Bucomax, com catálogo gerenciado por `super_admin` e ativação por `tenant_admin`.
+> Sistema de integração de aplicativos externos ao painel SubManager, com catálogo gerenciado por `super_admin` e ativação por `tenant_admin`.
 
 ---
 
 ## 1. Visão geral
 
-O Bucomax precisa de um sistema de **marketplace de apps** que permita:
+O SubManager precisa de um sistema de **marketplace de apps** que permita:
 
 1. **Cadastro de apps** (super_admin) — registrar novos produtos/serviços que podem ser integrados ao dashboard.
 2. **Ativação de apps** (tenant_admin) — habilitar/configurar apps disponíveis para seu tenant.
@@ -47,7 +47,7 @@ model App {
   accentColor     String?                       // ex.: "#25D366" para WhatsApp
 
   /// Nome do desenvolvedor/provedor do app
-  developerName   String?                       // ex.: "Bucomax", "Parceiro X"
+  developerName   String?                       // ex.: "SubManager", "Parceiro X"
 
   /// URL do site do desenvolvedor
   developerUrl    String?
@@ -475,11 +475,11 @@ O componente `AppIframeContainer` é responsável por:
    - `{{theme}}` → tema atual (light/dark)
 
 2. **Comunicação via postMessage**:
-   - `bucomax:init` → envia contexto inicial ao app (tenantId, locale, theme, user básico)
-   - `bucomax:navigate` → app pode solicitar navegação no dashboard
-   - `bucomax:toast` → app pode disparar toast no dashboard
-   - `bucomax:resize` → app pode solicitar resize do container
-   - `bucomax:token-request` → app pode solicitar token temporário para APIs do Bucomax
+   - `submanager:init` → envia contexto inicial ao app (tenantId, locale, theme, user básico)
+   - `submanager:navigate` → app pode solicitar navegação no dashboard
+   - `submanager:toast` → app pode disparar toast no dashboard
+   - `submanager:resize` → app pode solicitar resize do container
+   - `submanager:token-request` → app pode solicitar token temporário para APIs do SubManager
 
 3. **Segurança do iframe**:
    - `sandbox="allow-scripts allow-same-origin allow-forms allow-popups"`
@@ -649,7 +649,7 @@ A página `/dashboard/apps` segue o layout de App Store:
 │  Informações                                    │
 │  ─────────────                                  │
 │  Categoria: Comunicação                         │
-│  Desenvolvedor: Bucomax                         │
+│  Desenvolvedor: SubManager                         │
 │  Site: https://...                              │
 │  Versão: 1.0.0 (do metadata)                   │
 └─────────────────────────────────────────────────┘
@@ -693,7 +693,7 @@ Durante a fase de transição, a API `/api/v1/tenant/whatsapp` continua funciona
 ### 9.1 Segurança do iframe
 
 - **CSP (Content Security Policy):** Hoje o Next.js pode ter CSP restritiva. Será necessário configurar `frame-src` dinamicamente para permitir os domínios dos apps ativos. Isso pode ser feito via middleware do Next.js que consulta os apps ativos.
-- **Token de autenticação para iframes:** Apps externos precisarão de um token temporário (short-lived, scoped) para chamar APIs do Bucomax em nome do tenant. Proposta: endpoint `/api/v1/tenant/apps/:appId/token` que gera JWT com escopo limitado ao app.
+- **Token de autenticação para iframes:** Apps externos precisarão de um token temporário (short-lived, scoped) para chamar APIs do SubManager em nome do tenant. Proposta: endpoint `/api/v1/tenant/apps/:appId/token` que gera JWT com escopo limitado ao app.
 - **Clickjacking:** O iframe do app externo pode tentar redirecionar ou exibir conteúdo malicioso. O `sandbox` attribute mitiga isso parcialmente.
 
 ### 9.2 Billing e assinatura
@@ -865,13 +865,13 @@ Quando a plataforma for escolhida, será necessário:
   - `TenantAppPermission` (tenantAppId, membershipId, permissions[])
 - **Para v1:** Todos os membros do tenant veem apps ativos. Granularidade posterior.
 
-### 9.6 Webhooks de saída (app → Bucomax)
+### 9.6 Webhooks de saída (app → SubManager)
 
-- Apps externos podem precisar notificar o Bucomax de eventos (ex.: chatbot completou atendimento, agendamento confirmado).
+- Apps externos podem precisar notificar o SubManager de eventos (ex.: chatbot completou atendimento, agendamento confirmado).
 - Necessário:
   - `App.webhookSecret` para validar assinatura
   - Rota genérica `/api/v1/webhooks/apps/:appSlug` que roteia para handler específico
-  - Registro de webhook por `TenantApp` (URL de callback do Bucomax para o app)
+  - Registro de webhook por `TenantApp` (URL de callback do SubManager para o app)
 - **Para v1:** Implementar apenas para apps que precisam (caso a caso).
 
 ### 9.7 Dados compartilhados entre apps
@@ -898,7 +898,7 @@ Quando a plataforma for escolhida, será necessário:
 
 ### 9.10 Rate limiting por app
 
-- Apps iframe que usam token para acessar APIs do Bucomax precisam de rate limiting separado para evitar que um app bugado degrade o tenant inteiro.
+- Apps iframe que usam token para acessar APIs do SubManager precisam de rate limiting separado para evitar que um app bugado degrade o tenant inteiro.
 - Adicionar preset `rate_limit_app` com limite por `(tenantId, appId)`.
 
 ### 9.11 Desativação em cascata
@@ -945,8 +945,8 @@ Quando a plataforma for escolhida, será necessário:
 - [x] CSP dinâmico via middleware (`ALLOWED_IFRAME_ORIGINS` env var + security headers)
 - [x] Error boundary + timeout (15s) no iframe com retry
 - [x] postMessage protocol completo:
-  - Host→Iframe: `bucomax:init` (context + token), `bucomax:theme`
-  - Iframe→Host: `bucomax:ready`, `bucomax:navigate`, `bucomax:toast`, `bucomax:resize`, `bucomax:token-request`
+  - Host→Iframe: `submanager:init` (context + token), `submanager:theme`
+  - Iframe→Host: `submanager:ready`, `submanager:navigate`, `submanager:toast`, `submanager:resize`, `submanager:token-request`
   - Validação de origin em todas as mensagens
 - [x] Hook `useIframeProtocol` — gerencia comunicação bidirecional
 - [x] Tipos tipados em `iframe-protocol.ts` com type guard `isIframeToHostMessage`

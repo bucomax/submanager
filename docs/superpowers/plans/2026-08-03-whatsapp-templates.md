@@ -970,13 +970,13 @@ describe("buildStageTemplateParams", () => {
         patientName: "Maria Souza",
         documentCount: 3,
         stageName: "Exames pré-operatórios",
-        portalUrl: "https://app.bucomax.com/clinica/patient/login",
+        portalUrl: "https://app.submanager.com/clinica/patient/login",
       }),
     ).toEqual([
       "Maria Souza",
       "3",
       "Exames pré-operatórios",
-      "https://app.bucomax.com/clinica/patient/login",
+      "https://app.submanager.com/clinica/patient/login",
     ]);
   });
 

@@ -1,4 +1,4 @@
-# Plano de execução — Bucomax
+# Plano de execução — SubManager
 
 Ordem prática de entrega, alinhada a [frontend-backend-scope.md](./frontend-backend-scope.md) e [database-backlog.md](./database-backlog.md). **Detalhes de API e UI** continuam nas páginas em `pages/` e em [listings-pagination-and-filters.md](./listings-pagination-and-filters.md).
 
@@ -51,7 +51,7 @@ Não há desenvolvimento ativo de **IA**, **WhatsApp (dispatch real)**, **webhoo
 
 | Doc | Conteúdo |
 |-----|----------|
-| [README.md](./README.md) | Índice Bucomax |
+| [README.md](./README.md) | Índice SubManager |
 | [database-backlog.md](./database-backlog.md) | Migrations e ideias de modelo |
 | [listings-pagination-and-filters.md](./listings-pagination-and-filters.md) | Paginação e filtros |
 | [pages/README.md](./pages/README.md) | Páginas por entidade |

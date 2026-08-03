@@ -1,4 +1,4 @@
-# Auditoria de Arquitetura, SOLID e Clean Code — Bucomax
+# Auditoria de Arquitetura, SOLID e Clean Code — SubManager
 
 **Data:** 2026-08-03
 **Escopo:** `src/**` (728 arquivos, ~61.000 linhas), `packages/prisma/schema.prisma`

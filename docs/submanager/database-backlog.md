@@ -1,7 +1,7 @@
 # Backlog: o que criar/alterar no banco (Prisma)
 
-Documento **único** que consolida mudanças de schema necessárias para os mocks Bucomax e para o fluxo **colunas DnD + Kanban**.  
-Detalhes por tela também citam gaps em [`pages/`](./pages/) e em [`../BUCOMAX-INTERFACES-AND-DATA.md`](../BUCOMAX-INTERFACES-AND-DATA.md).
+Documento **único** que consolida mudanças de schema necessárias para os mocks SubManager e para o fluxo **colunas DnD + Kanban**.  
+Detalhes por tela também citam gaps em [`pages/`](./pages/) e em [`../SUBMANAGER-INTERFACES-AND-DATA.md`](../SUBMANAGER-INTERFACES-AND-DATA.md).
 
 **Regra:** toda tabela nova com `tenantId` quando for dado do tenant; revisar LGPD antes de campos clínicos.
 
@@ -88,5 +88,5 @@ Com isso já é possível um **MVP** de listar estágios publicados + pacientes 
 ## Relacionado
 
 - [execution-plan.md](./execution-plan.md) — **em qual fase** cada backlog entra.  
-- [../BUCOMAX-INTERFACES-AND-DATA.md](../BUCOMAX-INTERFACES-AND-DATA.md) — lista original de gaps (§5).  
+- [../SUBMANAGER-INTERFACES-AND-DATA.md](../SUBMANAGER-INTERFACES-AND-DATA.md) — lista original de gaps (§5).  
 - [pages/entity-to-pages-matrix.md](./pages/entity-to-pages-matrix.md)

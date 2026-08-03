@@ -43,7 +43,7 @@ Em **cada** arquivo `page-*.md` há seções **Frontend** e **Backend** com chec
 
 ---
 
-## Índice principal Bucomax
+## Índice principal SubManager
 
 - [../README.md](../README.md) — hub geral  
 - [../database-backlog.md](../database-backlog.md) — migrations Prisma  

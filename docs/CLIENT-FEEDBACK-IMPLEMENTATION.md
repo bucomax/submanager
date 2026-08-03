@@ -156,7 +156,7 @@ Cards que colapsam:
 - **Completed Treatments** — ja colapsavel (accordion), manter
 - **Notas Clinicas** — expandido por default, colapsavel
 
-**Persistencia:** `localStorage` com chave `bucomax:collapse:{sectionId}`. Implementar hook `useCollapsibleState(sectionId, defaultOpen)`.
+**Persistencia:** `localStorage` com chave `submanager:collapse:{sectionId}`. Implementar hook `useCollapsibleState(sectionId, defaultOpen)`.
 
 ---
 

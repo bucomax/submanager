@@ -1,4 +1,4 @@
-# Bucomax — documentação (índice)
+# SubManager — documentação (índice)
 
 Ponto de entrada único: este arquivo **só agrega links** para os documentos por tema. O conteúdo detalhado fica nos arquivos listados abaixo.
 
@@ -17,7 +17,7 @@ Lista consolidada de **migrations** e prioridades (**P0 / P1 / P2 / P3**), separ
 
 **[database-backlog.md](./database-backlog.md)**
 
-*(Antes isso estava só como “gaps” em `BUCOMAX-INTERFACES-AND-DATA.md` e nos `page-*.md`.)*
+*(Antes isso estava só como “gaps” em `SUBMANAGER-INTERFACES-AND-DATA.md` e nos `page-*.md`.)*
 
 ---
 
@@ -50,7 +50,7 @@ Resumo: **A** (editor DnD) e **B** (Kanban) não são “só front” — exigem
 | **A — Editor de colunas (Configurações)** | [column-editor-drag-drop.md](./column-editor-drag-drop.md) | UI com DnD, adicionar/remover/renomear etapas, rascunho vs publicar, validações. |
 | **B — Pipeline (Kanban) no dashboard** | [dashboard-kanban-dynamic-columns.md](./dashboard-kanban-dynamic-columns.md) | Subseção “Visão por etapas”: colunas dinâmicas, cards, DnD → transição. Métricas/alertas/ações: [pages/page-dashboard.md](./pages/page-dashboard.md). |
 | **C — Persistência, API e transições** | [persistence-api-and-transitions.md](./persistence-api-and-transitions.md) | `PathwayStage.sortOrder`, `PathwayVersion`, `graphJson` enxuto ou só estágios, endpoints, use case de transição. |
-| **D — Referência visual e gaps gerais** | [../BUCOMAX-INTERFACES-AND-DATA.md](../BUCOMAX-INTERFACES-AND-DATA.md) | Mocks `arquivos-interfaces`, tema Shadcn, gaps de banco complementares (SLA, OPME, etc.). |
+| **D — Referência visual e gaps gerais** | [../SUBMANAGER-INTERFACES-AND-DATA.md](../SUBMANAGER-INTERFACES-AND-DATA.md) | Mocks `arquivos-interfaces`, tema Shadcn, gaps de banco complementares (SLA, OPME, etc.). |
 | **E — Arquitetura do monorepo** | [../ARCHITECTURE.md](../ARCHITECTURE.md) | Multi-tenant, §8 modelo de dados, RBAC. |
 | **Listagens e filtros** | [listings-pagination-and-filters.md](./listings-pagination-and-filters.md) | Paginação obrigatória (incl. cards por coluna do Kanban e lista DnD de etapas acima de limite); filtros por página mock. |
 
@@ -66,7 +66,7 @@ Resumo: **A** (editor DnD) e **B** (Kanban) não são “só front” — exigem
 6. [column-editor-drag-drop.md](./column-editor-drag-drop.md) + [dashboard-kanban-dynamic-columns.md](./dashboard-kanban-dynamic-columns.md) + [pages/page-dashboard.md](./pages/page-dashboard.md) (escopo completo do `index.html`).  
 7. [`pages/README.md`](./pages/README.md) — detalhe por página do mock.  
 8. [listings-pagination-and-filters.md](./listings-pagination-and-filters.md) — paginação e filtros.  
-9. [../BUCOMAX-INTERFACES-AND-DATA.md](../BUCOMAX-INTERFACES-AND-DATA.md) — tema e gaps gerais.
+9. [../SUBMANAGER-INTERFACES-AND-DATA.md](../SUBMANAGER-INTERFACES-AND-DATA.md) — tema e gaps gerais.
 
 ---
 

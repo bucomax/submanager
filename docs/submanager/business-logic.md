@@ -1,4 +1,4 @@
-# Bucomax — lógica de negócio consolidada
+# SubManager — lógica de negócio consolidada
 
 Este documento resume a **regra de negócio efetiva** que hoje governa cadastro de pacientes, jornada clínica, documentos por etapa e responsabilidades no tenant. Ele complementa `ARCHITECTURE.md` (§8), `execution-plan.md` e `persistence-api-and-transitions.md`.
 
@@ -246,5 +246,5 @@ Este documento resume a **regra de negócio efetiva** que hoje governa cadastro 
 
 - `docs/ARCHITECTURE.md`
 - `docs/PRODUCT-SCOPE.md`
-- `docs/bucomax/execution-plan.md`
-- `docs/bucomax/persistence-api-and-transitions.md`
+- `docs/submanager/execution-plan.md`
+- `docs/submanager/persistence-api-and-transitions.md`
