@@ -78,6 +78,13 @@ const MAGIC_BYTES_MAP: Record<string, MimeRule> = {
 export const MAGIC_BYTES_READ_SIZE = 16;
 
 /**
+ * MIME types com assinatura binária conhecida — fonte de verdade da allowlist
+ * de upload (`src/lib/constants/file-upload.ts`). Só aceitamos no presign o que
+ * conseguimos verificar depois, no registro.
+ */
+export const MAGIC_BYTES_KNOWN_MIME_TYPES: readonly string[] = Object.keys(MAGIC_BYTES_MAP);
+
+/**
  * MIME types que não possuem assinatura binária confiável (texto, CSV, etc.).
  * Para esses, a validação é ignorada (sempre retorna válido).
  */

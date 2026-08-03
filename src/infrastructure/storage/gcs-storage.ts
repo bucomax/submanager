@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "crypto";
 import { Storage } from "@google-cloud/storage";
 
+import { UPLOAD_URL_TTL_SECONDS } from "@/lib/constants/file-upload";
 import { BUCOMAX_GCS_PROJECT_ID } from "@/lib/constants/gcs";
 
 type GcpServiceAccountJson = {
@@ -205,7 +206,7 @@ export async function presignPutObject(key: string, mimeType: string): Promise<s
   const [url] = await file.getSignedUrl({
     version: "v4",
     action: "write",
-    expires: Date.now() + 3600 * 1000,
+    expires: Date.now() + UPLOAD_URL_TTL_SECONDS * 1000,
     contentType: mimeType,
   });
   return url;

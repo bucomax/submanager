@@ -12,6 +12,7 @@ import {
   getActiveTenantIdOr400,
   requireSessionOr401,
 } from "@/lib/auth/guards";
+import { UPLOAD_URL_TTL_SECONDS } from "@/lib/constants/file-upload";
 import { postFilePresignBodySchema } from "@/lib/validators/file";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,6 @@ export async function POST(request: Request) {
     uploadUrl,
     mimeType: parsed.data.mimeType,
     publicUrl: publicUrlForKey(key),
-    expiresInSeconds: 3600,
+    expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
   });
 }

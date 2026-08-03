@@ -7,6 +7,7 @@ import {
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { requireActivePatientPortalClient } from "@/lib/auth/patient-portal-request";
+import { UPLOAD_URL_TTL_SECONDS } from "@/lib/constants/file-upload";
 import { patientPortalFilePresignBodySchema } from "@/lib/validators/patient-portal-files";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,6 @@ export async function POST(request: Request) {
     uploadUrl,
     mimeType: parsed.data.mimeType,
     publicUrl: publicUrlForKey(key),
-    expiresInSeconds: 3600,
+    expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
   });
 }
