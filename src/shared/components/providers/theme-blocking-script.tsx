@@ -7,6 +7,11 @@ import Script from "next/script";
 
 export function ThemeBlockingScript() {
   return (
+    // A regra só reconhece `pages/_document.js`; no App Router `beforeInteractive` é
+    // suportado no root layout, e é lá que este componente é renderizado
+    // (`src/app/[locale]/layout.tsx`, dentro de `<head>`). Trocar a estratégia traria
+    // de volta o flash de tema errado.
+    // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
     <Script id="next-themes-block" strategy="beforeInteractive" src="/theme-hydration.js" />
   );
 }

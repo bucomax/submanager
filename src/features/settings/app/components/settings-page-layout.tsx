@@ -9,6 +9,7 @@ import { EmailSettingsCard } from "@/features/settings/app/components/email-sett
 import { TenantNotificationsCard } from "@/features/settings/app/components/tenant-notifications-card";
 import { UserSettingsPanel } from "@/features/settings/app/components/user-settings-panel";
 import { UsersManagementPanel } from "@/features/settings/app/components/users-management-panel";
+import { useSectionFromHash } from "@/features/settings/app/hooks/use-section-from-hash";
 import {
   sectionFromHash,
   type SettingsSectionId,
@@ -29,7 +30,7 @@ import {
 import { usePathname } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type NavDef = { id: SettingsSectionId; icon: LucideIcon; superAdminOnly?: boolean; tenantAdminOnly?: boolean };
 
@@ -64,24 +65,24 @@ export function SettingsPageLayout() {
     [isSuperAdmin, isTenantAdminOrSuper],
   );
 
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>("account");
+  /** Seção escolhida por clique; enquanto for `null`, o hash da URL manda. */
+  const [selectedSection, setSelectedSection] = useState<SettingsSectionId | null>(null);
+  const hashSection = useSectionFromHash();
+  const requestedSection = selectedSection ?? hashSection ?? "account";
+  /** `navItems` depende da sessão: seção fora do menu atual cai para "account". */
+  const activeSection = navItems.some((i) => i.id === requestedSection)
+    ? requestedSection
+    : "account";
   const [panelVisible, setPanelVisible] = useState(true);
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipHashReplaceRef = useRef(false);
-
-  useLayoutEffect(() => {
-    const fromHash = sectionFromHash(typeof window !== "undefined" ? window.location.hash : "");
-    if (fromHash && navItems.some((i) => i.id === fromHash)) {
-      setActiveSection(fromHash);
-    }
-  }, [navItems]);
 
   useEffect(() => {
     function onHashChange() {
       const id = sectionFromHash(window.location.hash);
       if (id && navItems.some((i) => i.id === id)) {
         skipHashReplaceRef.current = true;
-        setActiveSection(id);
+        setSelectedSection(id);
         setPanelVisible(true);
       }
     }
@@ -94,11 +95,18 @@ export function SettingsPageLayout() {
       skipHashReplaceRef.current = false;
       return;
     }
+    if (typeof window === "undefined") return;
     const desired = `#${activeSection}`;
-    if (typeof window !== "undefined" && window.location.hash !== desired) {
-      window.history.replaceState(null, "", `${pathname}${desired}`);
+    if (window.location.hash === desired) return;
+    // Enquanto nenhuma seção foi escolhida por clique, um hash válido na URL manda.
+    // Sem esta guarda, o primeiro commit (antes de `useSectionFromHash` estabilizar
+    // após a hidratação) sobrescreveria `/settings#team` por `#account`.
+    const urlSection = sectionFromHash(window.location.hash);
+    if (selectedSection === null && urlSection !== null && navItems.some((i) => i.id === urlSection)) {
+      return;
     }
-  }, [activeSection, pathname]);
+    window.history.replaceState(null, "", `${pathname}${desired}`);
+  }, [activeSection, navItems, pathname, selectedSection]);
 
   const goToSection = useCallback(
     (id: SettingsSectionId) => {
@@ -109,7 +117,7 @@ export function SettingsPageLayout() {
       }
       setPanelVisible(false);
       fadeTimeoutRef.current = setTimeout(() => {
-        setActiveSection(id);
+        setSelectedSection(id);
         setPanelVisible(true);
         fadeTimeoutRef.current = null;
       }, FADE_MS);
@@ -122,12 +130,6 @@ export function SettingsPageLayout() {
       if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!navItems.some((i) => i.id === activeSection)) {
-      setActiveSection("account");
-    }
-  }, [navItems, activeSection]);
 
   const panelContent = useMemo(() => {
     switch (activeSection) {

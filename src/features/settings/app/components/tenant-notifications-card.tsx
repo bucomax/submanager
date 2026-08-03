@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, RefreshCw, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 import { useTenantNotifications } from "@/features/settings/app/hooks/use-tenant-notifications";
@@ -18,6 +18,7 @@ import {
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/shared/components/ui/field";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Switch } from "@/shared/components/ui/switch";
+import { useSyncedDraft } from "@/shared/hooks/use-synced-draft";
 import type { TenantNotificationSettingsDto } from "@/types/api/tenant-settings-v1";
 
 const preferenceKeys: Array<keyof TenantNotificationSettingsDto> = [
@@ -42,12 +43,7 @@ export function TenantNotificationsCard() {
     savePreferences,
   } = useTenantNotifications();
 
-  const [draft, setDraft] = useState<TenantNotificationSettingsDto>(preferences);
-
-  useEffect(() => {
-    if (!hasLoaded) return;
-    setDraft(preferences);
-  }, [hasLoaded, preferences]);
+  const [draft, setDraft] = useSyncedDraft(preferences);
 
   const isDirty = useMemo(
     () => preferenceKeys.some((key) => draft[key] !== preferences[key]),

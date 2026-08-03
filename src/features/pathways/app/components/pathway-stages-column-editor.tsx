@@ -13,7 +13,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSo
 import type { Node } from "@xyflow/react";
 import { ExternalLink, Info, Loader2, Plus, RefreshCw, Rocket, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PATHWAY_STAGE_NONE_ASSIGNEE } from "@/features/pathways/app/utils/stage-default-assignee";
 import { setStageNodeDefaultAssignees } from "@/lib/pathway/stage-node-assignees";
 import { PathwaySortableStageRow } from "@/features/pathways/app/components/pathway-sortable-stage-row";
@@ -40,6 +40,8 @@ import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
+const EMPTY_NODES: Node[] = [];
+
 export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEditorProps) {
   const t = useTranslations("pathways.columnEditor");
   const tEditor = useTranslations("pathways.editor");
@@ -57,7 +59,31 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
     hasPublishableGraphChanges,
     reload,
   } = usePathwayDraftVersion(pathwayId);
-  const [nodes, setNodes] = useState<Node[]>([]);
+  /**
+   * Rascunho local das etapas. O grafo do servidor é a semente: enquanto `graphJson`
+   * mantiver a mesma identidade valem as edições locais; quando ele é recarregado
+   * (load, salvar, publicar) o rascunho volta a acompanhar o servidor — mesmo efeito
+   * do antigo `useLayoutEffect` de reset, porém derivado no render.
+   */
+  const serverNodes = useMemo(
+    () => (graphJson == null ? EMPTY_NODES : ensurePathwayGraphNodePositions(parsePathwayStageNodes(graphJson))),
+    [graphJson],
+  );
+  const [draftNodes, setDraftNodes] = useState<{ source: unknown; nodes: Node[] } | null>(null);
+  const nodes =
+    draftNodes !== null && Object.is(draftNodes.source, graphJson) ? draftNodes.nodes : serverNodes;
+  const setNodes = useCallback(
+    (updater: Node[] | ((previous: Node[]) => Node[])) =>
+      setDraftNodes((previous) => {
+        const current =
+          previous !== null && Object.is(previous.source, graphJson) ? previous.nodes : serverNodes;
+        return {
+          source: graphJson,
+          nodes: typeof updater === "function" ? updater(current) : updater,
+        };
+      }),
+    [graphJson, serverNodes],
+  );
   const [assigneeOptions, setAssigneeOptions] = useState<LabeledSelectOption[]>([]);
   const [removeStageDialog, setRemoveStageDialog] = useState<{
     stageKey: string;
@@ -95,11 +121,6 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-
-  useLayoutEffect(() => {
-    if (graphJson == null) return;
-    setNodes(ensurePathwayGraphNodePositions(parsePathwayStageNodes(graphJson)));
-  }, [graphJson]);
 
   const isDraftDirty = useMemo(
     () =>
@@ -256,7 +277,8 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
                 items.map((item) => {
                   if (item.id !== itemId) return item;
                   if (!requiredForTransition) {
-                    const { requiredForTransition: _r, ...rest } = item;
+                    const rest = { ...item };
+                    delete rest.requiredForTransition;
                     return rest;
                   }
                   return { ...item, requiredForTransition: true };

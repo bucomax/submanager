@@ -83,7 +83,6 @@ export default async function globalSetup(): Promise<void> {
       "utf8",
     );
 
-    // eslint-disable-next-line no-console -- feedback em CI/local
     console.log(
       `[playwright global-setup] Dois convites E2E criados (UI + API) para /${tenantSlug}/patient-self-register`,
     );

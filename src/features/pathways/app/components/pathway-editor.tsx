@@ -79,7 +79,17 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
   } = usePathwayDraftVersion(pathwayId);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  /**
+   * A seleção fica presa ao grafo que a originou: quando `graphJson` é recarregado
+   * (load, salvar, publicar) ela se anula sozinha no render, sem efeito de reset.
+   */
+  const [selection, setSelection] = useState<{ source: unknown; id: string } | null>(null);
+  const selectedId =
+    selection !== null && Object.is(selection.source, graphJson) ? selection.id : null;
+  const setSelectedId = useCallback(
+    (id: string | null) => setSelection(id === null ? null : { source: graphJson, id }),
+    [graphJson],
+  );
   const [assigneeOptions, setAssigneeOptions] = useState<LabeledSelectOption[]>([]);
   const [removeStageDialog, setRemoveStageDialog] = useState<{
     stageKey: string;
@@ -118,7 +128,6 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
     const parsed = parsePathwayGraph(graphJson);
     setNodes(ensurePathwayGraphNodePositions(parsed.nodes));
     setEdges(parsed.edges);
-    setSelectedId(null);
   }, [graphJson, setEdges, setNodes]);
 
   const isDraftDirty = useMemo(
@@ -314,7 +323,8 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
                 items.map((item) => {
                   if (item.id !== itemId) return item;
                   if (!requiredForTransition) {
-                    const { requiredForTransition: _r, ...rest } = item;
+                    const rest = { ...item };
+                    delete rest.requiredForTransition;
                     return rest;
                   }
                   return { ...item, requiredForTransition: true };

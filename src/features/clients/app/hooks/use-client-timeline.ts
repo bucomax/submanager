@@ -44,9 +44,11 @@ export function useClientTimeline(clientId: string, refreshSignal = 0) {
     } finally {
       setLoading(false);
     }
-  }, [clientId, page, t, categoriesQuery, refreshSignal]);
+  }, [clientId, page, t, categoriesQuery]);
 
   useEffect(() => {
+    // `refreshSignal` não entra em `load`: é o efeito que reexecuta a busca quando o
+    // detalhe do cliente sinaliza que a timeline mudou.
     void load();
   }, [load, refreshSignal]);
 

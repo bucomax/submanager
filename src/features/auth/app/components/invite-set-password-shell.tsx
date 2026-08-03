@@ -43,19 +43,12 @@ export function InviteSetPasswordShell({ successMessage }: InviteSetPasswordShel
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [preview, setPreview] = useState<InviteSetPasswordPreviewDto | null>(null);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setReady(true);
-      return;
-    }
+    if (!token) return;
     let cancelled = false;
     void fetchInviteSetPasswordPreview(token).then((p) => {
-      if (!cancelled) {
-        setPreview(p);
-        setReady(true);
-      }
+      if (!cancelled) setPreview(p);
     });
     return () => {
       cancelled = true;
@@ -64,7 +57,7 @@ export function InviteSetPasswordShell({ successMessage }: InviteSetPasswordShel
 
   return (
     <>
-      {ready && preview ? <InvitePreviewCard preview={preview} /> : null}
+      {preview ? <InvitePreviewCard preview={preview} /> : null}
       <SetPasswordForm successMessage={successMessage} />
     </>
   );

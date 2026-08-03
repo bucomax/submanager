@@ -49,11 +49,10 @@ export function TenantMembersCard() {
   } = useTenantMembers();
 
   useEffect(() => {
+    // Com o nome vindo da sessão o fallback da API nem é lido (ver `tenantName` abaixo),
+    // então não há o que resetar aqui.
     const fromSession = session?.user?.tenantName?.trim();
-    if (fromSession) {
-      setTenantNameFromApi(null);
-      return;
-    }
+    if (fromSession) return;
     if (sessionStatus !== "authenticated" || !canManage || !tenantId) {
       return;
     }

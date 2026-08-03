@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 const PAGE_SIZE = 50;
+const NO_STAGES: PublishedStageRowDto[] = [];
 
 export function useClientsList() {
   const t = useTranslations("clients.list");
@@ -28,22 +29,29 @@ export function useClientsList() {
   const [pathwayFilter, setPathwayFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [page, setPage] = useState(1);
+
+  /**
+   * A página fica atrelada à combinação de filtros que a originou: qualquer mudança de
+   * filtro volta para a página 1 no próprio render, sem efeito de reset.
+   */
+  const filtersKey = [debouncedQ, pathwayFilter, stageFilter, statusFilter].join("\u0000");
+  const [pageState, setPageState] = useState({ filtersKey, page: 1 });
+  const page = pageState.filtersKey === filtersKey ? pageState.page : 1;
 
   const [pathways, setPathways] = useState<PathwayOption[] | null>(null);
   const [pathwaysError, setPathwaysError] = useState<string | null>(null);
 
-  const [stages, setStages] = useState<PublishedStageRowDto[] | null>(null);
-  const [stagesError, setStagesError] = useState<string | null>(null);
+  /** Etapas publicadas do fluxo selecionado, guardadas com o fluxo que as originou. */
+  const [loadedStages, setLoadedStages] = useState<{
+    pathwayId: string;
+    rows: PublishedStageRowDto[];
+    error: string | null;
+  } | null>(null);
 
   const [rows, setRows] = useState<ClientListItemDto[] | null>(null);
   const [pagination, setPagination] = useState<ApiPagination | null>(null);
   const [statusFilterCapped, setStatusFilterCapped] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedQ, pathwayFilter, stageFilter, statusFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,25 +75,22 @@ export function useClientsList() {
   }, [t]);
 
   useEffect(() => {
-    if (pathwayFilter === "all") {
-      setStages([]);
-      setStagesError(null);
-      return;
-    }
+    if (pathwayFilter === "all") return;
 
     let cancelled = false;
-    setStages(null);
-    setStagesError(null);
     void (async () => {
       try {
         const data = await listPublishedStagesForPathway(pathwayFilter);
         if (!cancelled) {
-          setStages(data);
+          setLoadedStages({ pathwayId: pathwayFilter, rows: data, error: null });
         }
       } catch (e) {
         if (!cancelled) {
-          setStagesError(e instanceof Error ? e.message : t("stagesLoadError"));
-          setStages([]);
+          setLoadedStages({
+            pathwayId: pathwayFilter,
+            rows: [],
+            error: e instanceof Error ? e.message : t("stagesLoadError"),
+          });
         }
       }
     })();
@@ -94,6 +99,12 @@ export function useClientsList() {
       cancelled = true;
     };
   }, [pathwayFilter, t]);
+
+  const stagesForFilter =
+    pathwayFilter !== "all" && loadedStages?.pathwayId === pathwayFilter ? loadedStages : null;
+  const stages: PublishedStageRowDto[] | null =
+    pathwayFilter === "all" ? NO_STAGES : (stagesForFilter?.rows ?? null);
+  const stagesError = stagesForFilter?.error ?? null;
 
   const fetchListPage = useCallback(
     async (opts?: { fresh?: boolean }) => {
@@ -169,12 +180,12 @@ export function useClientsList() {
   const canNext = pagination?.hasNextPage ?? false;
 
   const goPrev = useCallback(() => {
-    setPage((p) => Math.max(1, p - 1));
-  }, []);
+    setPageState({ filtersKey, page: Math.max(1, page - 1) });
+  }, [filtersKey, page]);
 
   const goNext = useCallback(() => {
-    setPage((p) => p + 1);
-  }, []);
+    setPageState({ filtersKey, page: page + 1 });
+  }, [filtersKey, page]);
 
   const listLoading = rows === null && !listError;
   const stagesLoading = pathwayFilter !== "all" && stages === null;

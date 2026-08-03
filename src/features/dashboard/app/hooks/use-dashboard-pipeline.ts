@@ -124,7 +124,7 @@ export function useDashboardPipeline(pathways: DashboardPathwayOption[]): UseDas
     if (!pathwayId && withPublished[0]) {
       setPathwayId(withPublished[0].id);
     }
-  }, [pathwayId, withPublished]);
+  }, [pathwayId, withPublished, setPathwayId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +179,7 @@ export function useDashboardPipeline(pathways: DashboardPathwayOption[]): UseDas
         }
       }
     },
-    [pathwayId, debouncedSearch, statusFilter, opmeSupplierId, t],
+    [pathwayId, debouncedSearch, statusFilter, opmeSupplierId],
   );
 
   useEffect(() => {
@@ -217,7 +217,7 @@ export function useDashboardPipeline(pathways: DashboardPathwayOption[]): UseDas
         setLoadingMoreStageId(null);
       }
     },
-    [pathwayId, columns, debouncedSearch, opmeSupplierId, t],
+    [pathwayId, columns, debouncedSearch, opmeSupplierId],
   );
 
   const movePatientToStage = useCallback(

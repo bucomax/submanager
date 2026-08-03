@@ -3,10 +3,7 @@ import { apiClient } from "@/lib/api/http-client";
 import type { ApiErrorEnvelope } from "@/lib/api/envelope";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
 import { AxiosError } from "axios";
-import type {
-  PatchPatientChecklistItemRequestBody,
-  PatchPatientChecklistItemResponseData,
-} from "@/types/api/patient-pathways-v1";
+import type { PatchPatientChecklistItemResponseData } from "@/types/api/patient-pathways-v1";
 import type {
   PatientPathwayDetail,
   TogglePatientChecklistItemInput,

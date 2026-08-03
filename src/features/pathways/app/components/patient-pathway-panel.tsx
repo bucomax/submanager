@@ -1,7 +1,10 @@
 "use client";
 
 import { usePatientPathway } from "@/features/pathways/app/hooks/use-patient-pathway";
-import type { PatientPathwayPanelProps } from "@/features/pathways/app/types/components";
+import type {
+  PatientPathwayPanelProps,
+  PatientPathwayTransitionCardProps,
+} from "@/features/pathways/app/types/components";
 import { toast } from "@/lib/toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -17,41 +20,12 @@ import {
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function PatientPathwayPanel({ patientPathwayId }: PatientPathwayPanelProps) {
   const t = useTranslations("pathways.patient");
   const { data, loading, error, submitting, reload, submitTransition, nextOptions } =
     usePatientPathway(patientPathwayId);
-  const [toStageId, setToStageId] = useState<string>("");
-  const [note, setNote] = useState("");
-
-  useEffect(() => {
-    if (data) {
-      setToStageId("");
-      setNote("");
-    }
-  }, [data?.id, data?.currentStage?.id]);
-
-  async function handleSubmit() {
-    if (!toStageId) {
-      toast.error(t("toStagePlaceholder"));
-      return;
-    }
-    if (toStageId === data?.currentStage?.id) {
-      toast.error(t("sameStage"));
-      return;
-    }
-    try {
-      await submitTransition({
-        toStageId,
-        note: note.trim() || undefined,
-      });
-      toast.success(t("success"));
-    } catch {
-      /* erro: toast global no apiClient */
-    }
-  }
 
   if (loading && !data && !error) {
     return (
@@ -71,6 +45,49 @@ export function PatientPathwayPanel({ patientPathwayId }: PatientPathwayPanelPro
         </Button>
       </div>
     );
+  }
+
+  return (
+    // A `key` remonta o card ao trocar de paciente ou de etapa atual, zerando o
+    // formulário sem precisar de um efeito de reset.
+    <PatientPathwayTransitionCard
+      key={`${data.id}:${data.currentStage?.id ?? ""}`}
+      data={data}
+      nextOptions={nextOptions}
+      submitting={submitting}
+      submitTransition={submitTransition}
+    />
+  );
+}
+
+function PatientPathwayTransitionCard({
+  data,
+  nextOptions,
+  submitting,
+  submitTransition,
+}: PatientPathwayTransitionCardProps) {
+  const t = useTranslations("pathways.patient");
+  const [toStageId, setToStageId] = useState<string>("");
+  const [note, setNote] = useState("");
+
+  async function handleSubmit() {
+    if (!toStageId) {
+      toast.error(t("toStagePlaceholder"));
+      return;
+    }
+    if (toStageId === data.currentStage?.id) {
+      toast.error(t("sameStage"));
+      return;
+    }
+    try {
+      await submitTransition({
+        toStageId,
+        note: note.trim() || undefined,
+      });
+      toast.success(t("success"));
+    } catch {
+      /* erro: toast global no apiClient */
+    }
   }
 
   return (

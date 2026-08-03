@@ -17,7 +17,12 @@ export function ThemePreferenceBridge() {
   const setThemePreference = usePersistedAppStore((s) => s.setThemePreference);
   const { setTheme } = useTheme();
   const setThemeRef = useRef(setTheme);
-  setThemeRef.current = setTheme;
+
+  // Ref não pode ser escrita durante o render; este efeito roda antes do efeito de aplicação
+  // abaixo, então `setThemeRef.current` já está atualizado quando ele lê.
+  useEffect(() => {
+    setThemeRef.current = setTheme;
+  }, [setTheme]);
 
   const [hydrated, setHydrated] = useState(
     () => typeof window !== "undefined" && usePersistedAppStore.persist.hasHydrated(),

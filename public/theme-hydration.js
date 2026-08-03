@@ -1,28 +1,54 @@
 /** next-themes init antes da hidratação — espelha `ThemeProvider` (attribute class, storageKey next-theme). */
-((e, i, s, u, m, a, l, h) => {
-  let d = document.documentElement,
-    w = ["light", "dark"];
-  function p(n) {
-    (Array.isArray(e) ? e : [e]).forEach((y) => {
-      let k = y === "class",
-        S = k && a ? m.map((f) => a[f] || f) : m;
-      k
-        ? (d.classList.remove(...S), d.classList.add(a && a[n] ? a[n] : n))
-        : d.setAttribute(y, n);
-    }),
-      R(n);
+(function applyStoredTheme(
+  attribute,
+  storageKey,
+  defaultTheme,
+  forcedTheme,
+  themes,
+  valueMap,
+  enableSystem,
+  enableColorScheme,
+) {
+  var root = document.documentElement;
+  var colorSchemes = ["light", "dark"];
+
+  function applyColorScheme(theme) {
+    if (enableColorScheme && colorSchemes.indexOf(theme) !== -1) {
+      root.style.colorScheme = theme;
+    }
   }
-  function R(n) {
-    h && w.includes(n) && (d.style.colorScheme = n);
+
+  function applyTheme(theme) {
+    var attributes = Array.isArray(attribute) ? attribute : [attribute];
+    attributes.forEach(function (attr) {
+      if (attr !== "class") {
+        root.setAttribute(attr, theme);
+        return;
+      }
+      var classNames = valueMap
+        ? themes.map(function (name) {
+            return valueMap[name] || name;
+          })
+        : themes;
+      root.classList.remove.apply(root.classList, classNames);
+      root.classList.add(valueMap && valueMap[theme] ? valueMap[theme] : theme);
+    });
+    applyColorScheme(theme);
   }
-  function c() {
+
+  function systemTheme() {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
-  if (u) p(u);
-  else
-    try {
-      let n = localStorage.getItem(i) || s,
-        y = l && n === "system" ? c() : n;
-      p(y);
-    } catch (n) {}
+
+  if (forcedTheme) {
+    applyTheme(forcedTheme);
+    return;
+  }
+
+  try {
+    var stored = localStorage.getItem(storageKey) || defaultTheme;
+    applyTheme(enableSystem && stored === "system" ? systemTheme() : stored);
+  } catch {
+    /* localStorage indisponível (modo restrito): mantém o tema padrão do documento */
+  }
 })("class", "next-theme", "system", null, ["light", "dark"], null, true, true);

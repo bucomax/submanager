@@ -33,12 +33,14 @@ export function useTenantSettingsPickers({
 
   const reload = useCallback(async () => {
     if (!enabled) return;
-    setError(null);
     try {
       const [memberResponse, supplierResponse] = await Promise.all([
         listTenantMembersForPicker(),
         listOpmeSuppliers({ limit: 100 }),
       ]);
+      // Limpa o erro só com a resposta em mãos: zerar antes do await tornaria este
+      // `reload` um setState síncrono dentro do efeito que o chama.
+      setError(null);
       setMembers(memberResponse.members);
       setSuppliers(supplierResponse.data.map((supplier) => ({ id: supplier.id, name: supplier.name })));
     } catch (e) {
@@ -50,7 +52,11 @@ export function useTenantSettingsPickers({
 
   useEffect(() => {
     if (!enabled) return;
-    void reload();
+    // O wrapper async deixa explícito que o efeito só aguarda a resposta: nenhum
+    // `setState` acontece antes do primeiro `await` de `reload`.
+    void (async () => {
+      await reload();
+    })();
   }, [enabled, reload]);
 
   const appendSupplier = useCallback((supplier: OpmeSupplierPicker) => {

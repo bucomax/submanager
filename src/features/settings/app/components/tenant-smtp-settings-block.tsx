@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Loader2, Send } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 import { useTenantSmtp } from "@/features/settings/app/hooks/use-tenant-smtp";
@@ -13,6 +13,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { InfoTooltip } from "@/shared/components/ui/info-tooltip";
+import { useSyncedDraft } from "@/shared/hooks/use-synced-draft";
 
 type Props = { disabled?: boolean; outboundMode?: "platform" | "smtp" | "resend_domain" };
 
@@ -26,24 +27,29 @@ export function TenantSmtpSettingsBlock({ disabled: disabledProp = false, outbou
     }
   }, [outboundMode, reload]);
 
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState("587");
-  const [ssl, setSsl] = useState(false);
-  const [user, setUser] = useState("");
-  const [password, setPassword] = useState("");
-  const [fromName, setFromName] = useState("");
-  const [fromAddress, setFromAddress] = useState("");
+  /** A senha nunca volta da API: o campo sempre reabre vazio. */
+  const serverForm = useMemo(
+    () => ({
+      host: smtp.smtpHost ?? "",
+      port: String(smtp.smtpPort ?? 587),
+      ssl: smtp.smtpSecure,
+      user: smtp.smtpUser ?? "",
+      password: "",
+      fromName: smtp.smtpFromName ?? "",
+      fromAddress: smtp.smtpFromAddress ?? "",
+    }),
+    [smtp],
+  );
+  const [form, setForm] = useSyncedDraft(serverForm);
+  const { host, port, ssl, user, password, fromName, fromAddress } = form;
 
-  useEffect(() => {
-    if (!hasLoaded) return;
-    setHost(smtp.smtpHost ?? "");
-    setPort(String(smtp.smtpPort ?? 587));
-    setSsl(smtp.smtpSecure);
-    setUser(smtp.smtpUser ?? "");
-    setFromName(smtp.smtpFromName ?? "");
-    setFromAddress(smtp.smtpFromAddress ?? "");
-    setPassword("");
-  }, [hasLoaded, smtp]);
+  const setHost = (value: string) => setForm((prev) => ({ ...prev, host: value }));
+  const setPort = (value: string) => setForm((prev) => ({ ...prev, port: value }));
+  const setSsl = (value: boolean) => setForm((prev) => ({ ...prev, ssl: value }));
+  const setUser = (value: string) => setForm((prev) => ({ ...prev, user: value }));
+  const setPassword = (value: string) => setForm((prev) => ({ ...prev, password: value }));
+  const setFromName = (value: string) => setForm((prev) => ({ ...prev, fromName: value }));
+  const setFromAddress = (value: string) => setForm((prev) => ({ ...prev, fromAddress: value }));
 
   const onSave = useCallback(async () => {
     if (!canEdit) return;
@@ -63,12 +69,25 @@ export function TenantSmtpSettingsBlock({ disabled: disabledProp = false, outbou
         smtpFromAddress: fromAddress.trim() || undefined,
         smtpPassword: password.trim() || undefined,
       });
-      setPassword("");
+      setForm((prev) => ({ ...prev, password: "" }));
       toast.success(t("saveOk"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("saveFail"));
     }
-  }, [canEdit, fromAddress, fromName, host, port, password, save, smtp.smtpEnabled, ssl, t, user]);
+  }, [
+    canEdit,
+    fromAddress,
+    fromName,
+    host,
+    port,
+    password,
+    save,
+    setForm,
+    smtp.smtpEnabled,
+    ssl,
+    t,
+    user,
+  ]);
 
   const onToggle = useCallback(
     async (v: boolean) => {
@@ -98,7 +117,7 @@ export function TenantSmtpSettingsBlock({ disabled: disabledProp = false, outbou
             smtpFromAddress: fromAddress.trim() || undefined,
             smtpPassword: password.trim() || undefined,
           });
-          setPassword("");
+          setForm((prev) => ({ ...prev, password: "" }));
           toast.success(t("saveOk"));
         } catch (e) {
           toast.error(e instanceof Error ? e.message : t("saveFail"));
@@ -112,7 +131,20 @@ export function TenantSmtpSettingsBlock({ disabled: disabledProp = false, outbou
         }
       }
     },
-    [canEdit, fromAddress, fromName, host, password, port, save, smtp.hasPassword, ssl, t, user],
+    [
+      canEdit,
+      fromAddress,
+      fromName,
+      host,
+      password,
+      port,
+      save,
+      setForm,
+      smtp.hasPassword,
+      ssl,
+      t,
+      user,
+    ],
   );
 
   const onTest = useCallback(async () => {

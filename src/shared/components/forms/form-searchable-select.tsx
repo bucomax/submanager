@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { FieldLabelWithHint } from "@/shared/components/forms/field-label-with-hint";
 import { Field, FieldError } from "@/shared/components/ui/field";
@@ -142,6 +142,9 @@ export function SearchableSelectDropdown({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [highlightIndex, setHighlightIndex] = useState(0);
+  /** `role="combobox"` exige `aria-controls` apontando para a lista de opções. */
+  const fallbackId = useId();
+  const listboxId = `${id ?? fallbackId}-listbox`;
 
   const selectedOption = useMemo(
     () => options.find((o) => o.value === value),
@@ -195,6 +198,13 @@ export function SearchableSelectDropdown({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open, closeDropdown]);
 
+  const scrollToIndex = useCallback((index: number) => {
+    const list = listRef.current;
+    if (!list) return;
+    const item = list.children[index] as HTMLElement | undefined;
+    item?.scrollIntoView({ block: "nearest" });
+  }, []);
+
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -235,15 +245,8 @@ export function SearchableSelectDropdown({
           break;
       }
     },
-    [open, filtered, highlightIndex, openDropdown, closeDropdown, selectOption],
+    [open, filtered, highlightIndex, openDropdown, closeDropdown, selectOption, scrollToIndex],
   );
-
-  function scrollToIndex(index: number) {
-    const list = listRef.current;
-    if (!list) return;
-    const item = list.children[index] as HTMLElement | undefined;
-    item?.scrollIntoView({ block: "nearest" });
-  }
 
   return (
     <div ref={containerRef} className="relative" onKeyDown={handleKeyDown}>
@@ -253,6 +256,7 @@ export function SearchableSelectDropdown({
         type="button"
         role="combobox"
         aria-expanded={open}
+        aria-controls={listboxId}
         aria-haspopup="listbox"
         aria-invalid={invalid || undefined}
         disabled={disabled}
@@ -323,6 +327,7 @@ export function SearchableSelectDropdown({
           {/* Options list */}
           <div
             ref={listRef}
+            id={listboxId}
             role="listbox"
             className="max-h-56 overflow-y-auto p-1"
           >

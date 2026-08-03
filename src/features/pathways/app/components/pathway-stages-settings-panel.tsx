@@ -27,7 +27,7 @@ type PathwayStagesSettingsPanelProps = {
 export function PathwayStagesSettingsPanel({ className }: PathwayStagesSettingsPanelProps) {
   const t = useTranslations("pathways.columnEditor");
   const tList = useTranslations("pathways.list");
-  const { pathways, loading, error } = usePathways();
+  const { pathways, loading } = usePathways();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   /** Sempre string quando há pathways — evita Select alternar entre não controlado (`undefined`) e controlado. */

@@ -10,72 +10,38 @@ import {
 } from "@/features/clients/app/components/client-detail-journey-panels";
 import { ClientDetailProfileCard } from "@/features/clients/app/components/client-detail-profile-card";
 import { usePatientPortalClientDetail } from "@/features/patient-portal/app/hooks/use-patient-portal-client-detail";
+import { usePatientPortalTimeline } from "@/features/patient-portal/app/hooks/use-patient-portal-timeline";
 import { usePatientPortalTenantSlug } from "@/features/patient-portal/app/context/patient-portal-tenant-context";
 import { PatientPortalLoginPage } from "@/features/patient-portal/app/pages/patient-portal-login-page";
 import { PatientPortalFilesSection } from "@/features/patient-portal/app/components/patient-portal-files-section";
 import { PatientPortalTimelineSection } from "@/features/patient-portal/app/components/patient-portal-timeline-section";
 import { PatientPortalFullScreenLoading } from "@/features/patient-portal/app/components/patient-portal-full-screen-loading";
 import { PatientPortalPasswordDialog } from "@/features/patient-portal/app/components/patient-portal-password-dialog";
-import {
-  fetchPatientPortalTimeline,
-  logoutPatientPortal,
-  PatientPortalUnauthorizedError,
-} from "@/lib/api/patient-portal-client";
+import { logoutPatientPortal } from "@/lib/api/patient-portal-client";
 import { formatDateTime } from "@/lib/utils/date";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardDescription, CardHeader } from "@/shared/components/ui/card";
 import { Info, KeyRound, MapPinned } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
-import type { PatientPortalTimelineResponseData } from "@/types/api/patient-portal-v1";
+import { useState } from "react";
 
 export function PatientPortalHomePage() {
   const tenantSlug = usePatientPortalTenantSlug();
   const t = useTranslations("patientPortal");
   const td = useTranslations("clients.detail");
   const { data, error, loading, needsLink, reload } = usePatientPortalClientDetail(tenantSlug);
-  const [timeline, setTimeline] = useState<PatientPortalTimelineResponseData | null>(null);
-  const [timelineLoading, setTimelineLoading] = useState(false);
-  const [timelineError, setTimelineError] = useState<string | null>(null);
   const [timelineRefresh, setTimelineRefresh] = useState(0);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-
-  const loadTimeline = useCallback(() => {
-    setTimelineLoading(true);
-    setTimelineError(null);
-    void fetchPatientPortalTimeline(tenantSlug, 1, 20)
-      .then(setTimeline)
-      .catch((e) => {
-        if (e instanceof PatientPortalUnauthorizedError) {
-          setTimeline(null);
-          return;
-        }
-        setTimelineError(t("timeline.loadError"));
-      })
-      .finally(() => setTimelineLoading(false));
-  }, [t, tenantSlug]);
-
-  useEffect(() => {
-    if (!data) return;
-    loadTimeline();
-  }, [data, loadTimeline, timelineRefresh]);
-
-  const loadTimelinePage = useCallback(
-    (page: number) => {
-      setTimelineLoading(true);
-      setTimelineError(null);
-      void fetchPatientPortalTimeline(tenantSlug, page, 20)
-        .then(setTimeline)
-        .catch(() => setTimelineError(t("timeline.loadError")))
-        .finally(() => setTimelineLoading(false));
-    },
-    [t, tenantSlug],
-  );
+  const {
+    timeline,
+    loading: timelineLoading,
+    error: timelineError,
+    goToPage: loadTimelinePage,
+  } = usePatientPortalTimeline(tenantSlug, data?.client.id ?? null, timelineRefresh);
 
   async function onLogout() {
     await logoutPatientPortal();
-    setTimeline(null);
     reload();
   }
 

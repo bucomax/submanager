@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy, Info, Loader2, Mail, RefreshCw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -24,6 +24,7 @@ import { Field, FieldContent, FieldDescription, FieldLabel } from "@/shared/comp
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Switch } from "@/shared/components/ui/switch";
+import { useSyncedDraft } from "@/shared/hooks/use-synced-draft";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 
@@ -67,14 +68,17 @@ export function EmailSettingsCard() {
   const [domain, setDomain] = useState("");
   const [fromName, setFromName] = useState("");
   const [localPart, setLocalPart] = useState("notificacoes");
-  const [draftFrom, setDraftFrom] = useState("");
-  const [draftName, setDraftName] = useState("");
   const [eventsInfoOpen, setEventsInfoOpen] = useState(false);
 
-  useEffect(() => {
-    setDraftFrom(ed.fromAddress ?? "");
-    setDraftName(ed.fromName ?? "");
-  }, [ed.fromAddress, ed.fromName]);
+  const serverSender = useMemo(
+    () => ({ address: ed.fromAddress ?? "", name: ed.fromName ?? "" }),
+    [ed.fromAddress, ed.fromName],
+  );
+  const [sender, setSender] = useSyncedDraft(serverSender);
+  const draftFrom = sender.address;
+  const draftName = sender.name;
+  const setDraftFrom = (value: string) => setSender((prev) => ({ ...prev, address: value }));
+  const setDraftName = (value: string) => setSender((prev) => ({ ...prev, name: value }));
 
   const onCopy = useCallback(async (text: string) => {
     try {

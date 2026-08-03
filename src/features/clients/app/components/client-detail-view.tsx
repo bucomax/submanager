@@ -91,11 +91,15 @@ export function ClientDetailView({ clientId }: ClientDetailViewProps) {
   const { downloadingId: stageDocDownloadingId, openDownload: openStageDocumentDownload } =
     useClientFileDownload();
 
+  /** Identidade da versão do cliente carregada — muda a cada recarga que altera o registro. */
+  const clientVersion = data?.client ? `${data.client.id}:${data.client.updatedAt}` : null;
+  const storedCaseDescription = data?.client?.caseDescription ?? null;
+  const serverCaseDescription = storedCaseDescription ?? "";
+
   useEffect(() => {
-    const c = data?.client;
-    if (!c) return;
-    setDraftCaseDescription(c.caseDescription ?? "");
-  }, [data?.client?.id, data?.client?.updatedAt]);
+    if (clientVersion === null) return;
+    setDraftCaseDescription(serverCaseDescription);
+  }, [clientVersion, serverCaseDescription]);
 
   const pp = data?.patientPathway;
   const nextOptions = useMemo(() => {
@@ -170,12 +174,10 @@ export function ClientDetailView({ clientId }: ClientDetailViewProps) {
     [pp?.currentStage?.checklistItems],
   );
 
-  const notesDirty = useMemo(() => {
-    if (!data?.client) return false;
-    const server = data.client.caseDescription ?? null;
-    const draft = draftCaseDescription.trim() === "" ? null : draftCaseDescription.trim();
-    return draft !== server;
-  }, [data?.client?.caseDescription, data?.client?.id, draftCaseDescription]);
+  const trimmedDraftNotes = draftCaseDescription.trim();
+  const notesDirty =
+    clientVersion !== null &&
+    (trimmedDraftNotes === "" ? null : trimmedDraftNotes) !== storedCaseDescription;
 
   async function saveCaseDescription() {
     const trimmed = draftCaseDescription.trim();
