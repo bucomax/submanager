@@ -1,6 +1,6 @@
 /**
  * Opcional: envio do código OTP por WhatsApp (ou outro canal) via webhook configurável.
- * Body JSON: `{ "phone": "+5511...", "text": "..." }` — ajuste o receptor conforme o serviço Bucomax.
+ * Body JSON: `{ "phone": "+5511...", "text": "..." }` — ajuste o receptor conforme o serviço SubManager.
  */
 export async function notifyPatientPortalOtpByWebhook(params: {
   phone: string;

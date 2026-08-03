@@ -3,7 +3,7 @@
     "pageTitle": "Terms of service",
     "meta": "Reference text for registration acceptance (version {version}). Your clinic may publish its own policy on its website.",
     "paragraphs": [
-      "By using the patient registration and portal provided by the Bucomax platform on behalf of your clinic, you confirm that you have read and understood these terms.",
+      "By using the patient registration and portal provided by the SubManager platform on behalf of your clinic, you confirm that you have read and understood these terms.",
       "The service aims to support your care journey: showing stages, documents authorized by the care team, and contact channels indicated by the clinic.",
       "You are responsible for the accuracy of the information you provide and for keeping your portal password confidential. Do not share credentials with third parties.",
       "Sensitive clinical content must be handled according to your clinic’s guidance. Misuse of the system may result in access being suspended, in line with clinic policy and applicable law.",
@@ -14,7 +14,7 @@
     "pageTitle": "Privacy notice (LGPD)",
     "meta": "Reference text for registration acceptance (version {version}). The clinic is the controller of your data in this context.",
     "paragraphs": [
-      "This notice describes how we process personal data in the context of registration and the patient portal operated by the clinic through the Bucomax platform.",
+      "This notice describes how we process personal data in the context of registration and the patient portal operated by the clinic through the SubManager platform.",
       "We may collect and process data such as name, contact details, identification document, case description, and portal usage records (access dates, journey events you are allowed to see), always in line with LGPD and the purposes communicated by the clinic.",
       "Legal bases include preliminary procedures at your request, compliance with legal or regulatory obligations, and legitimate interest where applicable, while respecting your rights of access, correction, portability, deletion, and withdrawal of consent, as provided by law.",
       "Data may be shared with platform service providers (hosting, messaging) under contracts and appropriate security measures. We do not sell your personal data.",

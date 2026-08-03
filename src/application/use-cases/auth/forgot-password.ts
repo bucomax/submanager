@@ -37,7 +37,7 @@ export async function runForgotPassword(emailRaw: string): Promise<ForgotPasswor
   const resetUrl = buildResetPasswordUrl(token);
   const { error } = await sendEmail({
     to: user.email,
-    subject: "Bucomax — Redefinir senha",
+    subject: "SubManager — Redefinir senha",
     html: getResetPasswordHtml({ name: user.name, resetUrl }),
   });
 

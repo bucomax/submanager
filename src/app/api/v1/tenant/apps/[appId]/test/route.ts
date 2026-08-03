@@ -87,7 +87,7 @@ export async function POST(request: Request, context: RouteContext) {
   const startMs = Date.now();
   try {
     const headers: Record<string, string> = {
-      "User-Agent": "Bucomax-HealthCheck/1.0",
+      "User-Agent": "SubManager-HealthCheck/1.0",
     };
     if (authHeader) {
       headers["Authorization"] = authHeader;

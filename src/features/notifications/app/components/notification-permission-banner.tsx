@@ -4,7 +4,7 @@ import { Bell, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 
-const DISMISSED_KEY = "bucomax:notification-permission-dismissed";
+const DISMISSED_KEY = "submanager:notification-permission-dismissed";
 
 export function NotificationPermissionBanner() {
   const [visible, setVisible] = useState(false);

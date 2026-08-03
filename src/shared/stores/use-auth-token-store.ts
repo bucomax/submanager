@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { createEncryptedPersistStorage } from "@/lib/storage/encrypted-persist-storage";
 
 /** Bucket dentro de `createEncryptedPersistStorage` (paridade com tema). */
-const PERSIST_NAME = "bucomax-auth";
+const PERSIST_NAME = "submanager-auth";
 
 export type AuthTokenState = {
   accessToken: string | null;

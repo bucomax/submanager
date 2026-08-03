@@ -180,7 +180,7 @@ export async function testTenantSmtp(
     {
       from,
       to: toAddress,
-      subject: "Bucomax — e-mail de teste",
+      subject: "SubManager — e-mail de teste",
       html: "<p>Se você recebeu esta mensagem, a configuração SMTP está correta.</p>",
       text: "Se você recebeu esta mensagem, a configuração SMTP está correta.",
     },

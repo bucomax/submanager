@@ -1,24 +1,24 @@
 /**
- * postMessage protocol between Bucomax dashboard (host) and iframe apps.
+ * postMessage protocol between SubManager dashboard (host) and iframe apps.
  *
  * Host → Iframe:
- *   bucomax:init       — context (tenant, user, locale, theme, token)
- *   bucomax:theme      — theme changed
+ *   submanager:init       — context (tenant, user, locale, theme, token)
+ *   submanager:theme      — theme changed
  *
  * Iframe → Host:
- *   bucomax:navigate   — request navigation in the dashboard
- *   bucomax:toast      — show a toast notification
- *   bucomax:resize     — request container resize
- *   bucomax:ready      — iframe signals it's ready to receive init
- *   bucomax:token-request — iframe requests a fresh scoped token
+ *   submanager:navigate   — request navigation in the dashboard
+ *   submanager:toast      — show a toast notification
+ *   submanager:resize     — request container resize
+ *   submanager:ready      — iframe signals it's ready to receive init
+ *   submanager:token-request — iframe requests a fresh scoped token
  */
 
 // ---------------------------------------------------------------------------
 // Host → Iframe messages
 // ---------------------------------------------------------------------------
 
-export type BucomaxInitMessage = {
-  type: "bucomax:init";
+export type SubManagerInitMessage = {
+  type: "submanager:init";
   payload: {
     tenantId: string;
     userId: string;
@@ -30,33 +30,33 @@ export type BucomaxInitMessage = {
   };
 };
 
-export type BucomaxThemeMessage = {
-  type: "bucomax:theme";
+export type SubManagerThemeMessage = {
+  type: "submanager:theme";
   payload: {
     theme: "light" | "dark";
   };
 };
 
-export type HostToIframeMessage = BucomaxInitMessage | BucomaxThemeMessage;
+export type HostToIframeMessage = SubManagerInitMessage | SubManagerThemeMessage;
 
 // ---------------------------------------------------------------------------
 // Iframe → Host messages
 // ---------------------------------------------------------------------------
 
-export type BucomaxReadyMessage = {
-  type: "bucomax:ready";
+export type SubManagerReadyMessage = {
+  type: "submanager:ready";
 };
 
-export type BucomaxNavigateMessage = {
-  type: "bucomax:navigate";
+export type SubManagerNavigateMessage = {
+  type: "submanager:navigate";
   payload: {
     /** Path relative to dashboard root, e.g. "/dashboard/clients" */
     path: string;
   };
 };
 
-export type BucomaxToastMessage = {
-  type: "bucomax:toast";
+export type SubManagerToastMessage = {
+  type: "submanager:toast";
   payload: {
     variant: "success" | "error" | "info" | "warning";
     message: string;
@@ -64,35 +64,35 @@ export type BucomaxToastMessage = {
   };
 };
 
-export type BucomaxResizeMessage = {
-  type: "bucomax:resize";
+export type SubManagerResizeMessage = {
+  type: "submanager:resize";
   payload: {
     /** Desired height in pixels. 0 = auto (fill container). */
     height: number;
   };
 };
 
-export type BucomaxTokenRequestMessage = {
-  type: "bucomax:token-request";
+export type SubManagerTokenRequestMessage = {
+  type: "submanager:token-request";
 };
 
 export type IframeToHostMessage =
-  | BucomaxReadyMessage
-  | BucomaxNavigateMessage
-  | BucomaxToastMessage
-  | BucomaxResizeMessage
-  | BucomaxTokenRequestMessage;
+  | SubManagerReadyMessage
+  | SubManagerNavigateMessage
+  | SubManagerToastMessage
+  | SubManagerResizeMessage
+  | SubManagerTokenRequestMessage;
 
 // ---------------------------------------------------------------------------
 // Type guard
 // ---------------------------------------------------------------------------
 
 const VALID_IFRAME_TYPES = new Set([
-  "bucomax:ready",
-  "bucomax:navigate",
-  "bucomax:toast",
-  "bucomax:resize",
-  "bucomax:token-request",
+  "submanager:ready",
+  "submanager:navigate",
+  "submanager:toast",
+  "submanager:resize",
+  "submanager:token-request",
 ]);
 
 export function isIframeToHostMessage(data: unknown): data is IframeToHostMessage {

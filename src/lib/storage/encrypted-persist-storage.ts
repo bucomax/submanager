@@ -38,7 +38,7 @@ function writeBucket(bucket: PersistBucket): void {
     const encrypted = CryptoJS.AES.encrypt(payload, getPersistSecret()).toString();
     localStorage.setItem(ENCRYPTED_LOCAL_STORAGE_KEY, encrypted);
   } catch (e) {
-    console.error("[bucomax] Falha ao persistir estado criptografado:", e);
+    console.error("[submanager] Falha ao persistir estado criptografado:", e);
   }
 }
 

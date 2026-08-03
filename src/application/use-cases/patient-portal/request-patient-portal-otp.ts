@@ -85,13 +85,13 @@ export async function runRequestPatientPortalOtp(params: {
 
   if (emailReady) {
     const { from, useSmtp } = await resolveTenantSender(tenant.id);
-    const subject = `${clinicName} — Código do portal do paciente (Bucomax)`;
+    const subject = `${clinicName} — Código do portal do paciente (SubManager)`;
     const html = getPatientPortalOtpHtml({
       patientName: client.name,
       clinicName,
       code,
     });
-    const text = `Olá, ${client.name}. Seu código Bucomax: ${code}. Válido por poucos minutos.`;
+    const text = `Olá, ${client.name}. Seu código SubManager: ${code}. Válido por poucos minutos.`;
     const toList: string[] = [];
     if (email) toList.push(email);
     if (
@@ -119,7 +119,7 @@ export async function runRequestPatientPortalOtp(params: {
   }
 
   if (wppReady) {
-    const text = `Bucomax (${clinicName}): seu código para acessar o portal é ${code}. Válido por poucos minutos.`;
+    const text = `SubManager (${clinicName}): seu código para acessar o portal é ${code}. Válido por poucos minutos.`;
     const phones: string[] = [];
     if (phoneDigits.length >= 10) phones.push(client.phone!.trim());
     if (

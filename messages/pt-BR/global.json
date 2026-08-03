@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Bucomax",
+    "title": "SubManager",
     "description": "Plataforma clínica multi-tenant"
   },
-  "brand": "Bucomax",
+  "brand": "SubManager",
   "home": {
-    "title": "Bucomax",
+    "title": "SubManager",
     "subtitle": "Orquestração de jornadas clínicas e acompanhamento do paciente. Entre para acessar o seu espaço de trabalho.",
     "login": "Entrar",
     "loginHint": "Já tem acesso? Use o botão abaixo."

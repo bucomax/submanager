@@ -1,7 +1,7 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import type { EmailOutboundMode } from "@prisma/client";
 
-const DEFAULT_FROM = process.env.EMAIL_FROM ?? "Bucomax <onboarding@resend.dev>";
+const DEFAULT_FROM = process.env.EMAIL_FROM ?? "SubManager <onboarding@resend.dev>";
 
 /**
  * Modo `smtp` + credenciais completas, independente de `smtpEnabled` (o modo define o uso).

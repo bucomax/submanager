@@ -38,7 +38,7 @@ export async function notifyStaffPatientSelfRegistered(params: NotifyParams): Pr
     },
   });
 
-  /** E-mail: mesmo layout dos outros templates Bucomax (`email-templates.ts`). */
+  /** E-mail: mesmo layout dos outros templates SubManager (`email-templates.ts`). */
   if (!(await canSendEmailForTenant(tenantId))) {
     return;
   }
@@ -61,7 +61,7 @@ export async function notifyStaffPatientSelfRegistered(params: NotifyParams): Pr
       sendEmail({
         to: user.email,
         from,
-        subject: `Bucomax — Novo paciente: ${patientName}`,
+        subject: `SubManager — Novo paciente: ${patientName}`,
         html: getPatientSelfRegisteredStaffHtml({
           staffName: user.name,
           patientName,

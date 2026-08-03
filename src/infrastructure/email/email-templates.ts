@@ -1,6 +1,6 @@
 /**
  * Templates HTML transacionais (Resend).
- * Layout em tabela, preheader, CTA, footer — marca **Bucomax**; tema **escuro** (fundo preto, texto claro).
+ * Layout em tabela, preheader, CTA, footer — marca **SubManager**; tema **escuro** (fundo preto, texto claro).
  */
 
 import { getPublicAppUrl } from "@/lib/config/urls";
@@ -38,7 +38,7 @@ function baseLayout(content: string, preheaderOrOptions?: string | BaseLayoutOpt
         ? { preheader: preheaderOrOptions }
         : preheaderOrOptions;
   const preheader = options.preheader;
-  const brandLabel = escapeHtmlText(options.brandName?.trim() || "Bucomax");
+  const brandLabel = escapeHtmlText(options.brandName?.trim() || "SubManager");
   const base = getPublicAppUrl();
   return `
 <!DOCTYPE html>
@@ -123,7 +123,7 @@ export function getConfirmEmailHtml(params: { name: string | null; confirmUrl: s
       Este link expira em 24 horas. Se você não criou esta conta, ignore este e-mail.
     </p>
   `;
-  return baseLayout(content, `Confirme seu e-mail — Bucomax`);
+  return baseLayout(content, `Confirme seu e-mail — SubManager`);
 }
 
 /** Recuperação de senha. */
@@ -150,7 +150,7 @@ export function getResetPasswordHtml(params: { name: string | null; resetUrl: st
       Este link expira em 1 hora. Se você não solicitou isso, ignore este e-mail.
     </p>
   `;
-  return baseLayout(content, `Redefina sua senha — Bucomax`);
+  return baseLayout(content, `Redefina sua senha — SubManager`);
 }
 
 /**
@@ -171,7 +171,7 @@ export function getInviteSetPasswordHtml(params: {
     : "";
   const content = `
     <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: ${BRAND.text}; line-height: 1.3;">
-      Você foi convidado para o Bucomax
+      Você foi convidado para o SubManager
     </h1>
     <p style="margin: 0 0 16px; font-size: 15px; color: ${BRAND.text}; line-height: 1.6;">
       Olá, ${name}!
@@ -195,13 +195,13 @@ export function getInviteSetPasswordHtml(params: {
     </p>
   `;
   return baseLayout(content, {
-    preheader: "Defina sua senha — convite Bucomax",
+    preheader: "Defina sua senha — convite SubManager",
     brandName: params.tenantName,
   });
 }
 
 /**
- * Paciente: cadastro público concluído — confirmação + boas-vindas (mesmo layout escuro Bucomax).
+ * Paciente: cadastro público concluído — confirmação + boas-vindas (mesmo layout escuro SubManager).
  */
 export function getPatientSelfRegisterWelcomeHtml(params: {
   patientName: string;
@@ -276,11 +276,11 @@ export function getPatientSelfRegisteredStaffHtml(params: {
       <a href="${params.openPatientUrl}" style="color: ${BRAND.link}; text-decoration: underline;">${params.openPatientUrl}</a>
     </p>
     <p style="margin: 24px 0 0; padding-top: 20px; border-top: 1px solid ${BRAND.border}; font-size: 12px; color: ${BRAND.textMuted}; line-height: 1.5;">
-      Este aviso foi enviado porque você é membro da equipe desta clínica no Bucomax. Se não deveria recebê-lo, ignore esta mensagem.
+      Este aviso foi enviado porque você é membro da equipe desta clínica no SubManager. Se não deveria recebê-lo, ignore esta mensagem.
     </p>
   `;
   return baseLayout(content, {
-    preheader: `Novo paciente em ${escapeHtmlText(params.clinicName)} — Bucomax`,
+    preheader: `Novo paciente em ${escapeHtmlText(params.clinicName)} — SubManager`,
     brandName: params.clinicName,
   });
 }
@@ -306,7 +306,7 @@ export function getPatientPortalMagicLinkHtml(params: {
       Olá, ${patient}!
     </p>
     <p style="margin: 0 0 8px; font-size: 15px; color: ${BRAND.text}; line-height: 1.6;">
-      A clínica <strong>${clinic}</strong> disponibilizou um link seguro para você acompanhar sua jornada no Bucomax.
+      A clínica <strong>${clinic}</strong> disponibilizou um link seguro para você acompanhar sua jornada no SubManager.
     </p>
     ${ctaButton(params.enterUrl, "Abrir portal do paciente")}
     <p style="margin: 16px 0 0; font-size: 13px; color: ${BRAND.textMuted}; line-height: 1.5;">
@@ -412,7 +412,7 @@ export function getFileReviewResultPatientHtml(params: {
       <a href="${params.portalUrl}" style="color: ${BRAND.link}; text-decoration: underline;">${params.portalUrl}</a>
     </p>
     <p style="margin: 24px 0 0; padding-top: 20px; border-top: 1px solid ${BRAND.border}; font-size: 12px; color: ${BRAND.textMuted}; line-height: 1.5;">
-      Este e-mail foi enviado porque voce enviou um documento pelo portal da clinica no Bucomax. Se nao reconhece esta acao, ignore esta mensagem.
+      Este e-mail foi enviado porque voce enviou um documento pelo portal da clinica no SubManager. Se nao reconhece esta acao, ignore esta mensagem.
     </p>
   `;
   return baseLayout(content, { preheader, brandName: params.clinicName });
@@ -466,7 +466,7 @@ export function getStageTransitionPatientHtml(params: {
       <a href="${params.portalUrl}" style="color: ${BRAND.link}; text-decoration: underline;">${params.portalUrl}</a>
     </p>
     <p style="margin: 24px 0 0; padding-top: 20px; border-top: 1px solid ${BRAND.border}; font-size: 12px; color: ${BRAND.textMuted}; line-height: 1.5;">
-      Este e-mail foi enviado porque sua jornada na clínica foi atualizada no Bucomax.
+      Este e-mail foi enviado porque sua jornada na clínica foi atualizada no SubManager.
     </p>
   `;
   return baseLayout(content, {

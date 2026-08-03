@@ -40,7 +40,7 @@ export async function notifyPatientSelfRegisterWelcome(params: NotifyParams): Pr
     ``,
     `Portal do paciente: ${portalLoginUrl}`,
     ``,
-    `— Bucomax`,
+    `— SubManager`,
   ].join("\n");
 
   const { from, useSmtp } = await resolveTenantSender(params.tenantId);

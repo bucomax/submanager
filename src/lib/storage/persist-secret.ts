@@ -1,6 +1,6 @@
 const MIN_LENGTH = 32;
 
-const DEV_FALLBACK = "bucomax-dev-persist-secret-do-not-use-in-prod!!";
+const DEV_FALLBACK = "submanager-dev-persist-secret-do-not-use-in-prod!!";
 
 let resolvedSecret: string | null = null;
 let loggedDevFallbackWarning = false;
@@ -25,7 +25,7 @@ export function getPersistSecret(): string {
     if (s && s.length > 0 && s.length < MIN_LENGTH && !loggedDevFallbackWarning) {
       loggedDevFallbackWarning = true;
       console.warn(
-        "[bucomax] NEXT_PUBLIC_APP_PERSIST_SECRET muito curta (mín. 32 caracteres) — usando chave de desenvolvimento. Ajuste o .env ou remova a variável para o fallback silencioso.",
+        "[submanager] NEXT_PUBLIC_APP_PERSIST_SECRET muito curta (mín. 32 caracteres) — usando chave de desenvolvimento. Ajuste o .env ou remova a variável para o fallback silencioso.",
       );
     }
     resolvedSecret = DEV_FALLBACK;

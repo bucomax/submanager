@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
 import { toast } from "@/lib/toast";
 import type {
-  BucomaxInitMessage,
+  SubManagerInitMessage,
   HostToIframeMessage,
   IframeToHostMessage,
 } from "@/features/apps/app/types/iframe-protocol";
@@ -75,8 +75,8 @@ export function useIframeProtocol({
     const user = session?.user;
     if (!user) return;
 
-    const message: BucomaxInitMessage = {
-      type: "bucomax:init",
+    const message: SubManagerInitMessage = {
+      type: "submanager:init",
       payload: {
         tenantId: user.tenantId ?? "",
         userId: user.id,
@@ -107,18 +107,18 @@ export function useIframeProtocol({
       const msg: IframeToHostMessage = event.data;
 
       switch (msg.type) {
-        case "bucomax:ready":
+        case "submanager:ready":
           // Iframe signals it's ready — send init
           sendInit();
           break;
 
-        case "bucomax:navigate":
+        case "submanager:navigate":
           if (msg.payload.path && msg.payload.path.startsWith("/")) {
             router.push(msg.payload.path);
           }
           break;
 
-        case "bucomax:toast":
+        case "submanager:toast":
           switch (msg.payload.variant) {
             case "success":
               toast.success(msg.payload.message);
@@ -135,11 +135,11 @@ export function useIframeProtocol({
           }
           break;
 
-        case "bucomax:resize":
+        case "submanager:resize":
           onResize?.(msg.payload.height);
           break;
 
-        case "bucomax:token-request":
+        case "submanager:token-request":
           onTokenRequest?.();
           break;
       }

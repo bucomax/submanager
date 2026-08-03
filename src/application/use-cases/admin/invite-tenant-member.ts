@@ -40,11 +40,11 @@ export type InviteTenantMemberSuccess =
 function buildInviteEmailSubject(clinicName: string): string {
   const name = clinicName.trim();
   if (!name) {
-    return "Bucomax — Defina sua senha";
+    return "SubManager — Defina sua senha";
   }
   const max = 88;
   const shortened = name.length > max ? `${name.slice(0, max - 1)}…` : name;
-  return `Bucomax — ${shortened} — Defina sua senha`;
+  return `SubManager — ${shortened} — Defina sua senha`;
 }
 
 async function sendInviteSetPasswordEmail(

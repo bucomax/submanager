@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 
 const ALG = "HS256";
-const ISSUER = "bucomax";
-const AUDIENCE = "bucomax-app";
+const ISSUER = "submanager";
+const AUDIENCE = "submanager-app";
 
 /** Token lifetime: 15 minutes */
 const TOKEN_TTL_SECONDS = 15 * 60;

@@ -4,7 +4,7 @@ import { sendEmailViaSmtp } from "@/infrastructure/email/smtp-send.client";
 import { isResendApiConfigured } from "@/infrastructure/email/resend-domain.client";
 import { Resend } from "resend";
 
-const defaultFromEmail = process.env.EMAIL_FROM ?? "Bucomax <onboarding@resend.dev>";
+const defaultFromEmail = process.env.EMAIL_FROM ?? "SubManager <onboarding@resend.dev>";
 const resendApiKey = process.env.RESEND_API_KEY;
 
 let resendClient: Resend | null = null;

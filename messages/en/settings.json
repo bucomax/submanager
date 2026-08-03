@@ -304,7 +304,7 @@
     "retry": "Try again",
     "events": {
       "boxTitle": "Who gets email and when",
-      "boxDescription": "Overview of transactional emails (patients and staff) and the same Bucomax layout used when sending is enabled for your clinic.",
+      "boxDescription": "Overview of transactional emails (patients and staff) and the same SubManager layout used when sending is enabled for your clinic.",
       "openModal": "See events and sample",
       "modalTitle": "Transactional emails",
       "modalIntro": "These flows use the same dark template, with the sender you configure above, whenever sending is allowed.",

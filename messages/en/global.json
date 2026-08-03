@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Bucomax",
+    "title": "SubManager",
     "description": "Multi-tenant clinical platform"
   },
-  "brand": "Bucomax",
+  "brand": "SubManager",
   "home": {
-    "title": "Bucomax",
+    "title": "SubManager",
     "subtitle": "Clinical care pathways and patient journey orchestration. Sign in to open your workspace.",
     "login": "Sign in",
     "loginHint": "Already have access? Use the button below."

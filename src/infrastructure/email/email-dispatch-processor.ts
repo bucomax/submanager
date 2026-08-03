@@ -56,7 +56,7 @@ export async function processEmailDispatchJob(
     const text = `Olá! Você entrou na etapa "${data.stageName}" em ${data.clinicName}. Acesse o portal: ${data.portalUrl}`;
     const sent = await sendEmail({
       to,
-      subject: `${data.clinicName} — Nova etapa na sua jornada (Bucomax)`,
+      subject: `${data.clinicName} — Nova etapa na sua jornada (SubManager)`,
       html,
       text,
       from,
@@ -90,7 +90,7 @@ export async function processEmailDispatchJob(
       const text = `${label}: ${payload.data.patientName} — ${payload.data.daysInStage} dia(s) na etapa "${payload.data.stageName}". Abrir: ${patientUrl}`;
       const sent = await sendEmail({
         to,
-        subject: `Bucomax — ${label}: ${payload.data.patientName} (${payload.data.stageName})`,
+        subject: `SubManager — ${label}: ${payload.data.patientName} (${payload.data.stageName})`,
         html,
         text,
         from,
@@ -121,7 +121,7 @@ export async function processEmailDispatchJob(
       const text = `${payload.data.patientName} enviou "${payload.data.fileName}". Revisar: ${reviewUrl}`;
       const sent = await sendEmail({
         to,
-        subject: `Bucomax — Novo documento: ${payload.data.fileName} (${payload.data.patientName})`,
+        subject: `SubManager — Novo documento: ${payload.data.fileName} (${payload.data.patientName})`,
         html,
         text,
         from,
@@ -153,7 +153,7 @@ export async function processEmailDispatchJob(
       const text = `Checklist: ${payload.data.patientName} concluiu ${payload.data.totalRequiredItems} item(ns) obrigatório(s) em "${payload.data.stageName}". ${patientUrl}`;
       const sent = await sendEmail({
         to,
-        subject: `Bucomax — Checklist concluído: ${payload.data.patientName} — ${payload.data.stageName}`,
+        subject: `SubManager — Checklist concluído: ${payload.data.patientName} — ${payload.data.stageName}`,
         html,
         text,
         from,

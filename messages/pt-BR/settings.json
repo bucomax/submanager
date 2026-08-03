@@ -307,7 +307,7 @@
       "boxDescription": "Resumo dos envios transacionais (paciente e equipe) e o mesmo layout visual usado no envio, quando o e-mail está ativo para a clínica.",
       "openModal": "Ver eventos e exemplo",
       "modalTitle": "E-mails transacionais",
-      "modalIntro": "Estes eventos usam o mesmo “visual” (template escuro) do Bucomax, com o remetente que você configurou acima, quando o envio está permitido.",
+      "modalIntro": "Estes eventos usam o mesmo “visual” (template escuro) do SubManager, com o remetente que você configurou acima, quando o envio está permitido.",
       "patientSectionTitle": "Paciente",
       "patientItem1": "Mudança de etapa na jornada (com e-mail do paciente cadastrado): resumo, mensagem da etapa e link para o portal, quando a clínica avança o paciente.",
       "patientItem2": "Link de acesso ao portal e código (OTP) para entrar, quando a clínica ou o paciente dispara o fluxo no portal.",

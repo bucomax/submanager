@@ -1,4 +1,4 @@
-const EVENT = "bucomax:active-apps-invalidate";
+const EVENT = "submanager:active-apps-invalidate";
 
 /** Notifica o menu lateral para recarregar a lista de apps ativos (após ativar/desativar). */
 export function notifyActiveAppsMenuInvalidated(): void {

@@ -2,7 +2,7 @@
   "title": "Portal do paciente",
   "landing": {
     "title": "Portal do paciente",
-    "body": "O acesso é feito pelo link da sua clínica, no formato bucomax.com.br/nome-da-clinica/patient, ou com e-mail ou CPF nessa mesma página. Se você recebeu apenas um link sem o nome da clínica no endereço, peça à secretaria o endereço completo ou um novo convite."
+    "body": "O acesso é feito pelo link da sua clínica, no formato submanager.com.br/nome-da-clinica/patient, ou com e-mail ou CPF nessa mesma página. Se você recebeu apenas um link sem o nome da clínica no endereço, peça à secretaria o endereço completo ou um novo convite."
   },
   "enter": {
     "validating": "Verificando…",
