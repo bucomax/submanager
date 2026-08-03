@@ -1,4 +1,5 @@
 import { getApiT } from "@/lib/api/i18n";
+import { rateLimit } from "@/lib/api/rate-limit";
 import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
 import {
   countUnreadNotificationsWithClientScope,
@@ -27,6 +28,10 @@ export async function GET(request: Request) {
   const session = auth.session!;
   const userId = session.user.id;
   const tenantId = tenantCtx.tenantId;
+
+  // Cada conexão SSE segura um handler — preset dedicado, mais apertado que `api`.
+  const limited = await rateLimit("sse", userId);
+  if (limited) return limited;
 
   if (!isRedisEnabled()) {
     return Response.json(
