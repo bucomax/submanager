@@ -5,6 +5,7 @@ import {
 import { patientPortalOtpPrismaRepository } from "@/infrastructure/repositories/patient-portal-otp.repository";
 import { portalPasswordVersionMs, type PatientPortalSessionPayload } from "@/lib/auth/patient-portal-session";
 import { hashPatientPortalOtpCode } from "@/lib/utils/patient-portal-otp";
+import { timingSafeEqualStrings } from "@/lib/utils/timing-safe-compare";
 import type { PortalClientForLogin } from "@/types/api/patient-portal-v1";
 
 export type VerifyPatientPortalOtpResult =
@@ -32,7 +33,7 @@ export async function runVerifyPatientPortalOtp(params: {
   }
 
   const expectedHash = hashPatientPortalOtpCode(code);
-  if (expectedHash !== challenge.codeHash) {
+  if (!timingSafeEqualStrings(expectedHash, challenge.codeHash)) {
     await patientPortalOtpPrismaRepository.incrementChallengeAttempts(challenge.id);
     return { ok: false, code: "invalid" };
   }
