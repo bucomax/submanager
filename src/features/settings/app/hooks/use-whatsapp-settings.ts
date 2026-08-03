@@ -18,7 +18,6 @@ const DEFAULT_SETTINGS: WhatsAppSettingsDto = {
   whatsappPhoneNumberId: null,
   whatsappBusinessAccountId: null,
   hasAccessToken: false,
-  whatsappWebhookVerifyToken: null,
   whatsappVerifiedAt: null,
 };
 

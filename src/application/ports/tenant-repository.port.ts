@@ -48,7 +48,6 @@ export type TenantWhatsAppRow = {
   whatsappPhoneNumberId: string | null;
   whatsappBusinessAccountId: string | null;
   whatsappAccessTokenEnc: string | null;
-  whatsappWebhookVerifyToken: string | null;
   whatsappVerifiedAt: Date | null;
 };
 
@@ -57,7 +56,6 @@ export type TenantWhatsAppPatchInput = {
   whatsappEnabled?: boolean;
   whatsappPhoneNumberId?: string | null;
   whatsappBusinessAccountId?: string | null;
-  whatsappWebhookVerifyToken?: string | null;
   whatsappAccessTokenEnc?: string | null;
   /** Quando true, zera `whatsappVerifiedAt` (ex.: troca de token). */
   resetWhatsAppVerifiedAt?: boolean;

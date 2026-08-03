@@ -288,8 +288,6 @@
     "accessTokenHint": "Token de acesso permanente (System User Token). Será criptografado no servidor.",
     "accessTokenSaved": "Token salvo. Deixe em branco para manter o atual ou preencha para substituir.",
     "accessTokenPlaceholder": "Cole o token aqui",
-    "webhookVerifyToken": "Webhook Verify Token",
-    "webhookVerifyTokenHint": "Token de verificação usado pelo Meta ao registrar o webhook.",
     "webhookUrl": "Webhook URL",
     "webhookUrlHint": "Configure esta URL no Meta Business Manager como Callback URL do webhook.",
     "statusConnected": "Conectado",

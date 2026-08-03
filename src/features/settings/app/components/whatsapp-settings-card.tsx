@@ -10,7 +10,7 @@ import {
   Wifi,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { useWhatsAppSettings } from "@/features/settings/app/hooks/use-whatsapp-settings";
@@ -29,6 +29,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/shared/components/ui/field";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Switch } from "@/shared/components/ui/switch";
+import { useSyncedDraft } from "@/shared/hooks/use-synced-draft";
 
 const WEBHOOK_PATH = "/api/v1/webhooks/whatsapp";
 
@@ -45,21 +46,25 @@ export function WhatsAppSettingsCard() {
     testConnection,
   } = useWhatsAppSettings();
 
-  const [enabled, setEnabled] = useState(false);
-  const [phoneNumberId, setPhoneNumberId] = useState("");
-  const [businessAccountId, setBusinessAccountId] = useState("");
-  const [accessToken, setAccessToken] = useState("");
-  const [verifyToken, setVerifyToken] = useState("");
+  /** Token de acesso nunca volta da API: o campo sempre reabre vazio. */
+  const serverForm = useMemo(
+    () => ({
+      enabled: settings.whatsappEnabled,
+      phoneNumberId: settings.whatsappPhoneNumberId ?? "",
+      businessAccountId: settings.whatsappBusinessAccountId ?? "",
+      accessToken: "",
+    }),
+    [settings],
+  );
+  const [form, setForm] = useSyncedDraft(serverForm);
+  const { enabled, phoneNumberId, businessAccountId, accessToken } = form;
   const [showToken, setShowToken] = useState(false);
 
-  useEffect(() => {
-    if (!hasLoaded) return;
-    setEnabled(settings.whatsappEnabled);
-    setPhoneNumberId(settings.whatsappPhoneNumberId ?? "");
-    setBusinessAccountId(settings.whatsappBusinessAccountId ?? "");
-    setAccessToken("");
-    setVerifyToken(settings.whatsappWebhookVerifyToken ?? "");
-  }, [hasLoaded, settings]);
+  const setEnabled = (value: boolean) => setForm((prev) => ({ ...prev, enabled: value }));
+  const setPhoneNumberId = (value: string) => setForm((prev) => ({ ...prev, phoneNumberId: value }));
+  const setBusinessAccountId = (value: string) =>
+    setForm((prev) => ({ ...prev, businessAccountId: value }));
+  const setAccessToken = (value: string) => setForm((prev) => ({ ...prev, accessToken: value }));
 
   if (loading && !hasLoaded) {
     return (
@@ -88,7 +93,6 @@ export function WhatsAppSettingsCard() {
       whatsappPhoneNumberId: phoneNumberId || null,
       whatsappBusinessAccountId: businessAccountId || null,
       ...(accessToken ? { whatsappAccessToken: accessToken } : {}),
-      whatsappWebhookVerifyToken: verifyToken || null,
     });
   }
 
@@ -203,18 +207,6 @@ export function WhatsAppSettingsCard() {
                     {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel>{t("webhookVerifyToken")}</FieldLabel>
-              <FieldDescription>{t("webhookVerifyTokenHint")}</FieldDescription>
-              <FieldContent>
-                <Input
-                  value={verifyToken}
-                  onChange={(e) => setVerifyToken(e.target.value)}
-                  disabled={!canEdit}
-                />
               </FieldContent>
             </Field>
 

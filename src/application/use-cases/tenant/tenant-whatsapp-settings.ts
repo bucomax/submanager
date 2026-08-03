@@ -9,7 +9,6 @@ export function tenantWhatsAppToDto(tenant: {
   whatsappPhoneNumberId: string | null;
   whatsappBusinessAccountId: string | null;
   whatsappAccessTokenEnc: string | null;
-  whatsappWebhookVerifyToken: string | null;
   whatsappVerifiedAt: Date | null;
 }) {
   return {
@@ -17,7 +16,6 @@ export function tenantWhatsAppToDto(tenant: {
     whatsappPhoneNumberId: tenant.whatsappPhoneNumberId,
     whatsappBusinessAccountId: tenant.whatsappBusinessAccountId,
     hasAccessToken: Boolean(tenant.whatsappAccessTokenEnc),
-    whatsappWebhookVerifyToken: tenant.whatsappWebhookVerifyToken,
     whatsappVerifiedAt: tenant.whatsappVerifiedAt?.toISOString() ?? null,
   };
 }

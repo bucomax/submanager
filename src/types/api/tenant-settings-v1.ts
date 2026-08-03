@@ -91,7 +91,6 @@ export type WhatsAppSettingsDto = {
   whatsappBusinessAccountId: string | null;
   /** Access token is never exposed — only a boolean flag. */
   hasAccessToken: boolean;
-  whatsappWebhookVerifyToken: string | null;
   whatsappVerifiedAt: string | null;
 };
 
@@ -105,7 +104,6 @@ export type UpdateWhatsAppSettingsRequestBody = {
   whatsappBusinessAccountId?: string | null;
   /** Plaintext on write — encrypted at storage layer. */
   whatsappAccessToken?: string | null;
-  whatsappWebhookVerifyToken?: string | null;
 };
 
 export type UpdateWhatsAppSettingsResponseData = {

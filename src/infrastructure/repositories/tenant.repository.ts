@@ -14,7 +14,6 @@ const WHATSAPP_SELECT = {
   whatsappPhoneNumberId: true,
   whatsappBusinessAccountId: true,
   whatsappAccessTokenEnc: true,
-  whatsappWebhookVerifyToken: true,
   whatsappVerifiedAt: true,
 } as const;
 
@@ -216,9 +215,6 @@ export class TenantPrismaRepository implements ITenantRepository {
     }
     if (patch.whatsappBusinessAccountId !== undefined) {
       data.whatsappBusinessAccountId = patch.whatsappBusinessAccountId;
-    }
-    if (patch.whatsappWebhookVerifyToken !== undefined) {
-      data.whatsappWebhookVerifyToken = patch.whatsappWebhookVerifyToken;
     }
     if (patch.whatsappAccessTokenEnc !== undefined) {
       data.whatsappAccessTokenEnc = patch.whatsappAccessTokenEnc;

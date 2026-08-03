@@ -211,7 +211,6 @@ model Tenant {
   whatsappBusinessAccountId  String?
   /** AES-256-GCM encrypted access token; decrypted only at dispatch time. */
   whatsappAccessTokenEnc     String?                     @db.Text
-  whatsappWebhookVerifyToken String?
   /** ISO timestamp of last successful API health check. */
   whatsappVerifiedAt         DateTime?
 

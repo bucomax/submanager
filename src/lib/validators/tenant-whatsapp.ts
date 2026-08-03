@@ -6,7 +6,6 @@ export const patchWhatsAppSettingsBodySchema = z
     whatsappPhoneNumberId: z.string().max(64).nullable().optional(),
     whatsappBusinessAccountId: z.string().max(64).nullable().optional(),
     whatsappAccessToken: z.string().max(512).nullable().optional(),
-    whatsappWebhookVerifyToken: z.string().max(128).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Informe ao menos um campo para atualizar.",
