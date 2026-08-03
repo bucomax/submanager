@@ -935,7 +935,7 @@
                 "required": ["fileName", "mimeType"],
                 "properties": {
                   "fileName": { "type": "string" },
-                  "mimeType": { "type": "string" },
+                  "mimeType": { "type": "string", "description": "Allowlist (magic bytes): image/jpeg, image/png, image/gif, image/webp, image/bmp, image/tiff, application/pdf, DOCX/XLSX/PPTX (OpenXML), application/zip" },
                   "clientId": { "type": "string" },
                   "purpose": { "type": "string", "enum": ["avatar"], "description": "Opcional — avatar grava em tenants/{id}/avatars/" }
                 }
@@ -944,7 +944,7 @@
           }
         },
         "responses": {
-          "200": { "description": "uploadUrl + key" },
+          "200": { "description": "uploadUrl + key + expiresInSeconds (900)" },
           "503": { "description": "Armazenamento (GCS) não configurado" },
           "401": { "description": "Não autenticado" }
         }
@@ -965,8 +965,8 @@
                 "properties": {
                   "key": { "type": "string" },
                   "fileName": { "type": "string" },
-                  "mimeType": { "type": "string" },
-                  "sizeBytes": { "type": "integer" },
+                  "mimeType": { "type": "string", "description": "Allowlist (magic bytes): image/jpeg, image/png, image/gif, image/webp, image/bmp, image/tiff, application/pdf, DOCX/XLSX/PPTX (OpenXML), application/zip" },
+                  "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 52428800 },
                   "clientId": { "type": "string" }
                 }
               }
@@ -1147,8 +1147,7 @@
                   "whatsappEnabled": { "type": "boolean" },
                   "whatsappPhoneNumberId": { "type": ["string", "null"] },
                   "whatsappBusinessAccountId": { "type": ["string", "null"] },
-                  "whatsappAccessToken": { "type": "string" },
-                  "whatsappWebhookVerifyToken": { "type": ["string", "null"] }
+                  "whatsappAccessToken": { "type": "string" }
                 }
               }
             }
@@ -1293,10 +1292,12 @@
       },
       "post": {
         "summary": "Callback Meta: status de entrega e respostas de botões",
+        "description": "Exige `WHATSAPP_APP_SECRET` no ambiente e header `x-hub-signature-256` (HMAC-SHA256 do corpo bruto). Payload sem assinatura válida é rejeitado.",
         "tags": ["Webhooks"],
         "responses": {
           "200": { "description": "OK (processamento assíncrono)" },
-          "401": { "description": "Assinatura inválida" }
+          "401": { "description": "Assinatura ausente ou inválida" },
+          "503": { "description": "`WHATSAPP_APP_SECRET` não configurado" }
         }
       }
     },
@@ -1912,7 +1913,8 @@
           "200": {
             "description": "Stream SSE. Eventos: `unread-count` (data: { count }), `notification` (data: NotificationDto)"
           },
-          "401": { "description": "Não autenticado" }
+          "401": { "description": "Não autenticado" },
+          "429": { "description": "Rate limit de reconexão (3 por 10s por usuário)" }
         }
       }
     },
@@ -2285,8 +2287,8 @@
                 "properties": {
                   "key": { "type": "string" },
                   "fileName": { "type": "string" },
-                  "mimeType": { "type": "string" },
-                  "sizeBytes": { "type": "integer", "minimum": 1 }
+                  "mimeType": { "type": "string", "description": "Allowlist (magic bytes): image/jpeg, image/png, image/gif, image/webp, image/bmp, image/tiff, application/pdf, DOCX/XLSX/PPTX (OpenXML), application/zip" },
+                  "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 52428800 }
                 }
               }
             }
@@ -2325,14 +2327,14 @@
                 "required": ["fileName", "mimeType"],
                 "properties": {
                   "fileName": { "type": "string" },
-                  "mimeType": { "type": "string" }
+                  "mimeType": { "type": "string", "description": "Allowlist (magic bytes): image/jpeg, image/png, image/gif, image/webp, image/bmp, image/tiff, application/pdf, DOCX/XLSX/PPTX (OpenXML), application/zip" }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "`key`, `uploadUrl`, `mimeType`" },
+          "200": { "description": "`key`, `uploadUrl`, `mimeType`, `expiresInSeconds` (900)" },
           "401": { "description": "Sem sessão do portal" },
           "404": { "description": "Paciente inexistente ou removido" },
           "503": { "description": "Storage não configurado" }
