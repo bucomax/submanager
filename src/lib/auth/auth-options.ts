@@ -5,6 +5,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { recordStaffLoginFailed, recordStaffLoginSuccess } from "@/infrastructure/audit/staff-login-audit";
 import { prisma } from "@/infrastructure/database/prisma";
 
+/**
+ * Hash descartável (cost 12, igual ao dos hashes reais) usado só para gastar o
+ * mesmo tempo de CPU quando o e-mail não existe ou não tem senha — sem isso a
+ * diferença de latência revela quais e-mails estão cadastrados.
+ */
+const DUMMY_PASSWORD_HASH = "$2a$12$xj6MdirVeyFWWlipr.PIi.oaDzgSVSsuv45DRop9zTXCfjVZwr9qu";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
@@ -25,6 +32,7 @@ export const authOptions: NextAuthOptions = {
           where: { email, deletedAt: null },
         });
         if (!user?.passwordHash) {
+          await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
           if (user) {
             void recordStaffLoginFailed(email, "no_password", user.id).catch(() => undefined);
           }
