@@ -1,0 +1,13 @@
+[
+  {
+    "maxAgeSeconds": 3600,
+    "method": ["GET", "PUT", "HEAD"],
+    "origin": [
+      "https://*.bucomax.com.br",
+      "https://bucomax.com.br",
+      "https://submanager.vercel.app",
+      "https://bucomax-dashboard.vercel.app"
+    ],
+    "responseHeader": ["Content-Type", "Content-Length", "x-goog-resumable"]
+  }
+]

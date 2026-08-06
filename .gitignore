@@ -46,3 +46,4 @@ yarn-error.log*
 next-env.d.ts
 # agents locais do Claude Code (symlinks para a home do dev)
 .claude/agents/
+.gcs-sa-key.json
