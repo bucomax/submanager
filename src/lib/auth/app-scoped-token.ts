@@ -8,8 +8,8 @@ const AUDIENCE = "submanager-app";
 const TOKEN_TTL_SECONDS = 15 * 60;
 
 function getSecret(): Uint8Array {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) throw new Error("NEXTAUTH_SECRET not set");
+  const secret = process.env.APP_TOKEN_SECRET ?? process.env.NEXTAUTH_SECRET;
+  if (!secret) throw new Error("APP_TOKEN_SECRET not set");
   return new TextEncoder().encode(secret);
 }
 
