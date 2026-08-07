@@ -16,6 +16,7 @@
     "checklistItemNotFound": "Item de checklist não encontrado nesta jornada.",
     "checklistOnlyCurrentStage": "Só é possível atualizar checklist da etapa atual do paciente.",
     "notificationNotFound": "Notificação não encontrada.",
+    "conversationNotFound": "Conversa não encontrada.",
     "stageNotInPublishedVersion": "Etapa não pertence à versão publicada desta jornada.",
     "noPublishedVersion": "Nenhuma versão publicada para esta jornada. Publique uma versão primeiro.",
     "noPublishedVersionWithStages": "Não há versão publicada com etapas para esta jornada. Publique uma versão primeiro.",

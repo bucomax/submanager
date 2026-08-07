@@ -2452,6 +2452,29 @@
         }
       }
     },
+    "/api/v1/tenant/conversations": {
+      "get": {
+        "summary": "Board do kanban de contatos (conversas do tenant agrupadas por status)",
+        "description": "Read-only. Fase de demonstração do kanban de contatos multicanal (WhatsApp/Instagram).",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Conversas agrupadas em columns (new, in_progress, waiting_contact, qualified, discarded)" }
+        }
+      }
+    },
+    "/api/v1/tenant/conversations/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "get": {
+        "summary": "Detalhe de uma conversa com histórico completo de mensagens",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Conversa e mensagens ordenadas por createdAt asc" },
+          "404": { "description": "Conversa não encontrada neste tenant" }
+        }
+      }
+    },
     "/api/v1/tenant/apps/active": {
       "get": {
         "summary": "Apps ativos do tenant (para sidebar)",

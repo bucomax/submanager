@@ -1,0 +1,33 @@
+{
+  "page": {
+    "title": "Contacts",
+    "description": "Multichannel conversation kanban — WhatsApp and Instagram."
+  },
+  "board": {
+    "column": {
+      "new": "New",
+      "in_progress": "In progress",
+      "waiting_contact": "Waiting for patient",
+      "qualified": "Qualified",
+      "discarded": "Discarded",
+      "empty": "No conversations in this column."
+    },
+    "empty": "No conversations yet.",
+    "loadError": "Could not load conversations.",
+    "retry": "Retry"
+  },
+  "card": {
+    "channel": {
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram"
+    }
+  },
+  "detail": {
+    "empty": "No messages in this conversation.",
+    "loadError": "Could not load this conversation.",
+    "retry": "Retry",
+    "demoBadge": "Demo — sending not implemented yet",
+    "composerPlaceholder": "Type a message…",
+    "send": "Send"
+  }
+}

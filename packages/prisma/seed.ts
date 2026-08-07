@@ -2,6 +2,7 @@ import { AppCategory, AppRenderMode, AppPricingModel, AppBillingInterval, Global
 import bcrypt from "bcryptjs";
 
 import { tenants } from "./seed/data";
+import { seedConversations } from "./seed/seed-conversations";
 import { seedTenant, upsertUser } from "./seed/seed-tenant";
 import type { TenantContext } from "./seed/types";
 
@@ -45,6 +46,12 @@ async function main() {
       where: { id: superUser.id },
       data: { activeTenantId: firstTenantId },
     });
+  }
+
+  // ── Seed Conversations (kanban de contatos multicanal — demo read-only) ──
+  let conversationsSeeded = { conversationCount: 0, messageCount: 0 };
+  if (contexts[0]) {
+    conversationsSeeded = await seedConversations(prisma, contexts[0]);
   }
 
   // ── Seed Apps ──────────────────────────────────────────────────────────
@@ -153,6 +160,7 @@ async function main() {
       clients: tenant.clients.length,
       suppliers: tenant.suppliers.length,
     })),
+    conversations: conversationsSeeded,
   });
 }
 

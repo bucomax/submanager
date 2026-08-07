@@ -31,6 +31,7 @@ import {
   GitBranch,
   Home,
   LogOut,
+  MessageCircle,
   Settings,
   Stethoscope,
   UserPen,
@@ -45,7 +46,7 @@ import { AppIcon } from "@/features/apps/app/components/app-icon";
 
 type NavItem = {
   href: string;
-  labelKey: "home" | "clients" | "pathways" | "reports" | "settings";
+  labelKey: "home" | "clients" | "contacts" | "pathways" | "reports" | "settings";
   icon: LucideIcon;
   match: (p: string) => boolean;
 };
@@ -65,6 +66,12 @@ const navGroups: { labelKey: "principal" | "sistema"; items: NavItem[] }[] = [
         labelKey: "clients",
         icon: Users,
         match: (p) => p.startsWith("/dashboard/clients"),
+      },
+      {
+        href: "/dashboard/contacts",
+        labelKey: "contacts",
+        icon: MessageCircle,
+        match: (p) => p.startsWith("/dashboard/contacts"),
       },
       {
         href: "/dashboard/pathways",

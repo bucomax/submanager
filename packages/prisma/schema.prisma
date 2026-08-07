@@ -34,6 +34,40 @@ enum NotificationType {
   patient_portal_link_sent
 }
 
+// === Kanban de contatos multicanal (demo read-only) ===
+enum ConversationChannel {
+  whatsapp
+  instagram
+}
+
+enum ConversationStatus {
+  new
+  in_progress
+  waiting_contact
+  qualified
+  discarded
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+enum MessageType {
+  text
+  image
+  document
+  audio
+  video
+}
+
+enum MessageStatus {
+  sent
+  delivered
+  read
+  failed
+}
+
 /** Eventos de auditoria agregados na linha do tempo do paciente (LGPD: payload sem conteúdo clínico). */
 enum AuditEventType {
   STAGE_TRANSITION
@@ -127,6 +161,8 @@ model User {
   createdAt                         DateTime                      @default(now())
   updatedAt                         DateTime                      @updatedAt
   activatedTenantApps               TenantApp[]                   @relation("TenantAppActivatedBy")
+  assignedConversations             Conversation[]
+  actorMessages                     Message[]
 }
 
 model UserAuthToken {
@@ -260,6 +296,7 @@ model Tenant {
   channelDispatches          ChannelDispatch[]
   emailDispatchLogs          EmailDispatchLog[]
   tenantApps                 TenantApp[]
+  conversations               Conversation[]
 }
 
 /**
@@ -318,10 +355,63 @@ model Client {
   patientPortalOtpChallenges PatientPortalOtpChallenge[]
   auditEvents                  AuditEvent[]
   channelDispatches            ChannelDispatch[]
+  conversations                Conversation[]
 
   @@index([tenantId])
   @@index([tenantId, deletedAt])
   @@index([deletedByUserId])
+}
+
+/**
+ * Conversa de canal (WhatsApp, depois Instagram) — vira Client via conversão explícita.
+ * Ver docs/superpowers/specs/2026-08-03-kanban-contatos-multicanal-design.md
+ */
+model Conversation {
+  id               String              @id @default(cuid())
+  tenantId         String
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel          ConversationChannel @default(whatsapp)
+  externalId       String
+  displayName      String
+  clientId         String?
+  client           Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  status           ConversationStatus  @default(new)
+  assignedToUserId String?
+  assignedToUser   User?               @relation(fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  lastInboundAt    DateTime?
+  lastMessageAt    DateTime?
+  firstResponseAt  DateTime?
+  unreadCount      Int                 @default(0)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  messages         Message[]
+
+  @@unique([tenantId, channel, externalId])
+  @@index([tenantId, status])
+}
+
+/** Mensagem individual de uma Conversation. */
+model Message {
+  id                String           @id @default(cuid())
+  conversationId    String
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction         MessageDirection
+  externalMessageId String?
+  type              MessageType      @default(text)
+  body              String?          @db.Text
+  fileAssetId       String?
+  fileAsset         FileAsset?       @relation(fields: [fileAssetId], references: [id], onDelete: SetNull)
+  status            MessageStatus    @default(sent)
+  actorUserId       String?
+  actorUser         User?            @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  failedAt          DateTime?
+  errorDetail       String?
+  createdAt         DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 model PatientPortalLinkToken {
@@ -658,6 +748,7 @@ model FileAsset {
   stageDocuments              StageDocument[]
   appIcons                    App[]                        @relation("AppIcon")
   appScreenshots              AppScreenshot[]              @relation("AppScreenshot")
+  messages                    Message[]
 
   @@index([tenantId])
   @@index([clientId])

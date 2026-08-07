@@ -1,0 +1,33 @@
+{
+  "page": {
+    "title": "Contatos",
+    "description": "Kanban de conversas multicanal — WhatsApp e Instagram."
+  },
+  "board": {
+    "column": {
+      "new": "Novo",
+      "in_progress": "Em atendimento",
+      "waiting_contact": "Aguardando paciente",
+      "qualified": "Qualificado",
+      "discarded": "Descartado",
+      "empty": "Nenhuma conversa nesta coluna."
+    },
+    "empty": "Nenhuma conversa ainda.",
+    "loadError": "Não foi possível carregar as conversas.",
+    "retry": "Tentar novamente"
+  },
+  "card": {
+    "channel": {
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram"
+    }
+  },
+  "detail": {
+    "empty": "Nenhuma mensagem nesta conversa.",
+    "loadError": "Não foi possível carregar esta conversa.",
+    "retry": "Tentar novamente",
+    "demoBadge": "Demonstração — envio ainda não implementado",
+    "composerPlaceholder": "Digite uma mensagem…",
+    "send": "Enviar"
+  }
+}

@@ -16,6 +16,7 @@
     "checklistItemNotFound": "Checklist item not found on this journey.",
     "checklistOnlyCurrentStage": "You can only update the checklist for the patient's current stage.",
     "notificationNotFound": "Notification not found.",
+    "conversationNotFound": "Conversation not found.",
     "stageNotInPublishedVersion": "Stage does not belong to the published version of this pathway.",
     "noPublishedVersion": "No published version for this pathway. Publish a version first.",
     "noPublishedVersionWithStages": "There is no published version with stages for this pathway. Publish a version first.",
