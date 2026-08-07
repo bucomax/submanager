@@ -6,6 +6,7 @@
       "https://*.bucomax.com.br",
       "https://bucomax.com.br",
       "https://submanager.vercel.app",
+      "https://submanager-dashboard.vercel.app",
       "https://bucomax-dashboard.vercel.app"
     ],
     "responseHeader": ["Content-Type", "Content-Length", "x-goog-resumable"]
