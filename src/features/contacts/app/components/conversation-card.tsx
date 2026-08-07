@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
 import { relativeTimeLabel } from "@/lib/utils/date";
 import { AtSign, MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -24,6 +25,12 @@ function initialsFromName(name: string): string {
 const CHANNEL_ICON = {
   whatsapp: MessageCircle,
   instagram: AtSign,
+} as const;
+
+const CHANNEL_BADGE_CLASS = {
+  whatsapp:
+    "border-emerald-800 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
+  instagram: "border-transparent bg-transparent text-muted-foreground",
 } as const;
 
 export function ConversationCard({ conversation }: ConversationCardProps) {
@@ -56,7 +63,12 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
             )}
 
             <div className="flex items-center justify-between gap-2 pt-1">
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                  CHANNEL_BADGE_CLASS[conversation.channel],
+                )}
+              >
                 <ChannelIcon className="size-3" />
                 {t(`channel.${conversation.channel}`)}
               </span>

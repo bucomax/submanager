@@ -2,9 +2,14 @@
 
 import { ConversationCard } from "@/features/contacts/app/components/conversation-card";
 import { useConversationsBoard } from "@/features/contacts/app/hooks/use-conversations-board";
+import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { DEBOUNCE_MS, useDebouncedState } from "@/shared/hooks/use-debounce";
+import { cn } from "@/lib/utils";
+import { AtSign, MessageCircle, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ConversationStatus } from "@/types/api/contacts-v1";
+import { useState } from "react";
+import type { ConversationChannel, ConversationStatus } from "@/types/api/contacts-v1";
 
 const COLUMN_ORDER: ConversationStatus[] = [
   "new",
@@ -14,9 +19,22 @@ const COLUMN_ORDER: ConversationStatus[] = [
   "discarded",
 ];
 
+const CHANNEL_FILTERS: ConversationChannel[] = ["whatsapp", "instagram"];
+
+const CHANNEL_ICON = {
+  whatsapp: MessageCircle,
+  instagram: AtSign,
+} as const;
+
 export function ContactsKanbanBoard() {
   const t = useTranslations("contacts.board");
+  const tCard = useTranslations("contacts.card");
   const { data, loading, error, refresh } = useConversationsBoard();
+  const [searchInput, debouncedSearch, setSearchInput] = useDebouncedState("", {
+    delayMs: DEBOUNCE_MS.search,
+    trim: true,
+  });
+  const [channelFilter, setChannelFilter] = useState<ConversationChannel | undefined>();
 
   if (loading) {
     return (
@@ -56,36 +74,107 @@ export function ContactsKanbanBoard() {
     );
   }
 
-  return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
-      {COLUMN_ORDER.map((status) => {
-        const cards = data?.columns[status] ?? [];
-        return (
-          <div
-            key={status}
-            className="flex h-[calc(100vh-14rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/20"
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-xl border-b bg-muted/40 px-3 py-2 backdrop-blur">
-              <h2 className="text-sm font-semibold">{t(`column.${status}`)}</h2>
-              <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {cards.length}
-              </span>
-            </div>
+  const query = debouncedSearch.toLowerCase();
+  const matchesFilters = (conversation: {
+    channel: ConversationChannel;
+    displayName: string;
+    lastMessagePreview: string | null;
+  }) => {
+    if (channelFilter && conversation.channel !== channelFilter) return false;
+    if (!query) return true;
+    return (
+      conversation.displayName.toLowerCase().includes(query) ||
+      (conversation.lastMessagePreview?.toLowerCase().includes(query) ?? false)
+    );
+  };
 
-            <div className="flex-1 space-y-2 overflow-y-auto p-2">
-              {cards.length === 0 ? (
-                <p className="px-2 py-8 text-center text-xs text-muted-foreground">
-                  {t("column.empty")}
-                </p>
-              ) : (
-                cards.map((conversation) => (
-                  <ConversationCard key={conversation.id} conversation={conversation} />
-                ))
-              )}
-            </div>
-          </div>
-        );
-      })}
+  const hasAnyMatch = COLUMN_ORDER.some((status) =>
+    (data?.columns[status] ?? []).some(matchesFilters),
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={t("searchPlaceholder")}
+            className="pl-9"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setChannelFilter(undefined)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              !channelFilter
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+            )}
+          >
+            {t("filterAll")}
+          </button>
+          {CHANNEL_FILTERS.map((channel) => {
+            const Icon = CHANNEL_ICON[channel];
+            return (
+              <button
+                key={channel}
+                type="button"
+                onClick={() => setChannelFilter(channel === channelFilter ? undefined : channel)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  channelFilter === channel
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                )}
+              >
+                <Icon className="size-3" />
+                {tCard(`channel.${channel}`)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {!hasAnyMatch ? (
+        <div className="flex flex-col items-center gap-1 rounded-xl border border-dashed p-10 text-center">
+          <p className="text-sm text-muted-foreground">{t("noResults")}</p>
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {COLUMN_ORDER.map((status) => {
+            const cards = (data?.columns[status] ?? []).filter(matchesFilters);
+            return (
+              <div
+                key={status}
+                className="flex h-[calc(100vh-16rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/20"
+              >
+                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-xl border-b bg-muted/40 px-3 py-2 backdrop-blur">
+                  <h2 className="text-sm font-semibold">{t(`column.${status}`)}</h2>
+                  <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    {cards.length}
+                  </span>
+                </div>
+
+                <div className="flex-1 space-y-2 overflow-y-auto p-2">
+                  {cards.length === 0 ? (
+                    <p className="px-2 py-8 text-center text-xs text-muted-foreground">
+                      {t("column.empty")}
+                    </p>
+                  ) : (
+                    cards.map((conversation) => (
+                      <ConversationCard key={conversation.id} conversation={conversation} />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,12 @@
 {
   "page": {
     "title": "Contatos",
-    "description": "Kanban de conversas multicanal — WhatsApp e Instagram."
+    "description": "Kanban de conversas multicanal: WhatsApp e Instagram."
   },
   "board": {
+    "searchPlaceholder": "Buscar contato ou mensagem",
+    "filterAll": "Todos",
+    "noResults": "Nenhum contato encontrado para esses filtros.",
     "column": {
       "new": "Novo",
       "in_progress": "Em atendimento",
@@ -26,8 +29,10 @@
     "empty": "Nenhuma mensagem nesta conversa.",
     "loadError": "Não foi possível carregar esta conversa.",
     "retry": "Tentar novamente",
-    "demoBadge": "Demonstração — envio ainda não implementado",
+    "demoBadge": "Demonstração: envio ainda não implementado",
     "composerPlaceholder": "Digite uma mensagem…",
-    "send": "Enviar"
+    "send": "Enviar",
+    "today": "Hoje",
+    "yesterday": "Ontem"
   }
 }

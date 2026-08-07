@@ -1,9 +1,12 @@
 {
   "page": {
     "title": "Contacts",
-    "description": "Multichannel conversation kanban — WhatsApp and Instagram."
+    "description": "Multichannel conversation kanban: WhatsApp and Instagram."
   },
   "board": {
+    "searchPlaceholder": "Search contact or message",
+    "filterAll": "All",
+    "noResults": "No contacts found for these filters.",
     "column": {
       "new": "New",
       "in_progress": "In progress",
@@ -26,8 +29,10 @@
     "empty": "No messages in this conversation.",
     "loadError": "Could not load this conversation.",
     "retry": "Retry",
-    "demoBadge": "Demo — sending not implemented yet",
+    "demoBadge": "Demo: sending not implemented yet",
     "composerPlaceholder": "Type a message…",
-    "send": "Send"
+    "send": "Send",
+    "today": "Today",
+    "yesterday": "Yesterday"
   }
 }
