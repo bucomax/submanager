@@ -28,6 +28,12 @@ const sizeStyles = {
 const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
   ({ className, checked, onCheckedChange, disabled, id, size = "default", ...props }, ref) => {
     const s = sizeStyles[size];
+    // `onClick` explícito precisa vir DEPOIS do spread de `props`: quando este componente é usado
+    // como `render` de um `TooltipTrigger` (base-ui), o clone injeta seu próprio `onClick` em
+    // `props` — se o spread vier por último, ele sobrescreve o toggle e o switch para de responder.
+    const { onClick: injectedOnClick, ...restProps } = props as typeof props & {
+      onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    };
     return (
       <button
         ref={ref}
@@ -45,10 +51,11 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           checked ? "bg-primary" : "bg-input dark:bg-input/80",
           className,
         )}
-        onClick={() => {
+        {...restProps}
+        onClick={(e) => {
+          injectedOnClick?.(e);
           if (!disabled) onCheckedChange(!checked);
         }}
-        {...props}
       >
         <span
           className={cn(
