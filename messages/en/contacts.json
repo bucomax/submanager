@@ -10,7 +10,6 @@
     "column": {
       "new": "New",
       "in_progress": "In progress",
-      "waiting_contact": "Waiting for patient",
       "qualified": "Qualified",
       "discarded": "Discarded",
       "empty": "No conversations in this column."

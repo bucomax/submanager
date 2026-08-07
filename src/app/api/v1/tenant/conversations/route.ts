@@ -14,13 +14,7 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-const CONVERSATION_STATUSES: ConversationStatus[] = [
-  "new",
-  "in_progress",
-  "waiting_contact",
-  "qualified",
-  "discarded",
-];
+const CONVERSATION_STATUSES: ConversationStatus[] = ["new", "in_progress", "qualified", "discarded"];
 
 const PREVIEW_MAX_LENGTH = 80;
 

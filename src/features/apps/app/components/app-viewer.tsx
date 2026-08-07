@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, Construction, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import type { AppDetailResponseData } from "@/types/api/apps-v1";
@@ -73,7 +73,14 @@ export function AppViewer({ app }: Props) {
     return <IframeViewer url={iframeUrl} title={app.name} appId={app.id} appSlug={app.slug} t={t} />;
   }
 
-  return null;
+  // ── Sem destino configurado ainda (iframeBaseUrl vazio) ─────────────
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 py-16 text-center">
+      <Construction className="size-8 text-muted-foreground" />
+      <p className="text-sm font-medium">{t("comingSoon")}</p>
+      <p className="max-w-sm text-xs text-muted-foreground">{t("comingSoonHint")}</p>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------

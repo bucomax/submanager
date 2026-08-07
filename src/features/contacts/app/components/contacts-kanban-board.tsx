@@ -11,13 +11,10 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ConversationChannel, ConversationStatus } from "@/types/api/contacts-v1";
 
-const COLUMN_ORDER: ConversationStatus[] = [
-  "new",
-  "in_progress",
-  "waiting_contact",
-  "qualified",
-  "discarded",
-];
+/** Colunas exibidas no kanban — `waiting_contact` existe no schema mas não é usado nesta etapa demonstrativa. */
+type BoardStatus = Exclude<ConversationStatus, "waiting_contact">;
+
+const COLUMN_ORDER: BoardStatus[] = ["new", "in_progress", "qualified", "discarded"];
 
 const CHANNEL_FILTERS: ConversationChannel[] = ["whatsapp", "instagram"];
 

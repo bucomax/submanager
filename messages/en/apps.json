@@ -57,7 +57,9 @@
     "internalNotFound": "Internal component not found for this app.",
     "iframeError": "Could not load the app.",
     "iframeErrorHint": "Check your connection or try again in a few minutes.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "comingSoon": "Coming soon",
+    "comingSoonHint": "This app is still being built. It'll be available here soon."
   },
   "admin": {
     "title": "Manage Apps",

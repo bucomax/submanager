@@ -10,7 +10,6 @@
     "column": {
       "new": "Novo",
       "in_progress": "Em atendimento",
-      "waiting_contact": "Aguardando paciente",
       "qualified": "Qualificado",
       "discarded": "Descartado",
       "empty": "Nenhuma conversa nesta coluna."

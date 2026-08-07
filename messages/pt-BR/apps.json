@@ -57,7 +57,9 @@
     "internalNotFound": "Componente interno não encontrado para este app.",
     "iframeError": "Não foi possível carregar o app.",
     "iframeErrorHint": "Verifique sua conexão ou tente novamente em alguns minutos.",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "comingSoon": "Em desenvolvimento",
+    "comingSoonHint": "Esse app ainda está sendo construído. Em breve estará disponível por aqui."
   },
   "admin": {
     "title": "Gerenciar Apps",
