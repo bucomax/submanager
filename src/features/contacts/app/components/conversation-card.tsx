@@ -3,9 +3,11 @@
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
-import { Link } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { relativeTimeLabel } from "@/lib/utils/date";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { AtSign, MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ConversationCardDto } from "@/types/api/contacts-v1";
@@ -36,11 +38,33 @@ const CHANNEL_BADGE_CLASS = {
 export function ConversationCard({ conversation }: ConversationCardProps) {
   const t = useTranslations("contacts.card");
   const locale = useLocale();
+  const router = useRouter();
   const ChannelIcon = CHANNEL_ICON[conversation.channel];
 
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: conversation.id,
+  });
+
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+
   return (
-    <Link href={`/dashboard/contacts/${conversation.id}`} className="block">
-      <Card className="transition-shadow hover:shadow-md">
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={() => router.push(`/dashboard/contacts/${conversation.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") router.push(`/dashboard/contacts/${conversation.id}`);
+      }}
+      className={cn("touch-none", isDragging && "z-10 opacity-90")}
+      {...listeners}
+      {...attributes}
+    >
+      <Card
+        className={cn(
+          "cursor-grab transition-shadow hover:shadow-md active:cursor-grabbing",
+          isDragging && "shadow-lg",
+        )}
+      >
         <CardContent className="flex items-start gap-3 p-3">
           <Avatar size="sm" className="mt-0.5 shrink-0">
             <AvatarFallback>{initialsFromName(conversation.displayName)}</AvatarFallback>
@@ -85,6 +109,6 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 }

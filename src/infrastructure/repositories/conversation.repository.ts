@@ -1,3 +1,4 @@
+import type { ConversationStatus } from "@prisma/client";
 import { prisma } from "@/infrastructure/database/prisma";
 
 const conversationWithRelations = {
@@ -31,5 +32,14 @@ export const conversationPrismaRepository = {
         messages: { orderBy: { createdAt: "asc" } },
       },
     });
+  },
+
+  /** Move a conversa pra outra coluna do kanban (troca de status). Sempre escopado ao tenant. */
+  async updateStatus(tenantId: string, conversationId: string, status: ConversationStatus) {
+    const { count } = await prisma.conversation.updateMany({
+      where: { id: conversationId, tenantId },
+      data: { status },
+    });
+    return count > 0;
   },
 };

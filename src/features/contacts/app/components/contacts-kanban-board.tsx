@@ -6,12 +6,21 @@ import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DEBOUNCE_MS, useDebouncedState } from "@/shared/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { AtSign, MessageCircle, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import type { ConversationChannel, ConversationStatus } from "@/types/api/contacts-v1";
+import type { ConversationCardDto, ConversationChannel, ConversationStatus } from "@/types/api/contacts-v1";
 
-/** Colunas exibidas no kanban — `waiting_contact` existe no schema mas não é usado nesta etapa demonstrativa. */
+/** Colunas exibidas no kanban — `waiting_contact` existe no schema mas não é usado nesta etapa. */
 type BoardStatus = Exclude<ConversationStatus, "waiting_contact">;
 
 const COLUMN_ORDER: BoardStatus[] = ["new", "in_progress", "qualified", "discarded"];
@@ -23,15 +32,65 @@ const CHANNEL_ICON = {
   instagram: AtSign,
 } as const;
 
+function KanbanColumn({
+  status,
+  cards,
+  label,
+}: {
+  status: BoardStatus;
+  cards: ConversationCardDto[];
+  label: string;
+}) {
+  const t = useTranslations("contacts.board");
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex h-[calc(100vh-16rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/20 transition-colors",
+        isOver && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+      )}
+    >
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-xl border-b bg-muted/40 px-3 py-2 backdrop-blur">
+        <h2 className="text-sm font-semibold">{label}</h2>
+        <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {cards.length}
+        </span>
+      </div>
+
+      <div className="flex-1 space-y-2 overflow-y-auto p-2">
+        {cards.length === 0 ? (
+          <p className="px-2 py-8 text-center text-xs text-muted-foreground">{t("column.empty")}</p>
+        ) : (
+          cards.map((conversation) => (
+            <ConversationCard key={conversation.id} conversation={conversation} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ContactsKanbanBoard() {
   const t = useTranslations("contacts.board");
   const tCard = useTranslations("contacts.card");
-  const { data, loading, error, refresh } = useConversationsBoard();
+  const { data, loading, error, refresh, moveConversation } = useConversationsBoard();
   const [searchInput, debouncedSearch, setSearchInput] = useDebouncedState("", {
     delayMs: DEBOUNCE_MS.search,
     trim: true,
   });
   const [channelFilter, setChannelFilter] = useState<ConversationChannel | undefined>();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const toStatus = COLUMN_ORDER.find((status) => status === over.id);
+    if (!toStatus) return;
+    void moveConversation(String(active.id), toStatus);
+  }
 
   if (loading) {
     return (
@@ -141,36 +200,18 @@ export function ContactsKanbanBoard() {
           <p className="text-sm text-muted-foreground">{t("noResults")}</p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {COLUMN_ORDER.map((status) => {
-            const cards = (data?.columns[status] ?? []).filter(matchesFilters);
-            return (
-              <div
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {COLUMN_ORDER.map((status) => (
+              <KanbanColumn
                 key={status}
-                className="flex h-[calc(100vh-16rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/20"
-              >
-                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-xl border-b bg-muted/40 px-3 py-2 backdrop-blur">
-                  <h2 className="text-sm font-semibold">{t(`column.${status}`)}</h2>
-                  <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {cards.length}
-                  </span>
-                </div>
-
-                <div className="flex-1 space-y-2 overflow-y-auto p-2">
-                  {cards.length === 0 ? (
-                    <p className="px-2 py-8 text-center text-xs text-muted-foreground">
-                      {t("column.empty")}
-                    </p>
-                  ) : (
-                    cards.map((conversation) => (
-                      <ConversationCard key={conversation.id} conversation={conversation} />
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                status={status}
+                cards={(data?.columns[status] ?? []).filter(matchesFilters)}
+                label={t(`column.${status}`)}
+              />
+            ))}
+          </div>
+        </DndContext>
       )}
     </div>
   );

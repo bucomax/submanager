@@ -7,6 +7,7 @@
     "searchPlaceholder": "Search contact or message",
     "filterAll": "All",
     "noResults": "No contacts found for these filters.",
+    "moveError": "Could not move the contact. Please try again.",
     "column": {
       "new": "New",
       "in_progress": "In progress",

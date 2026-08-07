@@ -2473,6 +2473,30 @@
           "200": { "description": "Conversa e mensagens ordenadas por createdAt asc" },
           "404": { "description": "Conversa não encontrada neste tenant" }
         }
+      },
+      "patch": {
+        "summary": "Move a conversa entre colunas do kanban (troca de status)",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["new", "in_progress", "qualified", "discarded"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Status atualizado" },
+          "404": { "description": "Conversa não encontrada neste tenant" },
+          "422": { "description": "Status inválido" }
+        }
       }
     },
     "/api/v1/tenant/apps/active": {

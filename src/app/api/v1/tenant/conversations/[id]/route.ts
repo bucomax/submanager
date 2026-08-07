@@ -6,6 +6,7 @@ import {
   getActiveTenantIdOr400,
   requireSessionOr401,
 } from "@/lib/auth/guards";
+import { patchConversationStatusBodySchema } from "@/lib/validators/contacts";
 import type {
   ConversationCardDto,
   ConversationDetailResponseData,
@@ -74,4 +75,38 @@ export async function GET(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const payload: ConversationDetailResponseData = { conversation, messages };
   return jsonSuccess(payload);
+}
+
+/** Move a conversa entre colunas do kanban (troca de status). Sem efeito colateral em WhatsApp/mensagens. */
+export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
+  const apiT = await getApiT(request);
+  const auth = await requireSessionOr401(request, apiT);
+  if (auth.response) return auth.response;
+
+  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
+  if (tenantCtx.response) return tenantCtx.response;
+
+  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
+  if (memberErr) return memberErr;
+
+  const { id } = await ctx.params;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
+  }
+
+  const parsed = patchConversationStatusBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+  }
+
+  const updated = await conversationPrismaRepository.updateStatus(tenantCtx.tenantId!, id, parsed.data.status);
+  if (!updated) {
+    return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
+  }
+
+  return jsonSuccess({ id, status: parsed.data.status });
 }
