@@ -58,8 +58,8 @@
     "iframeError": "Não foi possível carregar o app.",
     "iframeErrorHint": "Verifique sua conexão ou tente novamente em alguns minutos.",
     "retry": "Tentar novamente",
-    "comingSoon": "Em desenvolvimento",
-    "comingSoonHint": "Esse app ainda está sendo construído. Em breve estará disponível por aqui."
+    "comingSoon": "Em manutenção",
+    "comingSoonHint": "Estamos trocando alguns componentes da integração e, por causa disso, algumas funções deste app ficaram temporariamente fora do ar. É temporário — deve voltar ao normal semana que vem."
   },
   "admin": {
     "title": "Gerenciar Apps",

@@ -58,8 +58,8 @@
     "iframeError": "Could not load the app.",
     "iframeErrorHint": "Check your connection or try again in a few minutes.",
     "retry": "Try again",
-    "comingSoon": "Coming soon",
-    "comingSoonHint": "This app is still being built. It'll be available here soon."
+    "comingSoon": "Under maintenance",
+    "comingSoonHint": "We're swapping out some parts of this integration, so a few features are temporarily offline. It's temporary — should be back to normal next week."
   },
   "admin": {
     "title": "Manage Apps",
