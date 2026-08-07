@@ -61,7 +61,8 @@ export async function GET(request: Request) {
       lastMessagePreview: buildLastMessagePreview(row.messages[0]),
       unreadCount: row.unreadCount,
     };
-    columns[row.status].push(card);
+    // Status fora das colunas exibidas (ex.: valor legado do enum) — não quebra o board.
+    columns[row.status]?.push(card);
   }
 
   const payload: ConversationsBoardResponseData = { columns };
