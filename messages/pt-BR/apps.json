@@ -74,6 +74,9 @@
     "draft": "Rascunho",
     "publish": "Publicar",
     "unpublish": "Despublicar",
+    "active": "Ativo",
+    "activate": "Ativar no tenant atual",
+    "deactivate": "Desativar no tenant atual",
     "noApps": "Nenhum app cadastrado.",
     "preview": {
       "view": "Visualizar",

@@ -33,6 +33,7 @@ import {
   LogOut,
   MessageCircle,
   Settings,
+  Store,
   Stethoscope,
   UserPen,
   Users,
@@ -46,7 +47,7 @@ import { AppIcon } from "@/features/apps/app/components/app-icon";
 
 type NavItem = {
   href: string;
-  labelKey: "home" | "clients" | "contacts" | "pathways" | "reports" | "settings";
+  labelKey: "home" | "clients" | "contacts" | "pathways" | "reports" | "marketplace" | "settings";
   icon: LucideIcon;
   match: (p: string) => boolean;
 };
@@ -84,6 +85,12 @@ const navGroups: { labelKey: "principal" | "sistema"; items: NavItem[] }[] = [
         labelKey: "reports",
         icon: BarChart3,
         match: (p) => p.startsWith("/dashboard/reports"),
+      },
+      {
+        href: "/dashboard/apps",
+        labelKey: "marketplace",
+        icon: Store,
+        match: (p) => p.startsWith("/dashboard/apps"),
       },
       {
         href: "/dashboard/settings#account",

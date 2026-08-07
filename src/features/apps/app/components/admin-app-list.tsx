@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { notifyActiveAppsMenuInvalidated } from "@/features/apps/app/lib/invalidate-active-apps";
 import { getAdminApps, deleteApp, publishApp } from "@/features/apps/app/services/admin-apps.service";
+import { activateApp, deactivateApp, getActiveApps } from "@/features/apps/app/services/apps.service";
 import { AdminAppStorePreviewDialog } from "@/features/apps/app/components/admin-app-store-preview-dialog";
 import { AdminAppWizardDialog } from "@/features/apps/app/components/admin-app-wizard-dialog";
 import { AppIcon } from "@/features/apps/app/components/app-icon";
@@ -12,14 +13,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Badge } from "@/shared/components/ui/badge";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
-import { Eye, EyeOff, Pencil, Plus, Store, Trash2, Users } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Power, PowerOff, Store, Trash2, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export function AdminAppList() {
   const t = useTranslations("apps.admin");
   const tCat = useTranslations("apps.catalog.categories");
   const [apps, setApps] = useState<AppDto[]>([]);
+  const [activeSlugs, setActiveSlugs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [togglingAppId, setTogglingAppId] = useState<string | null>(null);
 
   // Wizard dialog state
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -28,8 +31,9 @@ export function AdminAppList() {
 
   const refresh = useCallback(async () => {
     try {
-      const data = await getAdminApps();
+      const [data, active] = await Promise.all([getAdminApps(), getActiveApps()]);
       setApps(data);
+      setActiveSlugs(new Set(active.map((a) => a.slug)));
     } catch {
       // apiClient trata toast
     } finally {
@@ -54,6 +58,21 @@ export function AdminAppList() {
   async function handleTogglePublish(app: AppDto) {
     await publishApp(app.id, !app.isPublished);
     void refresh();
+  }
+
+  async function handleToggleActivate(app: AppDto) {
+    setTogglingAppId(app.id);
+    try {
+      if (activeSlugs.has(app.slug)) {
+        await deactivateApp(app.id);
+      } else {
+        await activateApp(app.id);
+      }
+      notifyActiveAppsMenuInvalidated();
+      await refresh();
+    } finally {
+      setTogglingAppId(null);
+    }
   }
 
   async function handleDelete(app: AppDto) {
@@ -108,6 +127,11 @@ export function AdminAppList() {
                       <Badge variant="outline" className="text-xs">
                         {tCat(app.category)}
                       </Badge>
+                      {activeSlugs.has(app.slug) && (
+                        <Badge variant="outline" className="border-emerald-700 text-xs text-emerald-600">
+                          {t("active")}
+                        </Badge>
+                      )}
                       {app.accentColor && (
                         <span
                           className="size-3 rounded-full border border-foreground/10"
@@ -182,6 +206,30 @@ export function AdminAppList() {
                         {app.isPublished ? t("unpublish") : t("publish")}
                       </TooltipContent>
                     </Tooltip>
+
+                    {(app.isPublished || activeSlugs.has(app.slug)) && (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={togglingAppId === app.id}
+                              onClick={() => void handleToggleActivate(app)}
+                            />
+                          }
+                        >
+                          {activeSlugs.has(app.slug) ? (
+                            <PowerOff className="size-4" />
+                          ) : (
+                            <Power className="size-4" />
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {activeSlugs.has(app.slug) ? t("deactivate") : t("activate")}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
 
                     <Tooltip>
                       <TooltipTrigger
