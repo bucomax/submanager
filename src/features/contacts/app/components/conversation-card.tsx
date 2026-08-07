@@ -7,7 +7,6 @@ import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { relativeTimeLabel } from "@/lib/utils/date";
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { AtSign, MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ConversationCardDto } from "@/types/api/contacts-v1";
@@ -35,80 +34,93 @@ const CHANNEL_BADGE_CLASS = {
   instagram: "border-transparent bg-transparent text-muted-foreground",
 } as const;
 
-export function ConversationCard({ conversation }: ConversationCardProps) {
+/** Conteúdo visual puro, compartilhado entre o card na lista e o preview no `DragOverlay`. */
+function ConversationCardBody({
+  conversation,
+  className,
+}: ConversationCardProps & { className?: string }) {
   const t = useTranslations("contacts.card");
   const locale = useLocale();
-  const router = useRouter();
   const ChannelIcon = CHANNEL_ICON[conversation.channel];
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  return (
+    <Card className={cn("transition-shadow hover:shadow-md", className)}>
+      <CardContent className="flex items-start gap-3 p-3">
+        <Avatar size="sm" className="mt-0.5 shrink-0">
+          <AvatarFallback>{initialsFromName(conversation.displayName)}</AvatarFallback>
+        </Avatar>
+
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm font-medium">{conversation.displayName}</p>
+            {conversation.unreadCount > 0 && (
+              <Badge variant="default" className="shrink-0 rounded-full px-1.5">
+                {conversation.unreadCount}
+              </Badge>
+            )}
+          </div>
+
+          {conversation.lastMessagePreview && (
+            <p className="truncate text-xs text-muted-foreground">{conversation.lastMessagePreview}</p>
+          )}
+
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                CHANNEL_BADGE_CLASS[conversation.channel],
+              )}
+            >
+              <ChannelIcon className="size-3" />
+              {t(`channel.${conversation.channel}`)}
+            </span>
+            {conversation.lastMessageAt && (
+              <span className="text-xs text-muted-foreground">
+                {relativeTimeLabel(conversation.lastMessageAt, locale === "en" ? "en-US" : "pt-BR")}
+              </span>
+            )}
+          </div>
+
+          {conversation.clientName && (
+            <p className="truncate text-xs text-primary">{conversation.clientName}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ConversationCard({ conversation }: ConversationCardProps) {
+  const router = useRouter();
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: conversation.id,
   });
-
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
       onClick={() => router.push(`/dashboard/contacts/${conversation.id}`)}
       onKeyDown={(e) => {
         if (e.key === "Enter") router.push(`/dashboard/contacts/${conversation.id}`);
       }}
-      className={cn("touch-none", isDragging && "z-10 opacity-90")}
+      className="touch-none"
       {...listeners}
       {...attributes}
     >
-      <Card
-        className={cn(
-          "cursor-grab transition-shadow hover:shadow-md active:cursor-grabbing",
-          isDragging && "shadow-lg",
-        )}
-      >
-        <CardContent className="flex items-start gap-3 p-3">
-          <Avatar size="sm" className="mt-0.5 shrink-0">
-            <AvatarFallback>{initialsFromName(conversation.displayName)}</AvatarFallback>
-          </Avatar>
+      <ConversationCardBody
+        conversation={conversation}
+        className={cn("cursor-grab active:cursor-grabbing", isDragging && "opacity-40")}
+      />
+    </div>
+  );
+}
 
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-medium">{conversation.displayName}</p>
-              {conversation.unreadCount > 0 && (
-                <Badge variant="default" className="shrink-0 rounded-full px-1.5">
-                  {conversation.unreadCount}
-                </Badge>
-              )}
-            </div>
-
-            {conversation.lastMessagePreview && (
-              <p className="truncate text-xs text-muted-foreground">
-                {conversation.lastMessagePreview}
-              </p>
-            )}
-
-            <div className="flex items-center justify-between gap-2 pt-1">
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                  CHANNEL_BADGE_CLASS[conversation.channel],
-                )}
-              >
-                <ChannelIcon className="size-3" />
-                {t(`channel.${conversation.channel}`)}
-              </span>
-              {conversation.lastMessageAt && (
-                <span className="text-xs text-muted-foreground">
-                  {relativeTimeLabel(conversation.lastMessageAt, locale === "en" ? "en-US" : "pt-BR")}
-                </span>
-              )}
-            </div>
-
-            {conversation.clientName && (
-              <p className="truncate text-xs text-primary">{conversation.clientName}</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+/** Cópia flutuante renderizada no `DragOverlay` — fora do fluxo da coluna, sempre por cima. */
+export function ConversationCardOverlay({ conversation }: ConversationCardProps) {
+  return (
+    <div className="w-[min(280px,calc(100vw-2rem))]">
+      <ConversationCardBody conversation={conversation} className="cursor-grabbing shadow-lg" />
     </div>
   );
 }

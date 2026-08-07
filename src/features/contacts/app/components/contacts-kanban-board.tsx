@@ -1,6 +1,6 @@
 "use client";
 
-import { ConversationCard } from "@/features/contacts/app/components/conversation-card";
+import { ConversationCard, ConversationCardOverlay } from "@/features/contacts/app/components/conversation-card";
 import { useConversationsBoard } from "@/features/contacts/app/hooks/use-conversations-board";
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -8,7 +8,9 @@ import { DEBOUNCE_MS, useDebouncedState } from "@/shared/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   closestCenter,
   useDroppable,
@@ -81,10 +83,20 @@ export function ContactsKanbanBoard() {
     trim: true,
   });
   const [channelFilter, setChannelFilter] = useState<ConversationChannel | undefined>();
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  const activeConversation = activeId
+    ? COLUMN_ORDER.flatMap((status) => data?.columns[status] ?? []).find((c) => c.id === activeId)
+    : null;
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, over } = event;
     if (!over) return;
     const toStatus = COLUMN_ORDER.find((status) => status === over.id);
@@ -200,7 +212,12 @@ export function ContactsKanbanBoard() {
           <p className="text-sm text-muted-foreground">{t("noResults")}</p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
           <div className="flex gap-4 overflow-x-auto pb-2">
             {COLUMN_ORDER.map((status) => (
               <KanbanColumn
@@ -211,6 +228,9 @@ export function ContactsKanbanBoard() {
               />
             ))}
           </div>
+          <DragOverlay dropAnimation={null}>
+            {activeConversation ? <ConversationCardOverlay conversation={activeConversation} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
     </div>
