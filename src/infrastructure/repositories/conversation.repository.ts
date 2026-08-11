@@ -103,6 +103,15 @@ export const conversationPrismaRepository = {
     return conversationPrismaRepository.updateStage(tenantId, conversationId, status);
   },
 
+  /** Vincula a conversa a um `Client` recém-criado (conversão de lead). Sempre escopado ao tenant. */
+  async linkClient(tenantId: string, conversationId: string, clientId: string) {
+    const { count } = await prisma.conversation.updateMany({
+      where: { id: conversationId, tenantId },
+      data: { clientId },
+    });
+    return count > 0;
+  },
+
   /**
    * Cria uma mensagem na conversa (inbound ou outbound) e atualiza `lastMessageAt`
    * (e `lastInboundAt` quando inbound) em transação. Retorna `null` se a conversa

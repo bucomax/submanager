@@ -94,6 +94,7 @@ export function MobileConversationView({ conversationId }: MobileConversationVie
               createNote={detail.createNote}
               updateNote={detail.updateNote}
               deleteNote={detail.deleteNote}
+              onConverted={() => void refresh()}
             />
           )}
         </SheetContent>

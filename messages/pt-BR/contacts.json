@@ -51,7 +51,7 @@
     "selectPrompt": "Selecione uma conversa para começar.",
     "leadSaved": "Dados do lead salvos.",
     "saveLead": "Salvar lead",
-    "leadNotRegistered": "Este lead ainda não tem cadastro de paciente vinculado."
+    "leadNotRegistered": "Lead ainda sem cadastro — preencha os dados abaixo para criar o paciente."
   },
   "phrases": {
     "title": "Frases prontas",

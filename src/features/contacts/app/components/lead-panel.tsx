@@ -5,6 +5,7 @@ import { ChevronLeft, NotebookPen, Pencil, Pin, Plus, Trash2 } from "lucide-reac
 import { useTranslations } from "next-intl";
 import { LeadStagePicker } from "@/features/contacts/app/components/lead-stage-picker";
 import { getClientDetail, updateClient } from "@/features/clients/app/services/clients.service";
+import { convertConversationToClient } from "@/features/contacts/app/services/contacts.service";
 import { NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
 import { STAGE_ORDER } from "@/features/contacts/app/utils/stage-colors";
 import { Button } from "@/shared/components/ui/button";
@@ -12,7 +13,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { calendarDaysFromNow } from "@/lib/utils/date";
 import { toast } from "@/lib/toast";
-import type { ClientDetailClientDto } from "@/types/api/clients-v1";
+import type { ClientDetailClientDto, ClientDto } from "@/types/api/clients-v1";
 import type {
   ConversationCardDto,
   ConversationStatus,
@@ -50,6 +51,8 @@ type LeadPanelProps = {
   createNote: (input: UpsertLeadNoteRequestBody) => Promise<LeadNoteDto>;
   updateNote: (id: string, input: Partial<UpsertLeadNoteRequestBody>) => Promise<LeadNoteDto>;
   deleteNote: (id: string) => Promise<void>;
+  /** Chamado quando um lead sem cadastro vira Client — o pai atualiza `conversation.clientId/clientName`. */
+  onConverted: (client: ClientDto) => void;
 };
 
 export function LeadPanel({
@@ -64,6 +67,7 @@ export function LeadPanel({
   createNote,
   updateNote,
   deleteNote,
+  onConverted,
 }: LeadPanelProps) {
   const t = useTranslations("contacts");
   const [form, setForm] = useState<ClientFormState | null>(null);
@@ -83,9 +87,15 @@ export function LeadPanel({
         .catch(() => setForm(null))
         .finally(() => setLoadingClient(false));
     } else {
-      setForm(null);
+      setForm({
+        name: conversation.clientName ?? conversation.displayName,
+        phone: conversation.externalId,
+        email: "",
+        documentId: "",
+        caseDescription: "",
+      });
     }
-  }, [open, conversation.clientId]);
+  }, [open, conversation.clientId, conversation.clientName, conversation.displayName, conversation.externalId]);
 
   if (!open) return null;
 
@@ -93,16 +103,27 @@ export function LeadPanel({
   const stageIndex = STAGE_ORDER.indexOf(conversation.status);
 
   async function handleSaveClient() {
-    if (!conversation.clientId || !form) return;
+    if (!form) return;
     setSaving(true);
     try {
-      await updateClient(conversation.clientId, {
-        name: form.name,
-        phone: form.phone,
-        email: form.email || undefined,
-        documentId: form.documentId || null,
-        caseDescription: form.caseDescription || null,
-      });
+      if (conversation.clientId) {
+        await updateClient(conversation.clientId, {
+          name: form.name,
+          phone: form.phone,
+          email: form.email || undefined,
+          documentId: form.documentId || null,
+          caseDescription: form.caseDescription || null,
+        });
+      } else {
+        const client = await convertConversationToClient(conversation.id, {
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          documentId: form.documentId || null,
+          caseDescription: form.caseDescription || null,
+        });
+        onConverted(client);
+      }
       setSaveHint(t("chat.leadSaved"));
       toast.success(t("chat.leadSaved"));
     } catch {
@@ -178,12 +199,13 @@ export function LeadPanel({
       </div>
 
       <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-2.5 overflow-y-auto p-3.5">
-        {!conversation.clientId ? (
-          <p className="col-span-full text-sm text-muted-foreground">{t("chat.leadNotRegistered")}</p>
-        ) : loadingClient || !form ? (
+        {loadingClient || !form ? (
           <p className="col-span-full text-sm text-muted-foreground">…</p>
         ) : (
           <>
+            {!conversation.clientId && (
+              <p className="col-span-full text-xs text-muted-foreground">{t("chat.leadNotRegistered")}</p>
+            )}
             <Field label="Nome">
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
@@ -327,11 +349,9 @@ export function LeadPanel({
         <Button type="button" variant="outline" onClick={onClose}>
           {t("chat.closeLead")}
         </Button>
-        {conversation.clientId && (
-          <Button type="button" disabled={saving} onClick={() => void handleSaveClient()}>
-            {t("chat.saveLead")}
-          </Button>
-        )}
+        <Button type="button" disabled={saving || !form} onClick={() => void handleSaveClient()}>
+          {t("chat.saveLead")}
+        </Button>
       </div>
     </div>
   );

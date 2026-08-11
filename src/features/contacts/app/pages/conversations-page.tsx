@@ -11,6 +11,7 @@ import { updateConversationStatus } from "@/features/contacts/app/services/conta
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
 import { useTranslations } from "next-intl";
+import type { ClientDto } from "@/types/api/clients-v1";
 import type { ConversationListItemDto, ConversationStatus } from "@/types/api/contacts-v1";
 
 const MOBILE_BREAKPOINT_PX = 1024;
@@ -49,6 +50,13 @@ export function ConversationsPage() {
     if (openStagePicker) setStagePickerOpen(true);
   }
 
+  function handleConverted(client: ClientDto) {
+    setActiveConversation((prev) =>
+      prev ? { ...prev, clientId: client.id, clientName: client.name } : prev,
+    );
+    void detail.refresh();
+  }
+
   async function handleStageChange(status: ConversationStatus) {
     if (!activeConversation) return;
     try {
@@ -63,7 +71,7 @@ export function ConversationsPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] min-h-0 rounded-xl border">
+    <div className="h-[calc(100vh-8rem)] min-h-0 overflow-hidden rounded-xl border">
       {/* Desktop / tablet largo (Layout B): grid de 3 colunas, painel do lead como 3ª coluna animada. */}
       <div
         className="hidden h-full min-h-0 overflow-x-auto lg:grid"
@@ -132,6 +140,7 @@ export function ConversationsPage() {
               createNote={detail.createNote}
               updateNote={detail.updateNote}
               deleteNote={detail.deleteNote}
+              onConverted={handleConverted}
             />
           )}
         </div>

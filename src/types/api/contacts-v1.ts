@@ -116,3 +116,12 @@ export type UpsertLeadNoteRequestBody = {
   color: LeadNoteColor;
   pinned: boolean;
 };
+
+/** Corpo de POST /conversations/{id}/convert-to-client — subconjunto de CreateClientRequestBody. */
+export type ConvertLeadToClientRequestBody = {
+  name: string;
+  phone?: string;
+  email: string;
+  documentId?: string | null;
+  caseDescription?: string | null;
+};

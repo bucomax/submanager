@@ -1,10 +1,12 @@
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { ClientDto } from "@/types/api/clients-v1";
 import type {
   ConversationDetailResponseData,
   ConversationListQueryParams,
   ConversationsListResponseData,
   ConversationStatus,
+  ConvertLeadToClientRequestBody,
   MessageDto,
   SendMessageRequestBody,
 } from "@/types/api/contacts-v1";
@@ -54,6 +56,21 @@ export async function getConversationsList(
     throw new Error(res.data.error.message);
   }
   return res.data.data;
+}
+
+/** Converte um lead sem cadastro em `Client` de verdade e vincula à conversa. */
+export async function convertConversationToClient(
+  conversationId: string,
+  body: ConvertLeadToClientRequestBody,
+): Promise<ClientDto> {
+  const res = await apiClient.post<ApiEnvelope<{ client: ClientDto }>>(
+    `/api/v1/tenant/conversations/${conversationId}/convert-to-client`,
+    body,
+  );
+  if (!res.data.success) {
+    throw new Error(res.data.error.message);
+  }
+  return res.data.data.client;
 }
 
 export async function sendMessage(

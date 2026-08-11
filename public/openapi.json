@@ -2506,6 +2506,39 @@
         }
       }
     },
+    "/api/v1/tenant/conversations/{id}/convert-to-client": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "post": {
+        "summary": "Converte um lead sem cadastro em Client e vincula à conversa",
+        "description": "Mesmas regras de validação do POST /clients (e-mail e telefone obrigatórios para adulto).",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "email": { "type": "string" },
+                  "documentId": { "type": "string", "nullable": true },
+                  "caseDescription": { "type": "string", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "{ client: ClientDto }" },
+          "404": { "description": "Conversa não encontrada neste tenant" },
+          "409": { "description": "Conversa já vinculada a um paciente" },
+          "422": { "description": "Corpo inválido" }
+        }
+      }
+    },
     "/api/v1/tenant/conversations/{id}/messages": {
       "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
       "post": {

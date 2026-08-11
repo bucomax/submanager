@@ -51,7 +51,7 @@
     "selectPrompt": "Select a conversation to get started.",
     "leadSaved": "Lead data saved.",
     "saveLead": "Save lead",
-    "leadNotRegistered": "This lead doesn't have a linked patient record yet."
+    "leadNotRegistered": "Lead not registered yet — fill in the fields below to create the patient."
   },
   "phrases": {
     "title": "Quick phrases",
