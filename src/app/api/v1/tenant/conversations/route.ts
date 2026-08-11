@@ -7,15 +7,18 @@ import {
   requireSessionOr401,
 } from "@/lib/auth/guards";
 import type {
-  ConversationCardDto,
+  ConversationChannel,
+  ConversationListItemDto,
   ConversationStatus,
-  ConversationsBoardResponseData,
+  ConversationsListResponseData,
 } from "@/types/api/contacts-v1";
 
 export const dynamic = "force-dynamic";
 
-const CONVERSATION_STATUSES: ConversationStatus[] = ["new", "in_progress", "qualified", "discarded"];
-
+const VALID_CHANNELS: ConversationChannel[] = ["whatsapp", "instagram"];
+const VALID_STATUSES: ConversationStatus[] = ["new", "in_progress", "qualified", "discarded"];
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
 const PREVIEW_MAX_LENGTH = 80;
 
 function buildLastMessagePreview(lastMessage: { type: string; body: string | null } | undefined): string | null {
@@ -28,7 +31,7 @@ function buildLastMessagePreview(lastMessage: { type: string; body: string | nul
   return lastMessage.type !== "text" ? "[mídia]" : null;
 }
 
-/** Board do kanban de contatos: conversas do tenant agrupadas por status. */
+/** Lista paginada de conversas do tenant — usada pela coluna 1 da tela de Conversas. */
 export async function GET(request: Request) {
   const apiT = await getApiT(request);
   const auth = await requireSessionOr401(request, apiT);
@@ -40,31 +43,40 @@ export async function GET(request: Request) {
   const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
   if (memberErr) return memberErr;
 
-  const rows = await conversationPrismaRepository.listByTenant(tenantCtx.tenantId!);
+  const url = new URL(request.url);
+  const channelParam = url.searchParams.get("channel");
+  const statusParam = url.searchParams.get("status");
+  const q = url.searchParams.get("q")?.trim() || undefined;
+  const cursor = url.searchParams.get("cursor") || undefined;
+  const limitParam = Number(url.searchParams.get("limit"));
+  const limit = Number.isFinite(limitParam) && limitParam > 0
+    ? Math.min(limitParam, MAX_LIMIT)
+    : DEFAULT_LIMIT;
 
-  const columns = Object.fromEntries(
-    CONVERSATION_STATUSES.map((status) => [status, [] as ConversationCardDto[]]),
-  ) as Record<ConversationStatus, ConversationCardDto[]>;
+  const channel = VALID_CHANNELS.find((c) => c === channelParam);
+  const status = VALID_STATUSES.find((s) => s === statusParam);
 
-  for (const row of rows) {
-    const card: ConversationCardDto = {
-      id: row.id,
-      channel: row.channel,
-      externalId: row.externalId,
-      displayName: row.displayName,
-      status: row.status,
-      clientId: row.clientId,
-      clientName: row.client?.name ?? null,
-      assignedToUserId: row.assignedToUserId,
-      assignedToUserName: row.assignedToUser?.name ?? null,
-      lastMessageAt: row.lastMessageAt ? row.lastMessageAt.toISOString() : null,
-      lastMessagePreview: buildLastMessagePreview(row.messages[0]),
-      unreadCount: row.unreadCount,
-    };
-    // Status fora das colunas exibidas (ex.: valor legado do enum) — não quebra o board.
-    columns[row.status]?.push(card);
-  }
+  const { items, nextCursor, totalItems } = await conversationPrismaRepository.listByTenantPaged(
+    tenantCtx.tenantId!,
+    { channel, status, q, cursor, limit },
+  );
 
-  const payload: ConversationsBoardResponseData = { columns };
+  const data: ConversationListItemDto[] = items.map((row) => ({
+    id: row.id,
+    channel: row.channel,
+    externalId: row.externalId,
+    displayName: row.displayName,
+    status: row.status,
+    clientId: row.clientId,
+    clientName: row.client?.name ?? null,
+    assignedToUserId: row.assignedToUserId,
+    assignedToUserName: row.assignedToUser?.name ?? null,
+    lastMessageAt: row.lastMessageAt ? row.lastMessageAt.toISOString() : null,
+    lastMessagePreview: buildLastMessagePreview(row.messages[0]),
+    unreadCount: row.unreadCount,
+    stageChangedAt: row.stageChangedAt.toISOString(),
+  }));
+
+  const payload: ConversationsListResponseData = { data, nextCursor, totalItems };
   return jsonSuccess(payload);
 }

@@ -121,7 +121,12 @@
     "patientPortalLoginInvalid": "Informe um CPF com 11 dígitos ou um e-mail válido.",
     "patientPortalPasswordInvalid": "E-mail/CPF ou senha incorretos.",
     "patientPortalPasswordCurrentRequired": "Informe a senha atual.",
-    "patientPortalPasswordCurrentWrong": "Senha atual incorreta."
+    "patientPortalPasswordCurrentWrong": "Senha atual incorreta.",
+    "leadNoteNotFound": "Nota não encontrada.",
+    "quickPhraseNotFound": "Frase pronta não encontrada.",
+    "quickPhraseSlugConflict": "Já existe uma frase com este atalho.",
+    "agendaEventNotFound": "Compromisso não encontrado.",
+    "agendaRangeRequired": "Informe um intervalo de datas válido (from/to)."
   },
   "success": {
     "pathwayDeleted": "Jornada removida.",

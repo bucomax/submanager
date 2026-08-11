@@ -2454,12 +2454,19 @@
     },
     "/api/v1/tenant/conversations": {
       "get": {
-        "summary": "Board do kanban de contatos (conversas do tenant agrupadas por status)",
-        "description": "Read-only. Fase de demonstração do kanban de contatos multicanal (WhatsApp/Instagram).",
+        "summary": "Lista paginada de conversas do tenant (cursor) com filtros de canal/etapa/busca",
+        "description": "Coluna 1 da tela de Conversas.",
         "tags": ["Contacts (tenant)"],
         "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "channel", "in": "query", "schema": { "type": "string", "enum": ["whatsapp", "instagram"] } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["new", "in_progress", "qualified", "discarded"] } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 50 } }
+        ],
         "responses": {
-          "200": { "description": "Conversas agrupadas em columns (new, in_progress, waiting_contact, qualified, discarded)" }
+          "200": { "description": "{ data: ConversationListItemDto[], nextCursor, totalItems }" }
         }
       }
     },
@@ -2475,7 +2482,7 @@
         }
       },
       "patch": {
-        "summary": "Move a conversa entre colunas do kanban (troca de status)",
+        "summary": "Muda a etapa do lead (status da conversa)",
         "tags": ["Contacts (tenant)"],
         "security": [{ "cookieAuth": [] }],
         "requestBody": {
@@ -2496,6 +2503,254 @@
           "200": { "description": "Status atualizado" },
           "404": { "description": "Conversa não encontrada neste tenant" },
           "422": { "description": "Status inválido" }
+        }
+      }
+    },
+    "/api/v1/tenant/conversations/{id}/messages": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "post": {
+        "summary": "Envia mensagem outbound na conversa (real via WhatsApp Cloud API quando o tenant estiver configurado)",
+        "description": "Mensagem sempre persistida; status vira failed se o disparo externo falhar ou o tenant não tiver WhatsApp configurado.",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["body"],
+                "properties": {
+                  "body": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                  "attachment": { "type": "string", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "MessageDto criada" },
+          "404": { "description": "Conversa não encontrada neste tenant" },
+          "422": { "description": "Corpo inválido" }
+        }
+      }
+    },
+    "/api/v1/tenant/conversations/{id}/notes": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "get": {
+        "summary": "Lista notas internas do lead (nunca enviadas ao contato)",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "{ data: LeadNoteDto[] }" }
+        }
+      },
+      "post": {
+        "summary": "Cria nota interna sobre o lead",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text", "color", "pinned"],
+                "properties": {
+                  "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+                  "color": { "type": "string", "enum": ["amber", "sky", "emerald", "violet"] },
+                  "pinned": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "LeadNoteDto criada" },
+          "404": { "description": "Conversa não encontrada neste tenant" },
+          "422": { "description": "Corpo inválido" }
+        }
+      }
+    },
+    "/api/v1/tenant/notes/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "patch": {
+        "summary": "Atualiza nota interna (texto, cor, fixação)",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" },
+                  "color": { "type": "string", "enum": ["amber", "sky", "emerald", "violet"] },
+                  "pinned": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "LeadNoteDto atualizada" },
+          "404": { "description": "Nota não encontrada neste tenant" },
+          "422": { "description": "Corpo inválido" }
+        }
+      },
+      "delete": {
+        "summary": "Exclui nota interna",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "{ id }" },
+          "404": { "description": "Nota não encontrada neste tenant" }
+        }
+      }
+    },
+    "/api/v1/tenant/quick-phrases": {
+      "get": {
+        "summary": "Lista frases prontas do tenant (compartilhadas por toda a equipe)",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "{ data: QuickPhraseDto[] }" }
+        }
+      },
+      "post": {
+        "summary": "Cria frase pronta",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["slug", "title", "body"],
+                "properties": {
+                  "slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40 },
+                  "title": { "type": "string", "maxLength": 120 },
+                  "body": { "type": "string", "maxLength": 4096 },
+                  "attachment": { "type": "string", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "QuickPhraseDto criada" },
+          "409": { "description": "Já existe uma frase com este atalho no tenant" },
+          "422": { "description": "Corpo inválido" }
+        }
+      }
+    },
+    "/api/v1/tenant/quick-phrases/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "patch": {
+        "summary": "Atualiza frase pronta",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": { "type": "string" },
+                  "title": { "type": "string" },
+                  "body": { "type": "string" },
+                  "attachment": { "type": "string", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "QuickPhraseDto atualizada" },
+          "404": { "description": "Frase não encontrada neste tenant" },
+          "409": { "description": "Já existe uma frase com este atalho no tenant" },
+          "422": { "description": "Corpo inválido" }
+        }
+      },
+      "delete": {
+        "summary": "Exclui frase pronta",
+        "tags": ["Contacts (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "{ id }" },
+          "404": { "description": "Frase não encontrada neste tenant" }
+        }
+      }
+    },
+    "/api/v1/tenant/agenda": {
+      "get": {
+        "summary": "Lista compromissos do tenant num intervalo de datas",
+        "tags": ["Agenda (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": {
+          "200": { "description": "{ data: AgendaEventDto[] }" },
+          "400": { "description": "Intervalo from/to ausente ou inválido" }
+        }
+      },
+      "post": {
+        "summary": "Cria compromisso; opcionalmente envia mensagem de confirmação ao lead",
+        "tags": ["Agenda (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "type", "startsAt", "durationMin", "ownerUserId", "sendConfirmation"],
+                "properties": {
+                  "conversationId": { "type": "string", "nullable": true },
+                  "clientId": { "type": "string", "nullable": true },
+                  "title": { "type": "string", "maxLength": 160 },
+                  "type": { "type": "string", "enum": ["consulta", "retorno", "exame", "ligacao"] },
+                  "startsAt": { "type": "string", "format": "date-time" },
+                  "durationMin": { "type": "integer", "minimum": 5, "maximum": 480 },
+                  "ownerUserId": { "type": "string" },
+                  "notes": { "type": "string", "nullable": true },
+                  "sendConfirmation": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "AgendaEventDto criado" },
+          "422": { "description": "Corpo inválido" }
+        }
+      }
+    },
+    "/api/v1/tenant/agenda/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "patch": {
+        "summary": "Atualiza compromisso",
+        "tags": ["Agenda (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "AgendaEventDto atualizado" },
+          "404": { "description": "Compromisso não encontrado neste tenant" },
+          "422": { "description": "Corpo inválido" }
+        }
+      },
+      "delete": {
+        "summary": "Exclui compromisso",
+        "tags": ["Agenda (tenant)"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "{ id }" },
+          "404": { "description": "Compromisso não encontrado neste tenant" }
         }
       }
     },

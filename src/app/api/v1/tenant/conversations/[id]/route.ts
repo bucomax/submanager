@@ -77,7 +77,7 @@ export async function GET(request: Request, ctx: RouteCtx<{ id: string }>) {
   return jsonSuccess(payload);
 }
 
-/** Move a conversa entre colunas do kanban (troca de status). Sem efeito colateral em WhatsApp/mensagens. */
+/** Muda a etapa do lead (status da conversa). Sem efeito colateral em WhatsApp/mensagens. */
 export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
   const apiT = await getApiT(request);
   const auth = await requireSessionOr401(request, apiT);
@@ -103,7 +103,7 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
     return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
   }
 
-  const updated = await conversationPrismaRepository.updateStatus(tenantCtx.tenantId!, id, parsed.data.status);
+  const updated = await conversationPrismaRepository.updateStage(tenantCtx.tenantId!, id, parsed.data.status);
   if (!updated) {
     return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
   }

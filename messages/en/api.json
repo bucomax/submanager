@@ -121,7 +121,12 @@
     "patientPortalLoginInvalid": "Enter an 11-digit CPF or a valid email address.",
     "patientPortalPasswordInvalid": "Invalid email/CPF or password.",
     "patientPortalPasswordCurrentRequired": "Current password is required.",
-    "patientPortalPasswordCurrentWrong": "Current password is incorrect."
+    "patientPortalPasswordCurrentWrong": "Current password is incorrect.",
+    "leadNoteNotFound": "Note not found.",
+    "quickPhraseNotFound": "Quick phrase not found.",
+    "quickPhraseSlugConflict": "A phrase with this shortcut already exists.",
+    "agendaEventNotFound": "Appointment not found.",
+    "agendaRangeRequired": "Provide a valid date range (from/to)."
   },
   "success": {
     "pathwayDeleted": "Pathway removed.",
