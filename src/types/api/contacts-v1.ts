@@ -1,6 +1,6 @@
 /**
- * DTOs de API v1 do kanban de contatos multicanal (WhatsApp/Instagram).
- * Ver docs/superpowers/specs/2026-08-03-kanban-contatos-multicanal-design.md
+ * DTOs de API v1 da tela de Conversas multicanal (WhatsApp/Instagram).
+ * Ver docs/superpowers/plans/2026-08-11-conversas-agenda-whatsapp.md
  */
 
 export type ConversationChannel = "whatsapp" | "instagram";
@@ -49,4 +49,73 @@ export type MessageDto = {
 export type ConversationDetailResponseData = {
   conversation: ConversationCardDto;
   messages: MessageDto[];
+};
+
+export type SendMessageRequestBody = {
+  body: string;
+  attachment?: string | null;
+};
+
+export type ConversationListQueryParams = {
+  channel?: ConversationChannel;
+  status?: ConversationStatus;
+  q?: string;
+  cursor?: string;
+  limit?: number;
+};
+
+export type ConversationListItemDto = ConversationCardDto & {
+  stageChangedAt: string;
+};
+
+export type ConversationsListResponseData = {
+  data: ConversationListItemDto[];
+  nextCursor: string | null;
+  totalItems: number;
+};
+
+export type QuickPhraseDto = {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  attachment: string | null;
+  usageCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuickPhrasesResponseData = {
+  data: QuickPhraseDto[];
+};
+
+export type UpsertQuickPhraseRequestBody = {
+  slug: string;
+  title: string;
+  body: string;
+  attachment?: string | null;
+};
+
+export type LeadNoteColor = "amber" | "sky" | "emerald" | "violet";
+
+export type LeadNoteDto = {
+  id: string;
+  conversationId: string;
+  authorId: string;
+  authorName: string | null;
+  text: string;
+  color: LeadNoteColor;
+  pinned: boolean;
+  editedAt: string | null;
+  createdAt: string;
+};
+
+export type LeadNotesResponseData = {
+  data: LeadNoteDto[];
+};
+
+export type UpsertLeadNoteRequestBody = {
+  text: string;
+  color: LeadNoteColor;
+  pinned: boolean;
 };
