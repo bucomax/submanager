@@ -4,6 +4,7 @@ import { useState } from "react";
 import { NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
 import { formatDateTimeShort } from "@/lib/utils/date";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { ChevronLeft, ChevronRight, Pin } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { LeadNoteDto } from "@/types/api/contacts-v1";
@@ -51,22 +52,36 @@ export function PinnedNotesBar({ notes }: PinnedNotesBarProps) {
 
       {notes.length > 1 && (
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            aria-label="previous"
-            onClick={() => setIndex((i) => (i - 1 + notes.length) % notes.length)}
-            className="flex size-6 items-center justify-center rounded-md hover:bg-accent"
-          >
-            <ChevronLeft className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            aria-label="next"
-            onClick={() => setIndex((i) => (i + 1) % notes.length)}
-            className="flex size-6 items-center justify-center rounded-md hover:bg-accent"
-          >
-            <ChevronRight className="size-3.5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={t("pinnedPrev")}
+                  onClick={() => setIndex((i) => (i - 1 + notes.length) % notes.length)}
+                  className="flex size-6 items-center justify-center rounded-md hover:bg-accent"
+                >
+                  <ChevronLeft className="size-3.5" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("pinnedPrev")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={t("pinnedNext")}
+                  onClick={() => setIndex((i) => (i + 1) % notes.length)}
+                  className="flex size-6 items-center justify-center rounded-md hover:bg-accent"
+                >
+                  <ChevronRight className="size-3.5" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("pinnedNext")}</TooltipContent>
+          </Tooltip>
         </div>
       )}
     </div>

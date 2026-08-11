@@ -84,6 +84,7 @@ export function ConversationsPage() {
               leadPanelOpen={leadPanelOpen}
               onOpenLeadPanel={openLeadPanel}
               onCloseLeadPanel={() => setLeadPanelOpen(false)}
+              stageOverride={activeConversation.status}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

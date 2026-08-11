@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
 import { Button } from "@/shared/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { NotebookPen, Pin } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -62,18 +63,24 @@ export function NoteComposer({ editingNote, authorLabel, onSave, onCancel }: Not
           {COLORS.map((c) => {
             const token = NOTE_COLOR_TOKENS[c];
             return (
-              <button
-                key={c}
-                type="button"
-                aria-label={t(`colors.${c}`)}
-                aria-pressed={color === c}
-                onClick={() => setColor(c)}
-                className={cn(
-                  "size-5 rounded-full",
-                  color === c ? "border-2 border-foreground" : "border border-transparent",
-                )}
-                style={{ background: token.solid }}
-              />
+              <Tooltip key={c}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={t(`colors.${c}`)}
+                      aria-pressed={color === c}
+                      onClick={() => setColor(c)}
+                      className={cn(
+                        "size-5 rounded-full",
+                        color === c ? "border-2 border-foreground" : "border border-transparent",
+                      )}
+                      style={{ background: token.solid }}
+                    />
+                  }
+                />
+                <TooltipContent>{t(`colors.${c}`)}</TooltipContent>
+              </Tooltip>
             );
           })}
         </div>

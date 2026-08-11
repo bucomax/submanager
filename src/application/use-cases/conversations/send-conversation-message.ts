@@ -18,8 +18,11 @@ export type SendConversationMessageResult =
 /**
  * Persiste uma mensagem outbound na conversa e tenta o envio real via WhatsApp
  * Cloud API (só para canal `whatsapp`; Instagram fica só como registro local
- * — sem integração de envio nesta entrega). A mensagem é sempre gravada,
- * mesmo se o disparo externo falhar (`status: "failed"`).
+ * — sem integração de envio nesta entrega). A mensagem é sempre gravada.
+ * `status: "failed"` só quando a chamada à Cloud API de fato falhou
+ * (`send_failed`) — tenant sem WhatsApp configurado é skip gracioso (mesmo
+ * padrão do `whatsappDispatcher`), a mensagem fica `status: "sent"` (registro
+ * local válido, só não foi transmitida ao canal externo).
  */
 export async function sendConversationMessage(
   input: SendConversationMessageInput,
@@ -43,13 +46,14 @@ export async function sendConversationMessage(
       })
     : ({ sent: false, reason: "tenant_not_configured" } as const);
 
+  const trulyFailed = !sendResult.sent && sendResult.reason === "send_failed";
   const message = await conversationPrismaRepository.createMessage(
     input.tenantId,
     input.conversationId,
     {
       direction: "outbound",
       body: input.body,
-      status: sendResult.sent ? "sent" : "failed",
+      status: trulyFailed ? "failed" : "sent",
       actorUserId: input.actorUserId,
     },
   );

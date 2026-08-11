@@ -7,16 +7,21 @@ import { STAGE_ORDER } from "@/features/contacts/app/utils/stage-colors";
 import { Input } from "@/shared/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { useDebouncedState } from "@/shared/hooks/use-debounce";
 import { cn } from "@/lib/utils";
-import { AtSign, ChevronDown, Inbox, Loader2, MessageCircle, Search, Zap } from "lucide-react";
+import { AtSign, Check, ChevronDown, CircleDashed, Inbox, Loader2, MessageCircle, Search, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ConversationChannel, ConversationListItemDto, ConversationStatus } from "@/types/api/contacts-v1";
 
-const CHANNEL_SEGMENTS: Array<{ value: ConversationChannel | undefined; icon: typeof Inbox }> = [
-  { value: undefined, icon: Inbox },
-  { value: "whatsapp", icon: MessageCircle },
-  { value: "instagram", icon: AtSign },
+const CHANNEL_SEGMENTS: Array<{
+  value: ConversationChannel | undefined;
+  icon: typeof Inbox;
+  labelKey: "channel.all" | "channel.whatsappOnly" | "channel.instagramOnly";
+}> = [
+  { value: undefined, icon: Inbox, labelKey: "channel.all" },
+  { value: "whatsapp", icon: MessageCircle, labelKey: "channel.whatsappOnly" },
+  { value: "instagram", icon: AtSign, labelKey: "channel.instagramOnly" },
 ];
 
 type ConversationListProps = {
@@ -65,15 +70,21 @@ export function ConversationList({
               {t("list.unread", { count: unreadTotal })}
             </span>
           )}
-          <button
-            type="button"
-            onClick={onOpenPhrasesDrawer}
-            aria-label={t("list.managePhrases")}
-            title={t("list.managePhrases")}
-            className="ml-auto flex size-7 items-center justify-center rounded-lg border hover:bg-accent"
-          >
-            <Zap className="size-3.5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onOpenPhrasesDrawer}
+                  aria-label={t("list.managePhrases")}
+                  className="ml-auto flex size-7 items-center justify-center rounded-lg border hover:bg-accent"
+                >
+                  <Zap className="size-3.5" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("list.managePhrases")}</TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -87,21 +98,27 @@ export function ConversationList({
             />
           </div>
           <div className="flex items-center gap-0.5 rounded-lg border bg-muted p-0.5">
-            {CHANNEL_SEGMENTS.map(({ value, icon: Icon }) => (
-              <button
-                key={value ?? "all"}
-                type="button"
-                onClick={() => setChannelFilter(value)}
-                aria-pressed={channelFilter === value}
-                className={cn(
-                  "flex h-7 w-[30px] items-center justify-center rounded-[7px]",
-                  channelFilter === value
-                    ? "bg-background shadow-sm"
-                    : "text-muted-foreground opacity-55 hover:opacity-100",
-                )}
-              >
-                <Icon className="size-3.5" />
-              </button>
+            {CHANNEL_SEGMENTS.map(({ value, icon: Icon, labelKey }) => (
+              <Tooltip key={value ?? "all"}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => setChannelFilter(value)}
+                      aria-pressed={channelFilter === value}
+                      className={cn(
+                        "flex h-7 w-[30px] items-center justify-center rounded-[7px]",
+                        channelFilter === value
+                          ? "bg-background shadow-sm"
+                          : "text-muted-foreground opacity-55 hover:opacity-100",
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                    </button>
+                  }
+                />
+                <TooltipContent>{t(labelKey)}</TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </div>
@@ -125,10 +142,15 @@ export function ConversationList({
                   setStagePickerOpen(false);
                 }}
                 className={cn(
-                  "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm",
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
                   !stageFilter ? "bg-accent font-semibold" : "hover:bg-accent",
                 )}
               >
+                {!stageFilter ? (
+                  <Check className="size-3.5 shrink-0" />
+                ) : (
+                  <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />
+                )}
                 {t("list.allStages")}
               </button>
               {STAGE_ORDER.map((stage) => (
@@ -140,10 +162,15 @@ export function ConversationList({
                     setStagePickerOpen(false);
                   }}
                   className={cn(
-                    "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm",
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
                     stageFilter === stage ? "bg-accent font-semibold" : "hover:bg-accent",
                   )}
                 >
+                  {stageFilter === stage ? (
+                    <Check className="size-3.5 shrink-0" />
+                  ) : (
+                    <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />
+                  )}
                   {t(`stage.${stage}`)}
                 </button>
               ))}

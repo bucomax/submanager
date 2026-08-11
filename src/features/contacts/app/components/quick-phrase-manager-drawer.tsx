@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/shared/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { toast } from "@/lib/toast";
 import { Copy, Paperclip, Pencil, Plus, Search, Trash2, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -107,7 +108,7 @@ export function QuickPhraseManagerDrawer({ open, onOpenChange, initialDraft }: Q
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[560px]">
+      <SheetContent side="right" className="w-full sm:max-w-[680px]">
         <SheetHeader>
           <div className="flex items-center gap-2.5">
             <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
@@ -228,27 +229,51 @@ export function QuickPhraseManagerDrawer({ open, onOpenChange, initialDraft }: Q
                         <p className="truncate text-xs text-muted-foreground">{phrase.body}</p>
                       </div>
                       <div className="flex shrink-0 gap-1">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(phrase)}
-                          className="flex size-7 items-center justify-center rounded-md hover:bg-accent"
-                        >
-                          <Pencil className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void duplicate(phrase)}
-                          className="flex size-7 items-center justify-center rounded-md hover:bg-accent"
-                        >
-                          <Copy className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(phrase.id)}
-                          className="flex size-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                onClick={() => startEdit(phrase)}
+                                aria-label={t("edit")}
+                                className="flex size-7 items-center justify-center rounded-md hover:bg-accent"
+                              >
+                                <Pencil className="size-3.5" />
+                              </button>
+                            }
+                          />
+                          <TooltipContent>{t("edit")}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                onClick={() => void duplicate(phrase)}
+                                aria-label={t("duplicate")}
+                                className="flex size-7 items-center justify-center rounded-md hover:bg-accent"
+                              >
+                                <Copy className="size-3.5" />
+                              </button>
+                            }
+                          />
+                          <TooltipContent>{t("duplicate")}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                onClick={() => void handleDelete(phrase.id)}
+                                aria-label={t("delete")}
+                                className="flex size-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            }
+                          />
+                          <TooltipContent>{t("delete")}</TooltipContent>
+                        </Tooltip>
                       </div>
                     </li>
                   ))}

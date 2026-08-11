@@ -141,7 +141,9 @@ export function EventComposer({ leadName, conversationId, clientId, onSave, onCa
           className="rounded-md border bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
         <Select value={String(duration)} onValueChange={(v) => v && setDuration(Number(v))}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full">
+            <SelectValue>{(value) => (value ? `${value} min` : "")}</SelectValue>
+          </SelectTrigger>
           <SelectContent>
             {DURATIONS.map((d) => (
               <SelectItem key={d} value={String(d)}>{d} min</SelectItem>
@@ -149,7 +151,13 @@ export function EventComposer({ leadName, conversationId, clientId, onSave, onCa
           </SelectContent>
         </Select>
         <Select value={ownerUserId} onValueChange={(v) => v && setOwnerUserId(v)}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full">
+            <SelectValue>
+              {(value) => members.find((m) => m.userId === value)?.name
+                ?? members.find((m) => m.userId === value)?.email
+                ?? ""}
+            </SelectValue>
+          </SelectTrigger>
           <SelectContent>
             {members.map((m) => (
               <SelectItem key={m.userId} value={m.userId}>{m.name ?? m.email}</SelectItem>

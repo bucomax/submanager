@@ -1,6 +1,7 @@
 "use client";
 
 import { NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { formatDateTimeShort } from "@/lib/utils/date";
 import { NotebookPen, Pencil, Pin, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -39,31 +40,52 @@ export function ChatNoteBlock({ note, onPin, onEdit, onDelete }: ChatNoteBlockPr
           {editedSuffix}
         </span>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onPin}
-            aria-label={note.pinned ? t("pinned") : t("pin")}
-            aria-pressed={note.pinned}
-            className="flex size-[22px] items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
-          >
-            <Pin className="size-3" fill={note.pinned ? "currentColor" : "none"} />
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label={t("editTitle")}
-            className="flex size-[22px] items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
-          >
-            <Pencil className="size-3" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            aria-label={t("deleted")}
-            className="flex size-[22px] items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="size-3" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onPin}
+                  aria-label={note.pinned ? t("pinned") : t("pin")}
+                  aria-pressed={note.pinned}
+                  className="flex size-[22px] items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <Pin className="size-3" fill={note.pinned ? "currentColor" : "none"} />
+                </button>
+              }
+            />
+            <TooltipContent>{note.pinned ? t("pinned") : t("pin")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  aria-label={t("editTitle")}
+                  className="flex size-[22px] items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <Pencil className="size-3" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("editTitle")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  aria-label={t("delete")}
+                  className="flex size-[22px] items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("delete")}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
       <p className="whitespace-pre-wrap">{note.text}</p>

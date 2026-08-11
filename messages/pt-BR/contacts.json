@@ -21,7 +21,8 @@
     "noResults": "Nenhum contato encontrado para esses filtros.",
     "loadError": "Não foi possível carregar as conversas.",
     "retry": "Tentar novamente",
-    "managePhrases": "Gerenciar frases prontas"
+    "managePhrases": "Gerenciar frases prontas",
+    "back": "Voltar para a lista"
   },
   "channel": {
     "all": "Todos os canais",
@@ -49,7 +50,8 @@
     "openInAgenda": "Ver na agenda",
     "selectPrompt": "Selecione uma conversa para começar.",
     "leadSaved": "Dados do lead salvos.",
-    "saveLead": "Salvar lead"
+    "saveLead": "Salvar lead",
+    "leadNotRegistered": "Este lead ainda não tem cadastro de paciente vinculado."
   },
   "phrases": {
     "title": "Frases prontas",
@@ -74,7 +76,10 @@
     "futureHint": "Alterações valem para novos envios",
     "command": "comando",
     "variables": "variáveis",
-    "deleteConfirm": "Excluir esta frase?"
+    "deleteConfirm": "Excluir esta frase?",
+    "edit": "Editar frase",
+    "duplicate": "Duplicar frase",
+    "delete": "Excluir frase"
   },
   "notes": {
     "section": "Notas",
@@ -101,7 +106,10 @@
       "sky": "Azul — informação",
       "emerald": "Verde — positivo",
       "violet": "Roxo — financeiro"
-    }
+    },
+    "pinnedPrev": "Nota fixada anterior",
+    "pinnedNext": "Próxima nota fixada",
+    "delete": "Excluir nota"
   },
   "event": {
     "formTitle": "Agendar para este lead",

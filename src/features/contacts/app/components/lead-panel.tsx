@@ -15,6 +15,7 @@ import { NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
 import { STAGE_ORDER } from "@/features/contacts/app/utils/stage-colors";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { calendarDaysFromNow } from "@/lib/utils/date";
 import { toast } from "@/lib/toast";
 import type { ClientDetailClientDto } from "@/types/api/clients-v1";
@@ -138,14 +139,21 @@ export function LeadPanel({
     <div className="flex h-full flex-col overflow-hidden border-l bg-card">
       <div className="space-y-3 p-3.5" style={{ background: "#243b47", color: "#e9edef" }}>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("chat.closeLead")}
-            className="flex size-[26px] items-center justify-center rounded-md hover:bg-white/10"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={t("chat.closeLead")}
+                  className="flex size-[26px] items-center justify-center rounded-md hover:bg-white/10"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("chat.closeLead")}</TooltipContent>
+          </Tooltip>
           <p className="text-lg font-extrabold">Lead #{conversation.id.slice(-8)}</p>
         </div>
 
@@ -170,7 +178,7 @@ export function LeadPanel({
 
       <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-2.5 overflow-y-auto p-3.5">
         {!conversation.clientId ? (
-          <p className="col-span-full text-sm text-muted-foreground">{t("chat.selectPrompt")}</p>
+          <p className="col-span-full text-sm text-muted-foreground">{t("chat.leadNotRegistered")}</p>
         ) : loadingClient || !form ? (
           <p className="col-span-full text-sm text-muted-foreground">…</p>
         ) : (
@@ -260,24 +268,40 @@ export function LeadPanel({
                         {new Date(note.createdAt).toLocaleDateString("pt-BR")}
                       </span>
                       <div className="ml-auto flex gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingNoteId(note.id);
-                            setNoteDraft(note.text);
-                            setNoteFormOpen(true);
-                          }}
-                          className="flex size-[22px] items-center justify-center rounded hover:bg-accent"
-                        >
-                          <Pencil className="size-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteNote(note.id)}
-                          className="flex size-[22px] items-center justify-center rounded text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingNoteId(note.id);
+                                  setNoteDraft(note.text);
+                                  setNoteFormOpen(true);
+                                }}
+                                aria-label={t("notes.editTitle")}
+                                className="flex size-[22px] items-center justify-center rounded hover:bg-accent"
+                              >
+                                <Pencil className="size-3" />
+                              </button>
+                            }
+                          />
+                          <TooltipContent>{t("notes.editTitle")}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteNote(note.id)}
+                                aria-label={t("notes.delete")}
+                                className="flex size-[22px] items-center justify-center rounded text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="size-3" />
+                              </button>
+                            }
+                          />
+                          <TooltipContent>{t("notes.delete")}</TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                     <p className="text-[13px] leading-[1.45]">{note.text}</p>

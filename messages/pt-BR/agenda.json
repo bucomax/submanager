@@ -5,7 +5,9 @@
   "view": {
     "week": "Semana",
     "month": "Mês",
-    "today": "Hoje"
+    "today": "Hoje",
+    "previous": "Anterior",
+    "next": "Próximo"
   },
   "count": "{count} compromissos",
   "upcoming": {

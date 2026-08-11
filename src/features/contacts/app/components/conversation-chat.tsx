@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatEventBlock } from "@/features/contacts/app/components/chat-event-block";
 import { ChatMessageBubble, DateSeparator, dateSeparatorLabel } from "@/features/contacts/app/components/chat-message-bubble";
 import { ChatNoteBlock } from "@/features/contacts/app/components/chat-note-block";
@@ -15,13 +15,14 @@ import { resolvePhraseVariables } from "@/features/contacts/app/utils/resolve-ph
 import { STAGE_PILL_CLASS } from "@/features/contacts/app/utils/stage-colors";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { ChevronsUpDown, Paperclip, Send, UserPen, UserRound, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { AgendaEventDto } from "@/types/api/agenda-v1";
-import type { LeadNoteDto, MessageDto, QuickPhraseDto } from "@/types/api/contacts-v1";
+import type { ConversationCardDto, LeadNoteDto, MessageDto, QuickPhraseDto } from "@/types/api/contacts-v1";
 
 const BUILTIN_COMMANDS: QuickPhraseDto[] = [
   { id: "cmd-agendar", slug: "agendar", title: "Agendar compromisso", body: "Abre o formulário de agendamento.", attachment: null, usageCount: 0, createdAt: "", updatedAt: "" },
@@ -46,6 +47,8 @@ type ConversationChatProps = {
   leadPanelOpen: boolean;
   onOpenLeadPanel: (openStagePicker?: boolean) => void;
   onCloseLeadPanel: () => void;
+  /** Etapa vinda do estado do pai (fonte da verdade) — sobrepõe a etapa do fetch interno, que não é atualizado quando o LeadPanel muda a etapa. */
+  stageOverride?: ConversationCardDto["status"];
 };
 
 export function ConversationChat({
@@ -53,8 +56,10 @@ export function ConversationChat({
   leadPanelOpen,
   onOpenLeadPanel,
   onCloseLeadPanel,
+  stageOverride,
 }: ConversationChatProps) {
   const t = useTranslations("contacts");
+  const tDetail = useTranslations("contacts.detail");
   const locale = useLocale();
   const router = useRouter();
 
@@ -69,7 +74,9 @@ export function ConversationChat({
   const [editingNote, setEditingNote] = useState<LeadNoteDto | null>(null);
   const [eventOpen, setEventOpen] = useState(false);
   const [sessionEvents, setSessionEvents] = useState<AgendaEventDto[]>([]);
+  const [slashDismissed, setSlashDismissed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
 
   const slashMatch = /^\/([^\s]*)$/.exec(draft);
   const slashQuery = slashMatch?.[1]?.toLowerCase() ?? "";
@@ -80,7 +87,19 @@ export function ConversationChat({
       (p) => p.slug.toLowerCase().startsWith(slashQuery) || p.title.toLowerCase().includes(slashQuery),
     );
   }, [slashMatch, slashQuery, phrases]);
-  const popoverOpen = Boolean(slashMatch) && !noteOpen && !eventOpen;
+  const popoverOpen = Boolean(slashMatch) && !noteOpen && !eventOpen && !slashDismissed;
+
+  // Fecha o popover de frases ao clicar fora do composer (mantém o texto digitado).
+  useEffect(() => {
+    if (!popoverOpen) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (composerRef.current && !composerRef.current.contains(e.target as Node)) {
+        setSlashDismissed(true);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [popoverOpen]);
 
   const pinnedNotes = notes.filter((n) => n.pinned);
 
@@ -114,6 +133,11 @@ export function ConversationChat({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (popoverOpen && e.key === "Escape") {
+      e.preventDefault();
+      setSlashDismissed(true);
+      return;
+    }
     if (popoverOpen && filteredPhrases.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -128,11 +152,6 @@ export function ConversationChat({
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
         applyPhraseSelection(filteredPhrases[slashIndex]);
-        return;
-      }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setDraft("");
         return;
       }
     }
@@ -199,6 +218,7 @@ export function ConversationChat({
   }
 
   const { conversation } = data;
+  const displayStatus = stageOverride ?? conversation.status;
   let lastDateKey: string | null = null;
 
   return (
@@ -222,10 +242,10 @@ export function ConversationChat({
             title={t("chat.changeStage")}
             className={cn(
               "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold",
-              STAGE_PILL_CLASS[conversation.status],
+              STAGE_PILL_CLASS[displayStatus],
             )}
           >
-            {t(`stage.${conversation.status}`)}
+            {t(`stage.${displayStatus}`)}
             <ChevronsUpDown className="size-3" />
           </button>
           <button
@@ -258,7 +278,7 @@ export function ConversationChat({
             const key = item.kind === "message" ? item.message.id : item.kind === "note" ? `note-${item.note.id}` : `event-${item.event.id}`;
             return (
               <div key={key}>
-                {showSeparator && <DateSeparator label={dateSeparatorLabel(item.timestamp, locale, t)} />}
+                {showSeparator && <DateSeparator label={dateSeparatorLabel(item.timestamp, locale, tDetail)} />}
                 {item.kind === "message" && <ChatMessageBubble message={item.message} locale={locale} />}
                 {item.kind === "note" && (
                   <ChatNoteBlock
@@ -306,7 +326,7 @@ export function ConversationChat({
         </div>
       )}
 
-      <div className="relative border-t bg-background p-[10px_14px_14px]">
+      <div ref={composerRef} className="relative border-t bg-background p-[10px_14px_14px]">
         {popoverOpen && (
           <QuickPhrasePopover
             phrases={filteredPhrases}
@@ -317,22 +337,38 @@ export function ConversationChat({
           />
         )}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            title={t("chat.phrases")}
-            onClick={() => setDraft("/")}
-            className="flex size-[38px] shrink-0 items-center justify-center rounded-full border hover:bg-accent"
-          >
-            <Zap className="size-4" />
-          </button>
-          <button
-            type="button"
-            title={t("chat.attach")}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex size-[38px] shrink-0 items-center justify-center rounded-full border hover:bg-accent"
-          >
-            <Paperclip className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft("/");
+                    setSlashDismissed(false);
+                  }}
+                  className="flex size-[38px] shrink-0 items-center justify-center rounded-full border hover:bg-accent"
+                >
+                  <Zap className="size-4" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("chat.phrases")}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex size-[38px] shrink-0 items-center justify-center rounded-full border hover:bg-accent"
+                >
+                  <Paperclip className="size-4" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("chat.attach")}</TooltipContent>
+          </Tooltip>
           <input
             ref={fileInputRef}
             type="file"
@@ -341,21 +377,30 @@ export function ConversationChat({
           />
           <textarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setSlashDismissed(false);
+            }}
             onKeyDown={handleKeyDown}
             rows={1}
             placeholder={t("chat.composerPlaceholder")}
             className="max-h-[120px] min-h-[38px] flex-1 resize-none rounded-[10px] border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
-          <button
-            type="button"
-            title={t("chat.send")}
-            onClick={() => void handleSend()}
-            disabled={!draft.trim()}
-            className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
-          >
-            <Send className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={() => void handleSend()}
+                  disabled={!draft.trim()}
+                  className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+                >
+                  <Send className="size-4" />
+                </button>
+              }
+            />
+            <TooltipContent>{t("chat.send")}</TooltipContent>
+          </Tooltip>
         </div>
         {attachment && <p className="mt-1.5 text-xs text-muted-foreground">{attachment}</p>}
       </div>

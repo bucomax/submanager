@@ -4,6 +4,7 @@ import { AgendaMonthGrid } from "@/features/agenda/app/components/agenda-month-g
 import { AgendaUpcomingList } from "@/features/agenda/app/components/agenda-upcoming-list";
 import { AgendaWeekGrid } from "@/features/agenda/app/components/agenda-week-grid";
 import { useAgendaEvents } from "@/features/agenda/app/hooks/use-agenda-events";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -45,12 +46,36 @@ export function AgendaPage() {
                 </button>
               ))}
             </div>
-            <button type="button" onClick={goPrevious} className="flex size-8 items-center justify-center rounded-lg border hover:bg-accent">
-              <ChevronLeft className="size-4" />
-            </button>
-            <button type="button" onClick={goNext} className="flex size-8 items-center justify-center rounded-lg border hover:bg-accent">
-              <ChevronRight className="size-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={goPrevious}
+                    aria-label={t("view.previous")}
+                    className="flex size-8 items-center justify-center rounded-lg border hover:bg-accent"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                }
+              />
+              <TooltipContent>{t("view.previous")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label={t("view.next")}
+                    className="flex size-8 items-center justify-center rounded-lg border hover:bg-accent"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                }
+              />
+              <TooltipContent>{t("view.next")}</TooltipContent>
+            </Tooltip>
             <button type="button" onClick={goToday} className="flex h-8 items-center rounded-lg border px-3 text-sm font-medium hover:bg-accent">
               {t("view.today")}
             </button>

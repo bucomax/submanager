@@ -6,6 +6,7 @@ import { LeadPanel } from "@/features/contacts/app/components/lead-panel";
 import { useConversationDetail } from "@/features/contacts/app/hooks/use-conversation-detail";
 import { updateConversationStatus } from "@/features/contacts/app/services/contacts.service";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { Link } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
 import { ArrowLeft } from "lucide-react";
@@ -36,9 +37,20 @@ export function MobileConversationView({ conversationId }: MobileConversationVie
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       <div className="flex items-center gap-2 border-b px-3 py-2">
-        <Link href="/dashboard/contacts" className="flex size-8 items-center justify-center rounded-md hover:bg-accent">
-          <ArrowLeft className="size-4" />
-        </Link>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Link
+                href="/dashboard/contacts"
+                aria-label={t("list.back")}
+                className="flex size-8 items-center justify-center rounded-md hover:bg-accent"
+              >
+                <ArrowLeft className="size-4" />
+              </Link>
+            }
+          />
+          <TooltipContent>{t("list.back")}</TooltipContent>
+        </Tooltip>
       </div>
       <div className="min-h-0 flex-1">
         <ConversationChat
@@ -49,6 +61,7 @@ export function MobileConversationView({ conversationId }: MobileConversationVie
             if (openStage) setStagePickerOpen(true);
           }}
           onCloseLeadPanel={() => setLeadPanelOpen(false)}
+          stageOverride={data?.conversation.status}
         />
       </div>
 

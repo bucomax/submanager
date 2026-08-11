@@ -21,7 +21,8 @@
     "noResults": "No contacts found for these filters.",
     "loadError": "Could not load conversations.",
     "retry": "Retry",
-    "managePhrases": "Manage quick phrases"
+    "managePhrases": "Manage quick phrases",
+    "back": "Back to the list"
   },
   "channel": {
     "all": "All channels",
@@ -49,7 +50,8 @@
     "openInAgenda": "View in agenda",
     "selectPrompt": "Select a conversation to get started.",
     "leadSaved": "Lead data saved.",
-    "saveLead": "Save lead"
+    "saveLead": "Save lead",
+    "leadNotRegistered": "This lead doesn't have a linked patient record yet."
   },
   "phrases": {
     "title": "Quick phrases",
@@ -74,7 +76,10 @@
     "futureHint": "Changes apply to new messages",
     "command": "command",
     "variables": "variables",
-    "deleteConfirm": "Delete this phrase?"
+    "deleteConfirm": "Delete this phrase?",
+    "edit": "Edit phrase",
+    "duplicate": "Duplicate phrase",
+    "delete": "Delete phrase"
   },
   "notes": {
     "section": "Notes",
@@ -101,7 +106,10 @@
       "sky": "Blue — information",
       "emerald": "Green — positive",
       "violet": "Purple — financial"
-    }
+    },
+    "pinnedPrev": "Previous pinned note",
+    "pinnedNext": "Next pinned note",
+    "delete": "Delete note"
   },
   "event": {
     "formTitle": "Schedule for this lead",
