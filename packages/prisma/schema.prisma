@@ -163,6 +163,9 @@ model User {
   activatedTenantApps               TenantApp[]                   @relation("TenantAppActivatedBy")
   assignedConversations             Conversation[]
   actorMessages                     Message[]
+  quickPhrasesCreated               QuickPhrase[]                 @relation("QuickPhraseCreatedBy")
+  leadNotesAuthored                 LeadNote[]                    @relation("LeadNoteAuthor")
+  agendaEventsOwned                 AgendaEvent[]                 @relation("AgendaEventOwner")
 }
 
 model UserAuthToken {
@@ -297,6 +300,9 @@ model Tenant {
   emailDispatchLogs          EmailDispatchLog[]
   tenantApps                 TenantApp[]
   conversations               Conversation[]
+  quickPhrases                QuickPhrase[]
+  leadNotes                   LeadNote[]
+  agendaEvents                AgendaEvent[]
 }
 
 /**
@@ -356,6 +362,8 @@ model Client {
   auditEvents                  AuditEvent[]
   channelDispatches            ChannelDispatch[]
   conversations                Conversation[]
+  leadNotes                    LeadNote[]
+  agendaEvents                 AgendaEvent[]
 
   @@index([tenantId])
   @@index([tenantId, deletedAt])
@@ -382,9 +390,13 @@ model Conversation {
   lastMessageAt    DateTime?
   firstResponseAt  DateTime?
   unreadCount      Int                 @default(0)
+  /** Quando a etapa (status) atual foi assumida — exibido como "(N dias)" na UI. */
+  stageChangedAt   DateTime            @default(now())
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   messages         Message[]
+  notes            LeadNote[]
+  agendaEvents     AgendaEvent[]
 
   @@unique([tenantId, channel, externalId])
   @@index([tenantId, status])
@@ -412,6 +424,67 @@ model Message {
   createdAt         DateTime         @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+/** Frase pronta ("/atalho") disponível para toda a equipe do tenant no composer do chat. */
+model QuickPhrase {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug        String
+  title       String
+  body        String   @db.Text
+  attachment  String?
+  createdById String
+  createdBy   User     @relation("QuickPhraseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+/** Nota interna sobre um lead/conversa — nunca enviada ao contato. */
+model LeadNote {
+  id             String       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  clientId       String?
+  client         Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  authorId       String
+  author         User         @relation("LeadNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  text           String       @db.Text
+  color          String       @default("amber")
+  pinned         Boolean      @default(false)
+  editedAt       DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([tenantId, conversationId, createdAt])
+}
+
+/** Compromisso agendado para um lead (consulta, retorno, exame, ligação). */
+model AgendaEvent {
+  id             String        @id @default(cuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  clientId       String?
+  client         Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title          String
+  type           String
+  startsAt       DateTime
+  durationMin    Int
+  ownerUserId    String
+  owner          User          @relation("AgendaEventOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([tenantId, startsAt])
 }
 
 model PatientPortalLinkToken {
