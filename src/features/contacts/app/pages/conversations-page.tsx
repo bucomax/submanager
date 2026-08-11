@@ -5,6 +5,8 @@ import { ConversationChat } from "@/features/contacts/app/components/conversatio
 import { ConversationList } from "@/features/contacts/app/components/conversation-list";
 import { LeadPanel } from "@/features/contacts/app/components/lead-panel";
 import { QuickPhraseManagerDrawer } from "@/features/contacts/app/components/quick-phrase-manager-drawer";
+import { useConversationDetail } from "@/features/contacts/app/hooks/use-conversation-detail";
+import { useQuickPhrases } from "@/features/contacts/app/hooks/use-quick-phrases";
 import { updateConversationStatus } from "@/features/contacts/app/services/contacts.service";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
@@ -26,6 +28,11 @@ export function ConversationsPage() {
   const [stagePickerOpen, setStagePickerOpen] = useState(false);
   const [phrasesDrawerOpen, setPhrasesDrawerOpen] = useState(false);
   const [phrasesDraft, setPhrasesDraft] = useState<string | undefined>(undefined);
+
+  // Buscados uma única vez por conversa ativa e compartilhados entre ConversationChat e LeadPanel
+  // — evita o fetch duplicado de notas/frases que existia quando cada um tinha seu próprio hook.
+  const detail = useConversationDetail(activeConversation?.id ?? "");
+  const { items: phrases } = useQuickPhrases();
 
   function handleSelectConversation(item: ConversationListItemDto) {
     if (typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT_PX) {
@@ -81,6 +88,16 @@ export function ConversationsPage() {
             <ConversationChat
               key={activeConversation.id}
               conversationId={activeConversation.id}
+              data={detail.data}
+              loading={detail.loading}
+              error={detail.error}
+              refresh={detail.refresh}
+              sendMessage={detail.sendMessage}
+              notes={detail.notes}
+              createNote={detail.createNote}
+              updateNote={detail.updateNote}
+              deleteNote={detail.deleteNote}
+              phrases={phrases}
               leadPanelOpen={leadPanelOpen}
               onOpenLeadPanel={openLeadPanel}
               onCloseLeadPanel={() => setLeadPanelOpen(false)}
@@ -111,6 +128,10 @@ export function ConversationsPage() {
               stagePickerOpen={stagePickerOpen}
               onStagePickerOpenChange={setStagePickerOpen}
               onStageChange={handleStageChange}
+              notes={detail.notes}
+              createNote={detail.createNote}
+              updateNote={detail.updateNote}
+              deleteNote={detail.deleteNote}
             />
           )}
         </div>

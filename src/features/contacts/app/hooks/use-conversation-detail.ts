@@ -17,14 +17,20 @@ import type {
 
 let optimisticIdCounter = 0;
 
+/**
+ * `conversationId` vazio ("") = nenhuma conversa selecionada ainda — não busca nada.
+ * Permite chamar o hook incondicionalmente no componente pai (ex.: antes de o
+ * usuário escolher uma conversa), sem violar as regras de hooks do React.
+ */
 export function useConversationDetail(conversationId: string) {
   const [data, setData] = useState<ConversationDetailResponseData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(conversationId));
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<LeadNoteDto[]>([]);
-  const [notesLoading, setNotesLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(Boolean(conversationId));
 
   const refresh = useCallback(async () => {
+    if (!conversationId) return;
     setLoading(true);
     try {
       const result = await getConversationDetail(conversationId);
@@ -39,6 +45,7 @@ export function useConversationDetail(conversationId: string) {
   }, [conversationId]);
 
   const refreshNotes = useCallback(async () => {
+    if (!conversationId) return;
     setNotesLoading(true);
     try {
       const result = await listLeadNotes(conversationId);
@@ -51,9 +58,16 @@ export function useConversationDetail(conversationId: string) {
   }, [conversationId]);
 
   useEffect(() => {
+    if (!conversationId) {
+      setData(null);
+      setNotes([]);
+      setLoading(false);
+      setNotesLoading(false);
+      return;
+    }
     void refresh();
     void refreshNotes();
-  }, [refresh, refreshNotes]);
+  }, [conversationId, refresh, refreshNotes]);
 
   /** Envia mensagem outbound com atualização otimista (bolha "sent" imediata; substitui pela resposta real). */
   const sendMessage = useCallback(

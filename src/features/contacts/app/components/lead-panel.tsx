@@ -5,12 +5,6 @@ import { ChevronLeft, NotebookPen, Pencil, Pin, Plus, Trash2 } from "lucide-reac
 import { useTranslations } from "next-intl";
 import { LeadStagePicker } from "@/features/contacts/app/components/lead-stage-picker";
 import { getClientDetail, updateClient } from "@/features/clients/app/services/clients.service";
-import {
-  createLeadNote,
-  deleteLeadNote,
-  listLeadNotes,
-  updateLeadNote,
-} from "@/features/contacts/app/services/notes.service";
 import { NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
 import { STAGE_ORDER } from "@/features/contacts/app/utils/stage-colors";
 import { Button } from "@/shared/components/ui/button";
@@ -19,7 +13,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/
 import { calendarDaysFromNow } from "@/lib/utils/date";
 import { toast } from "@/lib/toast";
 import type { ClientDetailClientDto } from "@/types/api/clients-v1";
-import type { ConversationCardDto, ConversationStatus, LeadNoteDto } from "@/types/api/contacts-v1";
+import type {
+  ConversationCardDto,
+  ConversationStatus,
+  LeadNoteDto,
+  UpsertLeadNoteRequestBody,
+} from "@/types/api/contacts-v1";
 
 type ClientFormState = {
   name: string;
@@ -47,6 +46,10 @@ type LeadPanelProps = {
   stagePickerOpen: boolean;
   onStagePickerOpenChange: (open: boolean) => void;
   onStageChange: (status: ConversationStatus) => Promise<void>;
+  notes: LeadNoteDto[];
+  createNote: (input: UpsertLeadNoteRequestBody) => Promise<LeadNoteDto>;
+  updateNote: (id: string, input: Partial<UpsertLeadNoteRequestBody>) => Promise<LeadNoteDto>;
+  deleteNote: (id: string) => Promise<void>;
 };
 
 export function LeadPanel({
@@ -57,12 +60,15 @@ export function LeadPanel({
   stagePickerOpen,
   onStagePickerOpenChange,
   onStageChange,
+  notes,
+  createNote,
+  updateNote,
+  deleteNote,
 }: LeadPanelProps) {
   const t = useTranslations("contacts");
   const [form, setForm] = useState<ClientFormState | null>(null);
   const [loadingClient, setLoadingClient] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [notes, setNotes] = useState<LeadNoteDto[]>([]);
   const [noteDraft, setNoteDraft] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteFormOpen, setNoteFormOpen] = useState(false);
@@ -70,7 +76,6 @@ export function LeadPanel({
 
   useEffect(() => {
     if (!open) return;
-    void listLeadNotes(conversation.id).then(setNotes).catch(() => setNotes([]));
     if (conversation.clientId) {
       setLoadingClient(true);
       void getClientDetail(conversation.clientId)
@@ -80,7 +85,7 @@ export function LeadPanel({
     } else {
       setForm(null);
     }
-  }, [open, conversation.id, conversation.clientId]);
+  }, [open, conversation.clientId]);
 
   if (!open) return null;
 
@@ -111,11 +116,9 @@ export function LeadPanel({
     if (!noteDraft.trim()) return;
     try {
       if (editingNoteId) {
-        const updated = await updateLeadNote(editingNoteId, { text: noteDraft.trim() });
-        setNotes((prev) => prev.map((n) => (n.id === editingNoteId ? updated : n)));
+        await updateNote(editingNoteId, { text: noteDraft.trim() });
       } else {
-        const created = await createLeadNote(conversation.id, { text: noteDraft.trim(), color: "amber", pinned: false });
-        setNotes((prev) => [created, ...prev]);
+        await createNote({ text: noteDraft.trim(), color: "amber", pinned: false });
       }
       setNoteDraft("");
       setEditingNoteId(null);
@@ -126,13 +129,11 @@ export function LeadPanel({
   }
 
   async function handleTogglePin(note: LeadNoteDto) {
-    const updated = await updateLeadNote(note.id, { pinned: !note.pinned });
-    setNotes((prev) => prev.map((n) => (n.id === note.id ? updated : n)));
+    await updateNote(note.id, { pinned: !note.pinned });
   }
 
   async function handleDeleteNote(id: string) {
-    await deleteLeadNote(id);
-    setNotes((prev) => prev.filter((n) => n.id !== id));
+    await deleteNote(id);
   }
 
   return (

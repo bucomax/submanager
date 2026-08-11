@@ -9,8 +9,6 @@ import { NoteComposer } from "@/features/contacts/app/components/note-composer";
 import { PinnedNotesBar } from "@/features/contacts/app/components/pinned-notes-bar";
 import { QuickPhrasePopover } from "@/features/contacts/app/components/quick-phrase-popover";
 import { createAgendaEvent } from "@/features/agenda/app/services/agenda.service";
-import { useConversationDetail } from "@/features/contacts/app/hooks/use-conversation-detail";
-import { useQuickPhrases } from "@/features/contacts/app/hooks/use-quick-phrases";
 import { resolvePhraseVariables } from "@/features/contacts/app/utils/resolve-phrase-variables";
 import { STAGE_PILL_CLASS } from "@/features/contacts/app/utils/stage-colors";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
@@ -22,7 +20,14 @@ import { toast } from "@/lib/toast";
 import { ChevronsUpDown, Paperclip, Send, UserPen, UserRound, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { AgendaEventDto } from "@/types/api/agenda-v1";
-import type { ConversationCardDto, LeadNoteDto, MessageDto, QuickPhraseDto } from "@/types/api/contacts-v1";
+import type {
+  ConversationDetailResponseData,
+  ConversationStatus,
+  LeadNoteDto,
+  MessageDto,
+  QuickPhraseDto,
+  UpsertLeadNoteRequestBody,
+} from "@/types/api/contacts-v1";
 
 const BUILTIN_COMMANDS: QuickPhraseDto[] = [
   { id: "cmd-agendar", slug: "agendar", title: "Agendar compromisso", body: "Abre o formulário de agendamento.", attachment: null, usageCount: 0, createdAt: "", updatedAt: "" },
@@ -44,15 +49,35 @@ type TimelineItem =
 
 type ConversationChatProps = {
   conversationId: string;
+  data: ConversationDetailResponseData | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  sendMessage: (body: string) => Promise<void>;
+  notes: LeadNoteDto[];
+  createNote: (input: UpsertLeadNoteRequestBody) => Promise<LeadNoteDto>;
+  updateNote: (id: string, input: Partial<UpsertLeadNoteRequestBody>) => Promise<LeadNoteDto>;
+  deleteNote: (id: string) => Promise<void>;
+  phrases: QuickPhraseDto[];
   leadPanelOpen: boolean;
   onOpenLeadPanel: (openStagePicker?: boolean) => void;
   onCloseLeadPanel: () => void;
   /** Etapa vinda do estado do pai (fonte da verdade) — sobrepõe a etapa do fetch interno, que não é atualizado quando o LeadPanel muda a etapa. */
-  stageOverride?: ConversationCardDto["status"];
+  stageOverride?: ConversationStatus;
 };
 
 export function ConversationChat({
   conversationId,
+  data,
+  loading,
+  error,
+  refresh,
+  sendMessage,
+  notes,
+  createNote,
+  updateNote,
+  deleteNote,
+  phrases,
   leadPanelOpen,
   onOpenLeadPanel,
   onCloseLeadPanel,
@@ -62,10 +87,6 @@ export function ConversationChat({
   const tDetail = useTranslations("contacts.detail");
   const locale = useLocale();
   const router = useRouter();
-
-  const { data, loading, error, refresh, sendMessage, notes, createNote, updateNote, deleteNote } =
-    useConversationDetail(conversationId);
-  const { items: phrases } = useQuickPhrases();
 
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<string | null>(null);

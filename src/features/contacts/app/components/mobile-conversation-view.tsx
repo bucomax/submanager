@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ConversationChat } from "@/features/contacts/app/components/conversation-chat";
 import { LeadPanel } from "@/features/contacts/app/components/lead-panel";
 import { useConversationDetail } from "@/features/contacts/app/hooks/use-conversation-detail";
+import { useQuickPhrases } from "@/features/contacts/app/hooks/use-quick-phrases";
 import { updateConversationStatus } from "@/features/contacts/app/services/contacts.service";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
@@ -20,7 +21,9 @@ type MobileConversationViewProps = {
 /** Fallback <1024px: chat em tela cheia; painel do lead abre como Sheet lateral. */
 export function MobileConversationView({ conversationId }: MobileConversationViewProps) {
   const t = useTranslations("contacts");
-  const { data, refresh } = useConversationDetail(conversationId);
+  const detail = useConversationDetail(conversationId);
+  const { data, refresh } = detail;
+  const { items: phrases } = useQuickPhrases();
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [stagePickerOpen, setStagePickerOpen] = useState(false);
 
@@ -55,6 +58,16 @@ export function MobileConversationView({ conversationId }: MobileConversationVie
       <div className="min-h-0 flex-1">
         <ConversationChat
           conversationId={conversationId}
+          data={detail.data}
+          loading={detail.loading}
+          error={detail.error}
+          refresh={detail.refresh}
+          sendMessage={detail.sendMessage}
+          notes={detail.notes}
+          createNote={detail.createNote}
+          updateNote={detail.updateNote}
+          deleteNote={detail.deleteNote}
+          phrases={phrases}
           leadPanelOpen={leadPanelOpen}
           onOpenLeadPanel={(openStage) => {
             setLeadPanelOpen(true);
@@ -77,6 +90,10 @@ export function MobileConversationView({ conversationId }: MobileConversationVie
               stagePickerOpen={stagePickerOpen}
               onStagePickerOpenChange={setStagePickerOpen}
               onStageChange={handleStageChange}
+              notes={detail.notes}
+              createNote={detail.createNote}
+              updateNote={detail.updateNote}
+              deleteNote={detail.deleteNote}
             />
           )}
         </SheetContent>
