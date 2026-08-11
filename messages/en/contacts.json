@@ -72,7 +72,9 @@
     "changeStage": "Change lead stage",
     "sendError": "Could not send the message.",
     "openInAgenda": "View in agenda",
-    "selectPrompt": "Select a conversation to get started."
+    "selectPrompt": "Select a conversation to get started.",
+    "leadSaved": "Lead data saved.",
+    "saveLead": "Save lead"
   },
   "phrases": {
     "title": "Quick phrases",

@@ -72,7 +72,9 @@
     "changeStage": "Mudar etapa do lead",
     "sendError": "Não foi possível enviar a mensagem.",
     "openInAgenda": "Ver na agenda",
-    "selectPrompt": "Selecione uma conversa para começar."
+    "selectPrompt": "Selecione uma conversa para começar.",
+    "leadSaved": "Dados do lead salvos.",
+    "saveLead": "Salvar lead"
   },
   "phrases": {
     "title": "Frases prontas",
