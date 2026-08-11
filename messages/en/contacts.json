@@ -59,7 +59,8 @@
     "qualified": "Qualified",
     "discarded": "Discarded",
     "move": "Move lead to",
-    "changed": "Stage changed to {stage}"
+    "changed": "Stage changed to {stage}",
+    "waiting_contact": "In progress"
   },
   "chat": {
     "composerPlaceholder": "Message or / for quick phrases",

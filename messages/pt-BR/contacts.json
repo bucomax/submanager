@@ -59,7 +59,8 @@
     "qualified": "Qualificado",
     "discarded": "Descartado",
     "move": "Mover lead para",
-    "changed": "Etapa alterada para {stage}"
+    "changed": "Etapa alterada para {stage}",
+    "waiting_contact": "Em atendimento"
   },
   "chat": {
     "composerPlaceholder": "Mensagem ou / para frases prontas",
