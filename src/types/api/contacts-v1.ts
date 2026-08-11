@@ -24,6 +24,8 @@ export type ConversationCardDto = {
   externalId: string;
   displayName: string;
   status: ConversationStatus;
+  /** Quando a etapa atual foi assumida — alimenta o "(N dias)" no painel do lead. */
+  stageChangedAt: string;
   clientId: string | null;
   clientName: string | null;
   assignedToUserId: string | null;
@@ -31,10 +33,6 @@ export type ConversationCardDto = {
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
   unreadCount: number;
-};
-
-export type ConversationsBoardResponseData = {
-  columns: Record<ConversationStatus, ConversationCardDto[]>;
 };
 
 export type MessageDto = {
@@ -64,9 +62,8 @@ export type ConversationListQueryParams = {
   limit?: number;
 };
 
-export type ConversationListItemDto = ConversationCardDto & {
-  stageChangedAt: string;
-};
+/** Alias — todo card de conversa já traz `stageChangedAt` desde a base `ConversationCardDto`. */
+export type ConversationListItemDto = ConversationCardDto;
 
 export type ConversationsListResponseData = {
   data: ConversationListItemDto[];

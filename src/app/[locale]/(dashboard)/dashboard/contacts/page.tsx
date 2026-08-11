@@ -1,5 +1,5 @@
-import { ContactsPage } from "@/features/contacts/app/pages/contacts-page";
+import { ConversationsPage } from "@/features/contacts/app/pages/conversations-page";
 
 export default async function Page() {
-  return <ContactsPage />;
+  return <ConversationsPage />;
 }

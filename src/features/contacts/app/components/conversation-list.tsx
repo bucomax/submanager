@@ -11,7 +11,7 @@ import { useDebouncedState } from "@/shared/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import { AtSign, ChevronDown, Inbox, Loader2, MessageCircle, Search, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ConversationChannel, ConversationStatus } from "@/types/api/contacts-v1";
+import type { ConversationChannel, ConversationListItemDto, ConversationStatus } from "@/types/api/contacts-v1";
 
 const CHANNEL_SEGMENTS: Array<{ value: ConversationChannel | undefined; icon: typeof Inbox }> = [
   { value: undefined, icon: Inbox },
@@ -21,7 +21,7 @@ const CHANNEL_SEGMENTS: Array<{ value: ConversationChannel | undefined; icon: ty
 
 type ConversationListProps = {
   activeConversationId: string | null;
-  onSelectConversation: (id: string) => void;
+  onSelectConversation: (item: ConversationListItemDto) => void;
   onOpenPhrasesDrawer: () => void;
 };
 
@@ -178,7 +178,7 @@ export function ConversationList({
                 key={item.id}
                 conversation={item}
                 active={item.id === activeConversationId}
-                onSelect={() => onSelectConversation(item.id)}
+                onSelect={() => onSelectConversation(item)}
               />
             ))}
             {loadingMore && (

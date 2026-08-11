@@ -1,17 +1,10 @@
-import { ConversationDetailPanel } from "@/features/contacts/app/components/conversation-detail-panel";
-import { DashboardPage } from "@/shared/components/layout/dashboard-page";
-import { getTranslations } from "next-intl/server";
+import { MobileConversationView } from "@/features/contacts/app/components/mobile-conversation-view";
 
 type ConversationDetailPageProps = {
   conversationId: string;
 };
 
+/** Fallback mobile (<1024px) da tela de Conversas — a rota `/dashboard/contacts/[id]`. */
 export async function ConversationDetailPage({ conversationId }: ConversationDetailPageProps) {
-  const t = await getTranslations("contacts.page");
-
-  return (
-    <DashboardPage title={t("title")}>
-      <ConversationDetailPanel conversationId={conversationId} />
-    </DashboardPage>
-  );
+  return <MobileConversationView conversationId={conversationId} />;
 }

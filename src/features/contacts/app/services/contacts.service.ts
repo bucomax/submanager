@@ -3,22 +3,11 @@ import type { ApiEnvelope } from "@/shared/types/api/v1";
 import type {
   ConversationDetailResponseData,
   ConversationListQueryParams,
-  ConversationsBoardResponseData,
   ConversationsListResponseData,
   ConversationStatus,
   MessageDto,
   SendMessageRequestBody,
 } from "@/types/api/contacts-v1";
-
-export async function getConversationsBoard(): Promise<ConversationsBoardResponseData> {
-  const res = await apiClient.get<ApiEnvelope<ConversationsBoardResponseData>>(
-    "/api/v1/tenant/conversations",
-  );
-  if (!res.data.success) {
-    throw new Error(res.data.error.message);
-  }
-  return res.data.data;
-}
 
 export async function updateConversationStatus(
   conversationId: string,

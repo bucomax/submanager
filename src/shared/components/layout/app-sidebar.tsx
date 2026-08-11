@@ -27,6 +27,7 @@ import {
 import type { AppShellUser } from "@/shared/types/layout";
 import {
   BarChart3,
+  CalendarDays,
   ChevronDown,
   GitBranch,
   Home,
@@ -47,7 +48,7 @@ import { AppIcon } from "@/features/apps/app/components/app-icon";
 
 type NavItem = {
   href: string;
-  labelKey: "home" | "clients" | "contacts" | "pathways" | "reports" | "marketplace" | "settings";
+  labelKey: "home" | "clients" | "contacts" | "agenda" | "pathways" | "reports" | "marketplace" | "settings";
   icon: LucideIcon;
   match: (p: string) => boolean;
 };
@@ -73,6 +74,12 @@ const navGroups: { labelKey: "principal" | "sistema"; items: NavItem[] }[] = [
         labelKey: "contacts",
         icon: MessageCircle,
         match: (p) => p.startsWith("/dashboard/contacts"),
+      },
+      {
+        href: "/dashboard/agenda",
+        labelKey: "agenda",
+        icon: CalendarDays,
+        match: (p) => p.startsWith("/dashboard/agenda"),
       },
       {
         href: "/dashboard/pathways",

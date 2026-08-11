@@ -55,6 +55,7 @@ export async function GET(request: Request, ctx: RouteCtx<{ id: string }>) {
     externalId: row.externalId,
     displayName: row.displayName,
     status: row.status,
+    stageChangedAt: row.stageChangedAt.toISOString(),
     clientId: row.clientId,
     clientName: row.client?.name ?? null,
     assignedToUserId: row.assignedToUserId,

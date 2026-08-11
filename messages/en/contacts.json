@@ -3,37 +3,12 @@
     "title": "Contacts",
     "description": "Multichannel conversations: WhatsApp and Instagram."
   },
-  "board": {
-    "searchPlaceholder": "Search contact or message",
-    "filterAll": "All",
-    "noResults": "No contacts found for these filters.",
-    "moveError": "Could not move the contact. Please try again.",
-    "column": {
-      "new": "New",
-      "in_progress": "In progress",
-      "qualified": "Qualified",
-      "discarded": "Discarded",
-      "empty": "No conversations in this column."
-    },
-    "empty": "No conversations yet.",
-    "loadError": "Could not load conversations.",
-    "retry": "Retry"
-  },
-  "card": {
-    "channel": {
-      "whatsapp": "WhatsApp",
-      "instagram": "Instagram"
-    }
-  },
   "detail": {
     "empty": "No messages in this conversation.",
     "loadError": "Could not load this conversation.",
     "retry": "Retry",
     "today": "Today",
-    "yesterday": "Yesterday",
-    "demoBadge": "Demo: sending not implemented yet",
-    "composerPlaceholder": "Type a message…",
-    "send": "Send"
+    "yesterday": "Yesterday"
   },
   "list": {
     "title": "Conversations",

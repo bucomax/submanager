@@ -3,37 +3,12 @@
     "title": "Contatos",
     "description": "Conversas multicanal: WhatsApp e Instagram."
   },
-  "board": {
-    "searchPlaceholder": "Buscar contato ou mensagem",
-    "filterAll": "Todos",
-    "noResults": "Nenhum contato encontrado para esses filtros.",
-    "moveError": "Não foi possível mover o contato. Tente novamente.",
-    "column": {
-      "new": "Novo",
-      "in_progress": "Em atendimento",
-      "qualified": "Qualificado",
-      "discarded": "Descartado",
-      "empty": "Nenhuma conversa nesta coluna."
-    },
-    "empty": "Nenhuma conversa ainda.",
-    "loadError": "Não foi possível carregar as conversas.",
-    "retry": "Tentar novamente"
-  },
-  "card": {
-    "channel": {
-      "whatsapp": "WhatsApp",
-      "instagram": "Instagram"
-    }
-  },
   "detail": {
     "empty": "Nenhuma mensagem nesta conversa.",
     "loadError": "Não foi possível carregar esta conversa.",
     "retry": "Tentar novamente",
     "today": "Hoje",
-    "yesterday": "Ontem",
-    "demoBadge": "Demonstração: envio ainda não implementado",
-    "composerPlaceholder": "Digite uma mensagem…",
-    "send": "Enviar"
+    "yesterday": "Ontem"
   },
   "list": {
     "title": "Conversas",
