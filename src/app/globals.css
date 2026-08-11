@@ -40,6 +40,8 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-avatar: var(--avatar);
+  --color-row-hover: var(--row-hover);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -82,6 +84,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --avatar: oklch(0.905 0 0);
+  --row-hover: oklch(0.958 0 0);
 }
 
 .dark {
@@ -116,6 +120,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --avatar: oklch(0.34 0 0);
+  --row-hover: oklch(0.245 0 0);
 }
 
 @layer base {
@@ -187,10 +193,50 @@
     animation: chat-date-pill-in 0.25s ease-out both;
   }
 
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  .animate-pop-in {
+    animation: pop-in 0.14s ease-out both;
+  }
+
+  @keyframes tip-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+  .animate-tip-in {
+    animation: tip-in 0.12s ease-out both;
+  }
+
+  @keyframes chat-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .animate-chat-spin {
+    animation: chat-spin 0.7s linear infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-chat-bubble-out,
     .animate-chat-bubble-in,
-    .animate-chat-date-pill {
+    .animate-chat-date-pill,
+    .animate-pop-in,
+    .animate-tip-in,
+    .animate-chat-spin {
       animation: none;
     }
   }

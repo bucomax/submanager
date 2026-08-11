@@ -18,6 +18,7 @@ async function loadMessages(locale: string) {
         legal: (await import("../../messages/pt-BR/legal.json")).default,
         apps: (await import("../../messages/pt-BR/apps.json")).default,
         contacts: (await import("../../messages/pt-BR/contacts.json")).default,
+        agenda: (await import("../../messages/pt-BR/agenda.json")).default,
       };
     case "en":
       return {
@@ -34,6 +35,7 @@ async function loadMessages(locale: string) {
         legal: (await import("../../messages/en/legal.json")).default,
         apps: (await import("../../messages/en/apps.json")).default,
         contacts: (await import("../../messages/en/contacts.json")).default,
+        agenda: (await import("../../messages/en/agenda.json")).default,
       };
     default:
       return {
@@ -50,6 +52,7 @@ async function loadMessages(locale: string) {
         legal: (await import("../../messages/pt-BR/legal.json")).default,
         apps: (await import("../../messages/pt-BR/apps.json")).default,
         contacts: (await import("../../messages/pt-BR/contacts.json")).default,
+        agenda: (await import("../../messages/pt-BR/agenda.json")).default,
       };
   }
 }

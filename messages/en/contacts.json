@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Contacts",
-    "description": "Multichannel conversation kanban: WhatsApp and Instagram."
+    "description": "Multichannel conversations: WhatsApp and Instagram."
   },
   "board": {
     "searchPlaceholder": "Search contact or message",
@@ -29,10 +29,122 @@
     "empty": "No messages in this conversation.",
     "loadError": "Could not load this conversation.",
     "retry": "Retry",
+    "today": "Today",
+    "yesterday": "Yesterday",
     "demoBadge": "Demo: sending not implemented yet",
     "composerPlaceholder": "Type a message…",
-    "send": "Send",
-    "today": "Today",
-    "yesterday": "Yesterday"
+    "send": "Send"
+  },
+  "list": {
+    "title": "Conversations",
+    "searchPlaceholder": "Search lead, phone, message",
+    "unread": "{count} unread",
+    "allStages": "All stages",
+    "loadingMore": "Loading more conversations…",
+    "end": "{count} conversations · end of list",
+    "anonymous": "Lead #{id}",
+    "noResults": "No contacts found for these filters.",
+    "loadError": "Could not load conversations.",
+    "retry": "Retry",
+    "managePhrases": "Manage quick phrases"
+  },
+  "channel": {
+    "all": "All channels",
+    "whatsappOnly": "WhatsApp only",
+    "instagramOnly": "Instagram only"
+  },
+  "stage": {
+    "new": "New Contact",
+    "in_progress": "In progress",
+    "qualified": "Qualified",
+    "discarded": "Discarded",
+    "move": "Move lead to",
+    "changed": "Stage changed to {stage}"
+  },
+  "chat": {
+    "composerPlaceholder": "Message or / for quick phrases",
+    "send": "Send · Enter",
+    "attach": "Attach file",
+    "phrases": "Quick phrases — type /",
+    "editLead": "Edit lead",
+    "closeLead": "Close lead",
+    "changeStage": "Change lead stage",
+    "sendError": "Could not send the message.",
+    "openInAgenda": "View in agenda",
+    "selectPrompt": "Select a conversation to get started."
+  },
+  "phrases": {
+    "title": "Quick phrases",
+    "subtitle": "Shortcuts typed with / in chat",
+    "new": "New phrase",
+    "searchPlaceholder": "Search shortcut or title",
+    "createFromDraft": "Create phrase from what's written",
+    "hintNavigate": "↑↓ navigate · Enter insert · Esc close",
+    "validation": "Enter a shortcut and a message",
+    "empty": "No phrases found.",
+    "cancel": "Cancel",
+    "create": "Create phrase",
+    "save": "Save changes",
+    "duplicateSuffix": "2",
+    "duplicateLabel": "(copy)",
+    "shortcutLabel": "Shortcut",
+    "titleLabel": "Title",
+    "bodyLabel": "Message",
+    "attachmentLabel": "Attachment (optional)",
+    "shortcutHint": "in chat the agent types /shortcut and hits Enter",
+    "teamHint": "Available to the whole team",
+    "futureHint": "Changes apply to new messages",
+    "command": "command",
+    "variables": "variables",
+    "deleteConfirm": "Delete this phrase?"
+  },
+  "notes": {
+    "section": "Notes",
+    "new": "New note",
+    "formTitle": "Internal note about the lead",
+    "editTitle": "Edit internal note",
+    "notSent": "not sent to the contact",
+    "pin": "Pin to chat",
+    "pinned": "Pinned to chat",
+    "pinnedBar": "Pinned note",
+    "pinnedBarMany": "Pinned notes {i}/{n}",
+    "empty": "No notes yet — use /notes in chat.",
+    "placeholder": "E.g.: prefers contact after 6pm; was a patient in 2023.",
+    "savedPinned": "Note saved and pinned to chat",
+    "saved": "Note saved to lead profile",
+    "updated": "Note updated",
+    "deleted": "Note deleted",
+    "cancel": "Cancel",
+    "create": "Save note",
+    "save": "Save changes",
+    "editedSuffix": "(edited)",
+    "colors": {
+      "amber": "Amber — attention",
+      "sky": "Blue — information",
+      "emerald": "Green — positive",
+      "violet": "Purple — financial"
+    }
+  },
+  "event": {
+    "formTitle": "Schedule for this lead",
+    "goesToAgenda": "goes to the Agenda",
+    "sendConfirmation": "Send confirmation to lead",
+    "save": "Schedule",
+    "cancel": "Cancel",
+    "validation": "Enter a title and date",
+    "confirmationMessage": "Appointment confirmed: {title} on {date} at {time} with {owner}. Please arrive 15 minutes early 🙂",
+    "titlePlaceholder": "Appointment — {lead}",
+    "type": {
+      "consulta": "Appointment",
+      "retorno": "Follow-up",
+      "exame": "Exam",
+      "ligacao": "Call"
+    },
+    "dateShortcuts": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "in3Days": "In 3 days",
+      "in7Days": "In 7 days"
+    }
   }
 }

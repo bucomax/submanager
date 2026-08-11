@@ -1,0 +1,22 @@
+{
+  "page": {
+    "title": "Agenda"
+  },
+  "view": {
+    "week": "Week",
+    "month": "Month",
+    "today": "Today"
+  },
+  "count": "{count} appointments",
+  "upcoming": {
+    "title": "Upcoming appointments",
+    "empty": "No appointments scheduled.",
+    "openChat": "Open conversation"
+  },
+  "tooltip": {
+    "owner": "Owner"
+  },
+  "loadError": "Could not load the agenda.",
+  "retry": "Retry",
+  "moreCount": "+{count} more"
+}

@@ -1,0 +1,22 @@
+{
+  "page": {
+    "title": "Agenda"
+  },
+  "view": {
+    "week": "Semana",
+    "month": "Mês",
+    "today": "Hoje"
+  },
+  "count": "{count} compromissos",
+  "upcoming": {
+    "title": "Próximos compromissos",
+    "empty": "Nenhum compromisso agendado.",
+    "openChat": "Abrir conversa"
+  },
+  "tooltip": {
+    "owner": "Responsável"
+  },
+  "loadError": "Não foi possível carregar a agenda.",
+  "retry": "Tentar novamente",
+  "moreCount": "+{count} mais"
+}

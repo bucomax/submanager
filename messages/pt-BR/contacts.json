@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Contatos",
-    "description": "Kanban de conversas multicanal: WhatsApp e Instagram."
+    "description": "Conversas multicanal: WhatsApp e Instagram."
   },
   "board": {
     "searchPlaceholder": "Buscar contato ou mensagem",
@@ -29,10 +29,122 @@
     "empty": "Nenhuma mensagem nesta conversa.",
     "loadError": "Não foi possível carregar esta conversa.",
     "retry": "Tentar novamente",
+    "today": "Hoje",
+    "yesterday": "Ontem",
     "demoBadge": "Demonstração: envio ainda não implementado",
     "composerPlaceholder": "Digite uma mensagem…",
-    "send": "Enviar",
-    "today": "Hoje",
-    "yesterday": "Ontem"
+    "send": "Enviar"
+  },
+  "list": {
+    "title": "Conversas",
+    "searchPlaceholder": "Buscar lead, telefone, mensagem",
+    "unread": "{count} não lidas",
+    "allStages": "Todas as etapas",
+    "loadingMore": "Carregando mais conversas…",
+    "end": "{count} conversas · fim da lista",
+    "anonymous": "Lead #{id}",
+    "noResults": "Nenhum contato encontrado para esses filtros.",
+    "loadError": "Não foi possível carregar as conversas.",
+    "retry": "Tentar novamente",
+    "managePhrases": "Gerenciar frases prontas"
+  },
+  "channel": {
+    "all": "Todos os canais",
+    "whatsappOnly": "Só WhatsApp",
+    "instagramOnly": "Só Instagram"
+  },
+  "stage": {
+    "new": "Novo Contato",
+    "in_progress": "Em atendimento",
+    "qualified": "Qualificado",
+    "discarded": "Descartado",
+    "move": "Mover lead para",
+    "changed": "Etapa alterada para {stage}"
+  },
+  "chat": {
+    "composerPlaceholder": "Mensagem ou / para frases prontas",
+    "send": "Enviar · Enter",
+    "attach": "Anexar arquivo",
+    "phrases": "Frases prontas — digite /",
+    "editLead": "Editar lead",
+    "closeLead": "Fechar lead",
+    "changeStage": "Mudar etapa do lead",
+    "sendError": "Não foi possível enviar a mensagem.",
+    "openInAgenda": "Ver na agenda",
+    "selectPrompt": "Selecione uma conversa para começar."
+  },
+  "phrases": {
+    "title": "Frases prontas",
+    "subtitle": "Atalhos digitados com / no chat",
+    "new": "Nova frase",
+    "searchPlaceholder": "Buscar atalho ou título",
+    "createFromDraft": "Criar frase a partir do que está escrito",
+    "hintNavigate": "↑↓ navegar · Enter inserir · Esc fechar",
+    "validation": "Informe atalho e mensagem",
+    "empty": "Nenhuma frase encontrada.",
+    "cancel": "Cancelar",
+    "create": "Cadastrar frase",
+    "save": "Salvar alterações",
+    "duplicateSuffix": "2",
+    "duplicateLabel": "(cópia)",
+    "shortcutLabel": "Atalho",
+    "titleLabel": "Título",
+    "bodyLabel": "Mensagem",
+    "attachmentLabel": "Anexo (opcional)",
+    "shortcutHint": "no chat o atendente digita /atalho e dá Enter",
+    "teamHint": "Fica disponível para toda a equipe",
+    "futureHint": "Alterações valem para novos envios",
+    "command": "comando",
+    "variables": "variáveis",
+    "deleteConfirm": "Excluir esta frase?"
+  },
+  "notes": {
+    "section": "Notas",
+    "new": "Nova nota",
+    "formTitle": "Nota interna sobre o lead",
+    "editTitle": "Editar nota interna",
+    "notSent": "não é enviada ao contato",
+    "pin": "Fixar no chat",
+    "pinned": "Fixada no chat",
+    "pinnedBar": "Nota fixada",
+    "pinnedBarMany": "Notas fixadas {i}/{n}",
+    "empty": "Nenhuma nota ainda — use /notas no chat.",
+    "placeholder": "Ex.: prefere contato após as 18h; já foi paciente em 2023.",
+    "savedPinned": "Nota salva e fixada no chat",
+    "saved": "Nota salva no perfil do lead",
+    "updated": "Nota atualizada",
+    "deleted": "Nota excluída",
+    "cancel": "Cancelar",
+    "create": "Salvar nota",
+    "save": "Salvar alterações",
+    "editedSuffix": "(editada)",
+    "colors": {
+      "amber": "Amarelo — atenção",
+      "sky": "Azul — informação",
+      "emerald": "Verde — positivo",
+      "violet": "Roxo — financeiro"
+    }
+  },
+  "event": {
+    "formTitle": "Agendar para este lead",
+    "goesToAgenda": "vai para a Agenda",
+    "sendConfirmation": "Enviar confirmação ao lead",
+    "save": "Agendar",
+    "cancel": "Cancelar",
+    "validation": "Informe título e data",
+    "confirmationMessage": "Agendamento confirmado: {title} em {date} às {time} com {owner}. Chegue 15 minutos antes 🙂",
+    "titlePlaceholder": "Consulta — {lead}",
+    "type": {
+      "consulta": "Consulta",
+      "retorno": "Retorno",
+      "exame": "Exame",
+      "ligacao": "Ligação"
+    },
+    "dateShortcuts": {
+      "today": "Hoje",
+      "tomorrow": "Amanhã",
+      "in3Days": "Em 3 dias",
+      "in7Days": "Em 7 dias"
+    }
   }
 }
