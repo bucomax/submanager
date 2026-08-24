@@ -44,12 +44,27 @@ const TYPE_KEYS = {
   other: "typeOther",
 } as const satisfies Record<FeedbackType, string>;
 
+const TYPE_VALUES = Object.keys(TYPE_KEYS) as FeedbackType[];
+
+/** Valor sentinela do Select: Radix não aceita item com `value=""`. */
+const FILTER_ALL = "all";
+
 /** `DataTable*` é baseado em div/ul/li, não em `<table>` — daí o grid. */
 const GRID = "grid grid-cols-[6rem_minmax(0,1fr)_12rem_7rem_10rem] items-start gap-3";
 
 export function FeedbackTriageCard() {
   const t = useTranslations("settings.feedback");
-  const { rows, pagination, loading, pendingId, setPage, changeStatus } = useFeedbackTriage();
+  const {
+    rows,
+    pagination,
+    loading,
+    pendingId,
+    filters,
+    setPage,
+    setStatusFilter,
+    setTypeFilter,
+    changeStatus,
+  } = useFeedbackTriage();
 
   return (
     <Card>
@@ -57,6 +72,56 @@ export function FeedbackTriageCard() {
         <CardTitle>{t("title")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-muted-foreground text-xs" htmlFor="feedback-filter-status">
+              {t("filterStatusLabel")}
+            </label>
+            <Select
+              value={filters.status ?? FILTER_ALL}
+              onValueChange={(value) =>
+                setStatusFilter(value === FILTER_ALL ? undefined : (value as FeedbackStatus))
+              }
+            >
+              <SelectTrigger id="feedback-filter-status" className="h-8 w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={FILTER_ALL}>{t("filterAllStatuses")}</SelectItem>
+                {STATUS_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(STATUS_KEYS[value])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-muted-foreground text-xs" htmlFor="feedback-filter-type">
+              {t("filterTypeLabel")}
+            </label>
+            <Select
+              value={filters.type ?? FILTER_ALL}
+              onValueChange={(value) =>
+                setTypeFilter(value === FILTER_ALL ? undefined : (value as FeedbackType))
+              }
+            >
+              <SelectTrigger id="feedback-filter-type" className="h-8 w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={FILTER_ALL}>{t("filterAllTypes")}</SelectItem>
+                {TYPE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(TYPE_KEYS[value])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <DataTableRoot>
           <DataTableScroll>
             <DataTableHeader className={GRID}>

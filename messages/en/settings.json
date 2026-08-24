@@ -397,6 +397,10 @@
   },
   "feedback": {
     "title": "Feedback",
+    "filterStatusLabel": "Status",
+    "filterTypeLabel": "Type",
+    "filterAllStatuses": "All statuses",
+    "filterAllTypes": "All types",
     "columnType": "Type",
     "columnMessage": "Message",
     "columnAuthor": "Author",

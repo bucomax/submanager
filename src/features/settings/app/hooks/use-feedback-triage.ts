@@ -8,6 +8,7 @@ import {
 import type {
   FeedbackDto,
   FeedbackStatus,
+  FeedbackType,
   ListFeedbackQueryParams,
 } from "@/types/api/feedback-v1";
 import type { ApiPagination } from "@/lib/api/pagination";
@@ -60,5 +61,25 @@ export function useFeedbackTriage() {
     setFilters((current) => ({ ...current, page }));
   }, []);
 
-  return { rows, pagination, loading, pendingId, filters, setFilters, setPage, changeStatus };
+  // Trocar filtro reseta a página: sem isto, filtrar na página 4 de um resultado
+  // de 1 página deixa a tela vazia até o usuário perceber e voltar manualmente.
+  const setStatusFilter = useCallback((status: FeedbackStatus | undefined) => {
+    setFilters((current) => ({ ...current, status, page: 1 }));
+  }, []);
+
+  const setTypeFilter = useCallback((type: FeedbackType | undefined) => {
+    setFilters((current) => ({ ...current, type, page: 1 }));
+  }, []);
+
+  return {
+    rows,
+    pagination,
+    loading,
+    pendingId,
+    filters,
+    setPage,
+    setStatusFilter,
+    setTypeFilter,
+    changeStatus,
+  };
 }
