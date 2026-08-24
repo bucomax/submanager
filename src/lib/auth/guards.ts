@@ -2,7 +2,7 @@ import type { Session } from "next-auth";
 import { prisma } from "@/infrastructure/database/prisma";
 import { getApiT, type ApiT } from "@/lib/api/i18n";
 import { jsonError } from "@/lib/api-response";
-import { tagRequestId } from "@/lib/observability/request-id";
+import { tagRequestId, tagTenantId } from "@/lib/observability/request-id";
 import { getSession } from "./session";
 
 async function resolveApiT(request: Request | undefined, t?: ApiT): Promise<ApiT> {
@@ -103,6 +103,10 @@ export async function getActiveTenantIdOr400(session: Session, request?: Request
     const tr = await resolveApiT(request, t);
     return { tenantId: null, response: jsonError("TENANT_INACTIVE", tr("errors.tenantInactive"), 403) };
   }
+  // Server events herdam `request_id`/`api.route` de `tagRequestId`, mas só aqui o
+  // tenant é conhecido — sem isto, filtrar o Sentry por tenant funcionava só para
+  // evento de browser (`applySentryUserContext`), nunca para servidor.
+  tagTenantId(tenantId);
   return { tenantId, response: null };
 }
 

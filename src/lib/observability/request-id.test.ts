@@ -49,6 +49,27 @@ describe("tagRequestId", () => {
     expect(tagRequestId(undefined)).toBeNull();
     expect(currentRequestId()).toBeNull();
   });
+
+  it("marca api.route com o pathname da requisição", () => {
+    const request = new Request("https://app.local/api/v1/feedback?foo=bar", {
+      headers: { [REQUEST_ID_HEADER]: "req-2" },
+    });
+
+    tagRequestId(request);
+
+    expect(Sentry.getIsolationScope().getScopeData().tags["api.route"]).toBe(
+      "/api/v1/feedback",
+    );
+  });
+
+  it("não derruba o guard quando a URL da requisição é inválida", () => {
+    // `Request` real valida a URL no construtor — este fake reproduz só a superfície
+    // que `tagRequestId` usa (`headers.get`, `url`) para forçar `new URL()` a falhar.
+    const request = { url: "não é uma url", headers: new Headers() } as Request;
+
+    expect(() => tagRequestId(request)).not.toThrow();
+    expect(Sentry.getIsolationScope().getScopeData().tags["api.route"]).toBeUndefined();
+  });
 });
 
 describe("currentRequestId", () => {
