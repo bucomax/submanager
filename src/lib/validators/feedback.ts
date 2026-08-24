@@ -6,8 +6,10 @@ export const createFeedbackBodySchema = z.object({
   sentryEventId: z.string().trim().max(64).nullable().optional(),
   requestId: z.string().trim().max(128).nullable().optional(),
   // Só o pathname: a rota rejeita qualquer coisa com query string (LGPD — query
-  // string pode carregar busca por nome de paciente).
-  pagePath: z.string().trim().min(1).max(512).regex(/^\/[^?#]*$/),
+  // string pode carregar busca por nome de paciente). `(?!\/)` barra valor
+  // protocol-relative (`//evil.com`), que passaria pelo resto do padrão e viraria
+  // open redirect se a tela de triagem renderizar como href.
+  pagePath: z.string().trim().min(1).max(512).regex(/^\/(?!\/)[^?#]*$/),
   locale: z.string().trim().min(2).max(10),
 });
 

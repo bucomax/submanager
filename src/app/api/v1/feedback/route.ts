@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { toFeedbackDto } from "@/app/api/v1/feedback/to-feedback-dto";
 import { feedbackReportPrismaRepository } from "@/infrastructure/repositories/feedback-report.repository";
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
   const parsed = createFeedbackBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const row = await feedbackReportPrismaRepository.create({

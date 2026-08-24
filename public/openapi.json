@@ -2950,7 +2950,7 @@
           }
         },
         "responses": {
-          "201": { "description": "{ feedback: FeedbackDto }", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "feedback": { "$ref": "#/components/schemas/FeedbackDto" } } } } } } } },
+          "201": { "description": "Relato de feedback criado", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "feedback": { "$ref": "#/components/schemas/FeedbackDto" } } } } } } } },
           "400": { "description": "JSON inválido ou tenant ausente" },
           "401": { "description": "Não autenticado" },
           "403": { "description": "Sem permissão no tenant ativo" },
