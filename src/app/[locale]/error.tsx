@@ -24,16 +24,17 @@ export default function LocaleError({
 
   useEffect(() => {
     const id = Sentry.captureException(error);
-    // Adia o setState pra um microtask: evita re-render em cascata síncrono
-    // dentro do próprio effect (react-hooks/set-state-in-effect).
-    queueMicrotask(() => {
-      setEventId(id ?? null);
-      setLastError({
-        sentryEventId: id ?? null,
-        requestId: null,
-        route: window.location.pathname,
-        capturedAt: Date.now(),
-      });
+    // Adaptação a sistema externo: o eventId do Sentry só existe depois que o
+    // effect roda, então não há como derivá-lo no render. O segundo render que a
+    // regra sinaliza é inerente a isso, não acidental — ver "You Might Not Need
+    // an Effect" na doc do React.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEventId(id ?? null);
+    setLastError({
+      sentryEventId: id ?? null,
+      requestId: null,
+      route: window.location.pathname,
+      capturedAt: Date.now(),
     });
   }, [error, setLastError]);
 
