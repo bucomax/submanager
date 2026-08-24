@@ -7,6 +7,7 @@ import { LocaleSwitcher } from "@/shared/components/layout/locale-switcher";
 import { Separator } from "@/shared/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { AppSidebar } from "@/shared/components/layout/app-sidebar";
+import { FeedbackFloatingWidget } from "@/features/feedback/app/components/feedback-launcher";
 import { TenantSwitcher } from "@/shared/components/layout/tenant-switcher";
 import { ThemeToggle } from "@/shared/components/layout/theme-toggle";
 import { applySentryUserContext, clearSentryUserContext } from "@/lib/observability/sentry-context";
@@ -43,6 +44,7 @@ export function AppShell({ children, user, headerSlots, afterHeader }: AppShellP
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
+      <FeedbackFloatingWidget />
       <SidebarInset>
         <header className="bg-background sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-3 md:px-4">
           <SidebarTrigger className="-ml-1" />

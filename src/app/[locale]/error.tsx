@@ -56,9 +56,10 @@ export default function LocaleError({
         </Button>
         <Button onClick={() => openFeedbackDialog("bug")}>{t("report")}</Button>
       </div>
-      {/* A árvore da sidebar (e o `FeedbackLauncher` que normalmente monta o
-          dialog) some junto com o segmento que quebrou, então esta boundary
-          precisa montar o próprio `FeedbackDialog` para o botão acima funcionar. */}
+      {/* A árvore inteira do AppShell (sidebar + FeedbackFloatingWidget, que
+          normalmente monta o dialog) some junto com o segmento que quebrou,
+          então esta boundary precisa montar o próprio `FeedbackDialog` para o
+          botão acima funcionar. */}
       <FeedbackDialog />
     </div>
   );

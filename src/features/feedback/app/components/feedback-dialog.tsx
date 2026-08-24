@@ -20,7 +20,8 @@ const TYPE_OPTIONS: {
 
 /**
  * Sem props: lê a store global do dialog. Precisa funcionar tanto montado pelo
- * `FeedbackLauncher` (sidebar) quanto pela tela de erro, que não tem sidebar.
+ * `FeedbackFloatingWidget` (`AppShell`) quanto pela tela de erro, que não tem
+ * sidebar nem `AppShell`.
  */
 export function FeedbackDialog() {
   const t = useTranslations("feedback.widget");
