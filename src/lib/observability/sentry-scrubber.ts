@@ -32,17 +32,27 @@ export const SENSITIVE_KEY_DENYLIST = [
   "token",
 ] as const;
 
-/** CPF com ou sem pontuação. A borda `\D` evita casar dentro de cuid/uuid. */
+/** CPF com ou sem pontuação. Os lookarounds `(?<!\w)`/`(?!\w)` evitam casar dentro de cuid/uuid. */
 const CPF_RE = /(?<!\w)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\w)/g;
-/** Telefone BR: DDD opcional entre parênteses, 8 ou 9 dígitos. */
-const PHONE_RE = /(?<!\w)(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?9?\d{4}[-\s]?\d{4}(?!\w)/g;
+/**
+ * Telefone exige estrutura explícita — DDD entre parênteses ou hífen separando o
+ * sufixo. Um padrão que aceitasse 8 dígitos soltos apagaria timestamp unix, número
+ * de nota e valor em centavos, cegando o diagnóstico que este módulo existe para
+ * preservar. Celular sem formatação (11 dígitos) já cai no `CPF_RE`, que roda antes.
+ * Fixo de 10 dígitos sem formatação fica de fora de propósito: não dá para separá-lo
+ * de um timestamp sem heurística frágil, e ele continua coberto pela denylist de
+ * chaves e por `dataCollection`.
+ */
+const PHONE_PAREN_RE = /(?<!\w)\(\d{2}\)\s?9?\d{4}[-\s]?\d{4}(?!\w)/g;
+const PHONE_HYPHEN_RE = /(?<!\w)(?:\+?55[\s-]?)?(?:\d{2}[\s-])?9?\d{4}-\d{4}(?!\w)/g;
 const EMAIL_RE = /(?<!\w)[\w.+-]+@[\w-]+\.[\w.-]+(?!\w)/g;
 
 export function redactSensitiveText(value: string): string {
   return value
     .replace(EMAIL_RE, REDACTED)
     .replace(CPF_RE, REDACTED)
-    .replace(PHONE_RE, REDACTED);
+    .replace(PHONE_PAREN_RE, REDACTED)
+    .replace(PHONE_HYPHEN_RE, REDACTED);
 }
 
 function isSensitiveKey(key: string): boolean {

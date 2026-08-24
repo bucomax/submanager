@@ -39,6 +39,31 @@ describe("redactSensitiveText", () => {
       "clientId cmg3k2p9x0001abcd",
     );
   });
+
+  it("não confunde uuid com CPF ou telefone", () => {
+    expect(redactSensitiveText("trace 550e8400-e29b-41d4-a716-446655440000")).toBe(
+      "trace 550e8400-e29b-41d4-a716-446655440000",
+    );
+  });
+
+  it.each([
+    "timeout at 1735051200 ms",
+    "invoice 12345678 overdue",
+    "amount in cents: 999999999",
+    "periodo 2024 2025",
+  ])("preserva número sem forma de telefone: %s", (input) => {
+    expect(redactSensitiveText(input)).toBe(input);
+  });
+
+  it("redige telefone com código do país", () => {
+    expect(redactSensitiveText("zap +55 11 98765-4321")).toBe("zap [redacted]");
+  });
+
+  it("redige celular sem formatação, pelo padrão de 11 dígitos", () => {
+    expect(redactSensitiveText("telefone 11987654321 inválido")).toBe(
+      "telefone [redacted] inválido",
+    );
+  });
 });
 
 describe("scrubSentryEvent", () => {
