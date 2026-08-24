@@ -31,6 +31,11 @@ const leaks = [
   ["telefone", "98765-4321"],
   ["e-mail", "maria@exemplo.com"],
   ["query string", "Maria+Silva"],
+  // Celular sem formatação (11 dígitos) em texto livre não é coberto por regex de
+  // telefone (ver comentário de `PHONE_HYPHEN_RE` em `sentry-scrubber.ts`) — cai no
+  // `CPF_RE`, que aceita 11 dígitos sem pontuação. Sem esta entrada, a sonda passava
+  // mesmo com `CPF_RE` degradado para exigir pontuação (regressão real, já reproduzida).
+  ["celular sem formatação em texto livre", "11987654321"],
 ].filter(([, needle]) => scrubbed.includes(needle));
 
 if (leaks.length > 0) {

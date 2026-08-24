@@ -15,6 +15,7 @@ const SUGGESTION_TYPE_LABEL = /^sugestão$/i;
 const MESSAGE_LABEL = /o que aconteceu\?/i;
 const SUBMIT_LABEL = /^enviar$/i;
 const SUCCESS_TOAST = /feedback enviado\. obrigado\./i;
+const MESSAGE_TOO_SHORT_ERROR = /escreva ao menos 10 caracteres\./i;
 
 /**
  * Injeta o cookie de sessão emitido pelo `globalSetup` antes de qualquer `page.goto`.
@@ -72,7 +73,11 @@ test.describe("widget de feedback", () => {
     await dialog.getByLabel(MESSAGE_LABEL).fill("erro");
     await dialog.getByRole("button", { name: SUBMIT_LABEL }).click();
 
-    // Validação client-side (Zod: mínimo 10 caracteres) bloqueia o submit — dialog permanece aberto.
+    // Diálogo aberto sozinho não prova que a validação disparou (o servidor também
+    // devolveria 400 com o diálogo aberto, e um botão inerte teria o mesmo efeito).
+    // A mensagem de erro do Zod (`messageTooShort`) só aparece quando a validação
+    // client-side de fato bloqueou o submit.
+    await expect(dialog.getByText(MESSAGE_TOO_SHORT_ERROR)).toBeVisible();
     await expect(dialog).toBeVisible();
   });
 });
