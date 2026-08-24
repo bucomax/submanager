@@ -166,6 +166,7 @@ model User {
   quickPhrasesCreated               QuickPhrase[]                 @relation("QuickPhraseCreatedBy")
   leadNotesAuthored                 LeadNote[]                    @relation("LeadNoteAuthor")
   agendaEventsOwned                 AgendaEvent[]                 @relation("AgendaEventOwner")
+  feedbackReportsAuthored           FeedbackReport[]              @relation("FeedbackReportAuthor")
 }
 
 model UserAuthToken {
@@ -303,6 +304,7 @@ model Tenant {
   quickPhrases                QuickPhrase[]
   leadNotes                   LeadNote[]
   agendaEvents                AgendaEvent[]
+  feedbackReports             FeedbackReport[]
 }
 
 /**
@@ -1107,4 +1109,51 @@ model TenantApp {
   @@unique([tenantId, appId])
   @@index([tenantId, status])
   @@index([externalSubscriptionId])
+}
+
+enum FeedbackType {
+  bug
+  suggestion
+  question
+  other
+}
+
+enum FeedbackStatus {
+  open
+  triaged
+  in_progress
+  resolved
+  wont_fix
+  duplicate
+}
+
+/**
+ * Relato de feedback enviado via widget da aplicação (bug, sugestão, dúvida etc.),
+ * opcionalmente correlacionado a um evento capturado pelo Sentry.
+ */
+model FeedbackReport {
+  id            String         @id @default(cuid())
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /** Nulo quando o autor é removido: o relato sobrevive à saída da pessoa. */
+  authorUserId  String?
+  author        User?          @relation("FeedbackReportAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  type          FeedbackType
+  status        FeedbackStatus @default(open)
+  message       String         @db.Text
+  sentryEventId String?
+  requestId     String?
+  /** Apenas o pathname. Query string carrega busca por nome de paciente. */
+  pagePath      String
+  userAgent     String?
+  appVersion    String?
+  locale        String
+  adminNote     String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  resolvedAt    DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@index([sentryEventId])
 }

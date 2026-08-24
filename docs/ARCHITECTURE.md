@@ -497,6 +497,7 @@ Esta secção fixa **como** o produto se materializa em **PostgreSQL/Prisma** e 
 
 O **núcleo já implementado** é: **jornada + versão + etapas + checklist/documentos por etapa + paciente na jornada + notas dedicadas + transição + auditoria de timeline + notificações in-app + `ChannelDispatch` (WhatsApp Business Cloud API)**. `AiJob` continua como evolução futura.
 - **`Notification`**: notificação in-app persistida por usuário (`tenantId`, `userId`, `type`, `title`, `body?`, `metadata` Json, `readAt?`). Tipos: `sla_critical`, `sla_warning`, `stage_transition`, `new_patient`, `checklist_complete`. Ver §7.4.
+- **`FeedbackReport`**: relato enviado via widget de feedback da aplicação (`tenantId`, `authorUserId?` — nulo se o autor for removido —, `type` bug/suggestion/question/other, `status` open/triaged/in_progress/resolved/wont_fix/duplicate, `message`, `pagePath` — apenas pathname —, `locale`, `adminNote?`). Quando originado de um erro capturado, carrega `sentryEventId` para correlacionar com o evento no Sentry.
 
 ### 8.2 Tabelas e relacionamentos (núcleo)
 
@@ -531,6 +532,7 @@ O **núcleo já implementado** é: **jornada + versão + etapas + checklist/docu
 | `FileAsset` | `tenantId`, `r2Key`, `mimeType`, `sizeBytes`, `sha256Hash?` (hex do objeto no GCS após upload, para integridade), `clientId?`, `uploadedById?` (null se envio pelo portal), `patientPortalReviewStatus` (`NOT_APPLICABLE` / `PENDING` / `APPROVED` / `REJECTED`); upload na biblioteca **não** dispara WhatsApp sozinho. |
 | `OpmeSupplier` | Catálogo por tenant para relacionamento opcional em `Client`. |
 | `AiJob` | Futuro | Evolução para integração assíncrona com IA. |
+| `FeedbackReport` | `tenantId`, `authorUserId?`, `type` (bug/suggestion/question/other), `status` (open/triaged/in_progress/resolved/wont_fix/duplicate), `message`, `sentryEventId?`, `pagePath`, `adminNote?` | Relato do widget de feedback; `sentryEventId?` correlaciona com o evento no Sentry quando originado de um erro. |
 
 | Modelo | Campos-chave | Observação |
 |--------|--------------|------------|
