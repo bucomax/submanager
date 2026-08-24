@@ -782,13 +782,12 @@ git commit -m "feat(observability): propaga request_id e captura 5xx do envelope
 - Consumes: `shouldReportHttpStatus`, `severityForHttpStatus` (Task 2), `REQUEST_ID_HEADER` (Task 3).
 - Produces: `useLastErrorStore` com estado `{ lastError: CapturedError | null, setLastError(e: CapturedError): void, clearLastError(): void, readFreshError(nowMs: number): CapturedError | null }` e `type CapturedError = { sentryEventId: string | null; requestId: string | null; route: string; capturedAt: number }`; constante `LAST_ERROR_TTL_MS`.
 
-- [ ] **Step 1: Ampliar o include do Vitest**
+- [ ] **Step 1: Conferir o include do Vitest (deve ser no-op)**
 
-Em `vitest.config.ts`, trocar a linha do `include` por:
-
-```ts
-    include: ["src/lib/observability/**/*.test.ts", "src/shared/stores/**/*.test.ts"],
-```
+A Task 3 já ampliou o glob para `["src/lib/**/*.test.ts", "src/shared/**/*.test.ts"]`,
+que cobre `src/shared/stores/**`. Apenas confirme que `vitest.config.ts` está assim e
+siga. **Não estreite o glob de volta** — isso tiraria `src/lib/api-response.test.ts` da
+suíte e mataria em silêncio o teste que trava a propagação do `request_id`.
 
 - [ ] **Step 2: Escrever o teste que falha**
 
