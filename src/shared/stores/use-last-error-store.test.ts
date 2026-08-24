@@ -37,6 +37,14 @@ describe("useLastErrorStore", () => {
     ).toBeNull();
   });
 
+  it("mantém o erro no limite exato da janela", () => {
+    useLastErrorStore.getState().setLastError(captured(BASE));
+
+    expect(
+      useLastErrorStore.getState().readFreshError(BASE + LAST_ERROR_TTL_MS),
+    ).toEqual(captured(BASE));
+  });
+
   it("mantém apenas o erro mais recente", () => {
     useLastErrorStore.getState().setLastError(captured(BASE));
     useLastErrorStore.getState().setLastError({ ...captured(BASE + 1), sentryEventId: "evt-2" });
