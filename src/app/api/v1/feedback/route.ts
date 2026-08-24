@@ -9,6 +9,7 @@ import {
   getActiveTenantIdOr400,
   requireSessionOr401,
 } from "@/lib/auth/guards";
+import { redactSensitiveText } from "@/lib/observability/sentry-scrubber";
 import { createFeedbackBodySchema } from "@/lib/validators/feedback";
 import type { CreateFeedbackResponseData } from "@/types/api/feedback-v1";
 
@@ -69,7 +70,15 @@ export async function POST(request: Request) {
 function mirrorToSentry(type: string, sentryEventId: string | null, message: string) {
   if (type !== "bug" || !sentryEventId) return;
   try {
-    Sentry.captureFeedback({ associatedEventId: sentryEventId, message });
+    // `Sentry.captureFeedback` monta um evento `type: "feedback"`, e `beforeSend`
+    // só roda para evento de erro (`type` ausente) — `scrubSentryEvent` nunca vê
+    // este payload. Por isso a redação é manual aqui, e só nesta cópia: o `message`
+    // gravado no Postgres pelo `create` acima continua íntegro, porque é a fonte
+    // de verdade que o triador lê e nunca sai do banco do próprio tenant.
+    Sentry.captureFeedback({
+      associatedEventId: sentryEventId,
+      message: redactSensitiveText(message),
+    });
   } catch {
     // silêncio proposital — ver comentário acima
   }
