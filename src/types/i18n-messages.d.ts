@@ -12,6 +12,7 @@ import type settings from "../../messages/pt-BR/settings.json";
 import type apps from "../../messages/pt-BR/apps.json";
 import type contacts from "../../messages/pt-BR/contacts.json";
 import type agenda from "../../messages/pt-BR/agenda.json";
+import type feedback from "../../messages/pt-BR/feedback.json";
 
 // Tipos alinhados a `messages/pt-BR/*.json` (paridade com `en/` é manual).
 
@@ -30,6 +31,7 @@ type Messages = {
   apps: typeof apps;
   contacts: typeof contacts;
   agenda: typeof agenda;
+  feedback: typeof feedback;
 };
 
 declare module "next-intl" {

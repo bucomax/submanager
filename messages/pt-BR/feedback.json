@@ -1,0 +1,27 @@
+{
+  "errorBoundary": {
+    "title": "Algo quebrou nesta tela",
+    "description": "O erro foi registrado. Se puder contar o que você estava fazendo, o conserto vem mais rápido.",
+    "retry": "Tentar de novo",
+    "report": "Reportar problema",
+    "eventLabel": "Código do erro"
+  },
+  "widget": {
+    "trigger": "Enviar feedback",
+    "title": "Enviar feedback",
+    "description": "Sugestão, problema ou dúvida — tudo chega para a equipe.",
+    "typeLabel": "Tipo",
+    "typeBug": "Problema",
+    "typeSuggestion": "Sugestão",
+    "typeQuestion": "Dúvida",
+    "messageLabel": "O que aconteceu?",
+    "messagePlaceholder": "Descreva com suas palavras. Quanto mais concreto, melhor.",
+    "attachLabel": "Anexar detalhes técnicos do último erro",
+    "attachHint": "Envia o código do erro e a rota. Nenhum dado de paciente vai junto.",
+    "submit": "Enviar",
+    "cancel": "Cancelar",
+    "success": "Feedback enviado. Obrigado.",
+    "messageTooShort": "Escreva ao menos 10 caracteres.",
+    "messageTooLong": "Máximo de 2000 caracteres."
+  }
+}

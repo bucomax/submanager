@@ -1,0 +1,27 @@
+{
+  "errorBoundary": {
+    "title": "Something broke on this screen",
+    "description": "The error was recorded. Telling us what you were doing makes the fix faster.",
+    "retry": "Try again",
+    "report": "Report problem",
+    "eventLabel": "Error code"
+  },
+  "widget": {
+    "trigger": "Send feedback",
+    "title": "Send feedback",
+    "description": "Suggestion, problem or question — it all reaches the team.",
+    "typeLabel": "Type",
+    "typeBug": "Problem",
+    "typeSuggestion": "Suggestion",
+    "typeQuestion": "Question",
+    "messageLabel": "What happened?",
+    "messagePlaceholder": "Describe it in your own words. The more concrete, the better.",
+    "attachLabel": "Attach technical details from the last error",
+    "attachHint": "Sends the error code and route. No patient data goes with it.",
+    "submit": "Send",
+    "cancel": "Cancel",
+    "success": "Feedback sent. Thank you.",
+    "messageTooShort": "Write at least 10 characters.",
+    "messageTooLong": "2000 characters maximum."
+  }
+}
