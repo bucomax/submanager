@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -32,4 +33,24 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: "tercon",
+  project: "submanager",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Só loga o upload de source map em CI.
+  silent: !process.env.CI,
+
+  // Cobre mais arquivos de client em troca de build mais lento — stack trace legível
+  // é o que dá valor ao vínculo erro→relato de bug.
+  widenClientFileUpload: true,
+
+  // `next build` no Next 16 roda Turbopack, onde o upload de source map acontece
+  // depois da compilação em vez de via plugin de bundler. Sem isso, stack trace de
+  // produção chega minificado.
+  useRunAfterProductionCompileHook: true,
+
+  // Túnel para o ingest do Sentry, contornando adblock no browser.
+  // Exige `monitoring` excluído do matcher em `src/proxy.ts` — ver comentário lá.
+  tunnelRoute: "/monitoring",
+});

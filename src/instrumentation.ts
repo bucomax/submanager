@@ -1,5 +1,23 @@
+import * as Sentry from "@sentry/nextjs";
+import { sentrySharedOptions } from "@/lib/observability/sentry-shared-options";
+
+/**
+ * O guard de `NEXT_RUNTIME` precisa ser a primeira instrução desta função, no
+ * mesmo escopo dos `await import()` dos workers. O Next substitui a variável por
+ * literal em cada bundle, e é isso que elimina a árvore do BullMQ do bundle de
+ * edge — que não suporta `node:crypto`. Extrair os imports para outra função
+ * quebra essa eliminação e o build passa a reclamar de `node-module-in-edge-runtime`.
+ *
+ * `Sentry.init` fica inline aqui em vez de num `sentry.server.config.ts` na raiz:
+ * um arquivo a menos, e o init acontece antes de qualquer worker subir.
+ *
+ * Sem branch de edge de propósito — não há rota com `runtime = "edge"` no projeto
+ * e o proxy do Next 16 roda em Node. Ao criar a primeira, adicionar o branch aqui.
+ */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  Sentry.init(sentrySharedOptions);
 
   if (!process.env.REDIS_URL?.trim()) {
     console.log(
@@ -44,3 +62,6 @@ export async function register() {
     console.log("[instrumentation] BullMQ email dispatch worker started");
   }
 }
+
+/** Captura erro não tratado de Server Component, route handler e proxy. */
+export const onRequestError = Sentry.captureRequestError;

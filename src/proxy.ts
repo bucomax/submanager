@@ -66,5 +66,9 @@ export default function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  // `monitoring` é o túnel do Sentry (`tunnelRoute` no next.config.ts). Precisa ficar
+  // fora do matcher, não em PUBLIC_EXACT: liberar a rota ainda a entregaria ao
+  // middleware do next-intl, que a trata como página e responde 404. O rewrite do
+  // Sentry só é alcançado quando o proxy não toca na requisição.
+  matcher: ["/((?!api|_next|_vercel|monitoring|.*\\..*).*)"],
 };
