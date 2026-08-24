@@ -1,0 +1,126 @@
+import { describe, expect, it } from "vitest";
+import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
+import {
+  redactSensitiveText,
+  scrubSentryBreadcrumb,
+  scrubSentryEvent,
+  SENSITIVE_KEY_DENYLIST,
+} from "@/lib/observability/sentry-scrubber";
+
+describe("redactSensitiveText", () => {
+  it("redige CPF com pontuação", () => {
+    expect(redactSensitiveText("paciente 529.982.247-25 chegou")).toBe(
+      "paciente [redacted] chegou",
+    );
+  });
+
+  it("redige CPF sem pontuação", () => {
+    expect(redactSensitiveText("doc 52998224725")).toBe("doc [redacted]");
+  });
+
+  it("redige telefone brasileiro com DDD", () => {
+    expect(redactSensitiveText("ligar (11) 98765-4321")).toBe("ligar [redacted]");
+  });
+
+  it("redige e-mail", () => {
+    expect(redactSensitiveText("contato joao@clinica.com.br")).toBe(
+      "contato [redacted]",
+    );
+  });
+
+  it("mantém texto sem PII intacto", () => {
+    expect(redactSensitiveText("falha ao carregar etapa")).toBe(
+      "falha ao carregar etapa",
+    );
+  });
+
+  it("não confunde id interno com CPF", () => {
+    expect(redactSensitiveText("clientId cmg3k2p9x0001abcd")).toBe(
+      "clientId cmg3k2p9x0001abcd",
+    );
+  });
+});
+
+describe("scrubSentryEvent", () => {
+  it("remove o valor de chaves da denylist em extra", () => {
+    const event = {
+      extra: { documentId: "52998224725", stageKey: "pre-op" },
+    } as unknown as ErrorEvent;
+
+    const result = scrubSentryEvent(event);
+
+    expect(result.extra?.documentId).toBe("[redacted]");
+    expect(result.extra?.stageKey).toBe("pre-op");
+  });
+
+  it("redige PII dentro do valor da exception", () => {
+    const event = {
+      exception: {
+        values: [{ type: "Error", value: "falha para 529.982.247-25" }],
+      },
+    } as unknown as ErrorEvent;
+
+    const result = scrubSentryEvent(event);
+
+    expect(result.exception?.values?.[0]?.value).toBe("falha para [redacted]");
+  });
+
+  it("descarta a query string da URL da request", () => {
+    const event = {
+      request: { url: "https://app.local/dashboard/contacts?q=Maria+Silva" },
+    } as unknown as ErrorEvent;
+
+    const result = scrubSentryEvent(event);
+
+    expect(result.request?.url).toBe("https://app.local/dashboard/contacts");
+  });
+
+  it("varre objetos aninhados", () => {
+    const event = {
+      extra: { patient: { phone: "11987654321", id: "abc" } },
+    } as unknown as ErrorEvent;
+
+    const result = scrubSentryEvent(event);
+    const patient = result.extra?.patient as Record<string, unknown>;
+
+    expect(patient.phone).toBe("[redacted]");
+    expect(patient.id).toBe("abc");
+  });
+
+  it("não estoura com estrutura circular", () => {
+    const circular: Record<string, unknown> = { name: "loop" };
+    circular.self = circular;
+    const event = { extra: { circular } } as unknown as ErrorEvent;
+
+    expect(() => scrubSentryEvent(event)).not.toThrow();
+  });
+});
+
+describe("scrubSentryBreadcrumb", () => {
+  it("descarta breadcrumb de console, que costuma carregar payload cru", () => {
+    const breadcrumb = { category: "console", message: "user" } as Breadcrumb;
+
+    expect(scrubSentryBreadcrumb(breadcrumb)).toBeNull();
+  });
+
+  it("redige PII na mensagem de breadcrumb de navegação", () => {
+    const breadcrumb = {
+      category: "navigation",
+      message: "buscou por joao@clinica.com.br",
+    } as Breadcrumb;
+
+    const result = scrubSentryBreadcrumb(breadcrumb);
+
+    expect(result?.message).toBe("buscou por [redacted]");
+  });
+});
+
+describe("SENSITIVE_KEY_DENYLIST", () => {
+  it("cobre os nomes de campo sensíveis do domínio clínico", () => {
+    const required = ["cpf", "documentid", "phone", "email"];
+
+    for (const key of required) {
+      expect(SENSITIVE_KEY_DENYLIST).toContain(key);
+    }
+  });
+});

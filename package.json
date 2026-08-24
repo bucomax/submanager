@@ -31,6 +31,7 @@
     "audit:prisma-queries": "tsx scripts/load-and-security/run-prisma-slow-probe.ts",
     "audit:prisma-queries:stress": "PRISMA_PROBE_ROUNDS=24 PRISMA_PROBE_CONCURRENCY=20 tsx scripts/load-and-security/run-prisma-slow-probe.ts",
     "test:session-cookie": "tsx scripts/load-and-security/issue-load-test-session.ts",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:patient-self-register": "playwright test e2e/patient-self-register.spec.ts",
     "e2e:issue-self-register-invite": "tsx scripts/e2e/issue-patient-self-register-invite.ts",
@@ -93,7 +94,8 @@
     "supabase": "^2.101.0",
     "tailwindcss": "^4",
     "tsx": "^4.19.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
   "prisma": {
     "seed": "tsx packages/prisma/seed.ts"

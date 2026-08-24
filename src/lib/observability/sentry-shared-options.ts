@@ -10,6 +10,8 @@
  * Sem `NEXT_PUBLIC_SENTRY_DSN` o SDK fica desligado e nada é enviado (dev local).
  */
 
+import { scrubSentryBreadcrumb, scrubSentryEvent } from "@/lib/observability/sentry-scrubber";
+
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim() ?? "";
 
 /**
@@ -44,4 +46,6 @@ export const sentrySharedOptions = {
     stackFrameVariables: false,
     genAI: { inputs: false, outputs: false },
   },
+  beforeSend: scrubSentryEvent,
+  beforeBreadcrumb: scrubSentryBreadcrumb,
 };
