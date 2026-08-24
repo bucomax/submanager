@@ -2318,6 +2318,8 @@ git commit -m "feat(feedback): adiciona tela de triagem para super_admin"
 
 - [ ] **Step 1: Escrever o E2E do caminho feliz**
 
+O spec precisa de sessão autenticada — ver a nota e o Step 2 abaixo antes de rodar.
+
 ```ts
 // e2e/feedback-widget.spec.ts
 import { expect, test } from "@playwright/test";
@@ -2350,10 +2352,60 @@ test.describe("widget de feedback", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar o E2E**
+> **Nota do controller.** O plano original dizia "reaproveitar o setup de autenticação
+> dos specs existentes". **Não existe.** Conferi: `e2e/global-setup.ts` cria um convite
+> público de auto-cadastro de paciente, e `patient-self-register.spec.ts` é um fluxo sem
+> sessão. Nenhum spec deste repo entra autenticado.
+>
+> O que existe e resolve: `scripts/load-and-security/issue-load-test-session.ts`
+> (`npm run test:session-cookie`) emite um cookie de sessão NextAuth real usando o mesmo
+> `encode()` da aplicação — não é Bearer genérico, é exatamente o que
+> `getServerSession` aceita. O nome do cookie é `next-auth.session-token`
+> (ou `__Secure-…` quando `NEXTAUTH_URL` é https).
+>
+> Banco local já conferido: 3 tenants, tenant `clinica-alpha` ativo, super_admin
+> `dev@bucomax.local` presente.
+
+- [ ] **Step 2: Estender o `global-setup` para emitir a sessão autenticada**
+
+Em `e2e/global-setup.ts`, depois do bloco que cria os convites, mintar também um cookie
+de sessão e gravá-lo num arquivo de estado. Reaproveitar a lógica de
+`scripts/load-and-security/issue-load-test-session.ts` (o `encode()` do `next-auth/jwt`
+com o payload do usuário) em vez de duplicá-la: se ela já vive num módulo importável,
+importe; se não, extraia para um helper compartilhado e faça os dois chamarem.
+
+Gravar em `e2e/.auth-state.json` no formato de `storageState` do Playwright:
+
+```ts
+{
+  cookies: [
+    {
+      name: "next-auth.session-token",
+      value: token,
+      domain: "localhost",
+      path: "/",
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
+      expires: -1,
+    },
+  ],
+  origins: [],
+}
+```
+
+O arquivo é gitignored, como o `.invite-state.json` que já existe.
+
+- [ ] **Step 3: Rodar o E2E**
+
+No spec do widget, usar `test.use({ storageState: "e2e/.auth-state.json" })`.
 
 Run: `npx playwright test e2e/feedback-widget.spec.ts`
-Expected: 2 testes passando. Se falhar por sessão, reaproveitar o setup de autenticação dos specs existentes em `e2e/`.
+Expected: 2 testes passando.
+
+Se o cookie não autenticar, **não invente um login pela UI** — pare e reporte:
+significa que o `NEXTAUTH_SECRET` do ambiente de teste diverge do usado no `encode()`,
+e adivinhar aí gera um teste que passa por motivo errado.
 
 - [ ] **Step 3: Escrever a sonda do scrubber**
 
