@@ -49,7 +49,7 @@ const GRID = "grid grid-cols-[6rem_minmax(0,1fr)_12rem_7rem_10rem] items-start g
 
 export function FeedbackTriageCard() {
   const t = useTranslations("settings.feedback");
-  const { rows, pagination, loading, setPage, changeStatus } = useFeedbackTriage();
+  const { rows, pagination, loading, pendingId, setPage, changeStatus } = useFeedbackTriage();
 
   return (
     <Card>
@@ -101,6 +101,7 @@ export function FeedbackTriageCard() {
                       onValueChange={(value) =>
                         void changeStatus(row.id, value as FeedbackStatus)
                       }
+                      disabled={pendingId === row.id}
                     >
                       <SelectTrigger aria-label={t("statusAria")} className="h-8">
                         {/* `SelectValue` sem children mostra o `value` cru — precisa do label traduzido. */}

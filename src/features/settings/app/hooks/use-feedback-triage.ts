@@ -18,6 +18,7 @@ export function useFeedbackTriage() {
   const [rows, setRows] = useState<FeedbackDto[]>([]);
   const [pagination, setPagination] = useState<ApiPagination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,6 +26,10 @@ export function useFeedbackTriage() {
       const data = await listFeedback(filters);
       setRows(data.data);
       setPagination(data.pagination);
+    } catch {
+      // O interceptor do apiClient já mostrou o toast. Sem este catch, `void load()`
+      // no efeito abaixo deixaria a rejeição escapar como unhandledrejection — e o
+      // Sentry a capturaria como erro de aplicação nesta mesma fila de triagem.
     } finally {
       setLoading(false);
     }
@@ -34,14 +39,26 @@ export function useFeedbackTriage() {
     void load();
   }, [load]);
 
-  const changeStatus = useCallback(async (id: string, status: FeedbackStatus) => {
-    const { feedback } = await updateFeedback(id, { status });
-    setRows((current) => current.map((row) => (row.id === id ? feedback : row)));
-  }, []);
+  const changeStatus = useCallback(
+    async (id: string, status: FeedbackStatus) => {
+      setPendingId(id);
+      try {
+        const { feedback } = await updateFeedback(id, { status });
+        setRows((current) => current.map((row) => (row.id === id ? feedback : row)));
+      } catch {
+        // Idem: o interceptor já avisou o usuário. O reload devolve o Select ao
+        // estado real do servidor em vez de deixar a UI otimista desalinhada.
+        await load();
+      } finally {
+        setPendingId(null);
+      }
+    },
+    [load],
+  );
 
   const setPage = useCallback((page: number) => {
     setFilters((current) => ({ ...current, page }));
   }, []);
 
-  return { rows, pagination, loading, filters, setFilters, setPage, changeStatus };
+  return { rows, pagination, loading, pendingId, filters, setFilters, setPage, changeStatus };
 }
