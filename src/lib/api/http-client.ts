@@ -1,8 +1,12 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import * as Sentry from "@sentry/nextjs";
 import { normalizeApiError, shouldSilenceApiErrorToast } from "@/lib/api/axios-error";
 import { routing } from "@/i18n/routing";
 import { getAccessToken, getRefreshToken, setAuthTokens } from "@/lib/api/token-storage";
 import { toast } from "@/lib/toast";
+import { severityForHttpStatus, shouldReportHttpStatus } from "@/lib/observability/error-taxonomy";
+import { REQUEST_ID_HEADER } from "@/lib/observability/request-id";
+import { useLastErrorStore } from "@/shared/stores/use-last-error-store";
 import type { ApiErrorEnvelope } from "@/shared/types/api/v1";
 
 /** Alinha mensagens da API v1 ao locale da UI (segmento `[locale]` ou padrão). */
@@ -111,6 +115,34 @@ apiClient.interceptors.response.use(
       if (err.message !== "Request aborted") {
         toast.error(err.message);
       }
+    }
+
+    if (typeof window !== "undefined" && status && shouldReportHttpStatus(status)) {
+      const route = original?.url ?? "unknown";
+      const requestId = error.response?.headers?.[REQUEST_ID_HEADER] ?? null;
+      const eventId = Sentry.withScope((scope) => {
+        scope.setLevel(severityForHttpStatus(status));
+        scope.setTags({
+          "error.code": error.response?.data?.error?.code ?? "UNKNOWN",
+          "api.route": route,
+          request_id: requestId ?? "none",
+        });
+        // Agrupa por rota e código, não por mensagem — mensagem varia por locale.
+        scope.setFingerprint([
+          "api-client",
+          original?.method ?? "get",
+          route,
+          error.response?.data?.error?.code ?? "UNKNOWN",
+        ]);
+        return Sentry.captureException(error);
+      });
+
+      useLastErrorStore.getState().setLastError({
+        sentryEventId: eventId ?? null,
+        requestId,
+        route: window.location.pathname,
+        capturedAt: Date.now(),
+      });
     }
 
     return Promise.reject(error);
