@@ -700,17 +700,35 @@ import { currentRequestId } from "@/lib/observability/request-id";
 E, dentro de `jsonError`, logo antes do `return`:
 
 ```ts
+  const requestId = currentRequestId();
+
   // `onRequestError` só enxerga exception que escapa do handler. Erro que o
   // handler tratou e converteu em envelope passaria despercebido sem isto.
   if (shouldReportHttpStatus(status)) {
     Sentry.withScope((scope) => {
       scope.setLevel(severityForHttpStatus(status));
-      scope.setTags({ "error.code": code, request_id: currentRequestId() ?? "none" });
+      scope.setTags({ "error.code": code, request_id: requestId ?? "none" });
       scope.setFingerprint(["api-error", code, String(status)]);
       Sentry.captureMessage(`API ${status} ${code}`);
     });
   }
 ```
+
+E o `return` precisa devolver o header — **este é o elo que fecha a correlação**. O
+`matcher` do proxy exclui `/api/*` por design, então o carimbo que o proxy faz nunca
+alcança rota de API: sem isto, o id vive só na tag do evento do servidor e o browser
+nunca o descobre.
+
+```ts
+  return Response.json(body, {
+    status,
+    // Sem id marcado (rota pública, que não passa por `requireSessionOr401`) o header
+    // é omitido: id que nenhum evento carrega é pior que id ausente.
+    ...(requestId ? { headers: { [REQUEST_ID_HEADER]: requestId } } : {}),
+  });
+```
+
+O import de `REQUEST_ID_HEADER` entra junto do de `currentRequestId`.
 
 - [ ] **Step 7: Devolver o id ao browser**
 
