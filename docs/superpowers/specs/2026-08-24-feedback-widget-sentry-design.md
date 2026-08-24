@@ -47,18 +47,32 @@ Consultas de issue durante investigação usam o MCP do Sentry (`mcp__sentry__*`
 
 ### 1. Camada de observabilidade
 
-Arquivos gerados pelo wizard, a revisar: `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/instrumentation-client.ts`, `withSentryConfig` no `next.config.ts`.
+**Status: implementado.** O wizard rodou e o resultado foi corrigido; o que segue descreve o estado final, não a saída bruta dele.
 
-Dois ajustes obrigatórios por cima:
+Arquivos: `src/instrumentation.ts` (init do servidor, inline), `src/instrumentation-client.ts`, `src/lib/observability/sentry-shared-options.ts`, `withSentryConfig` no `next.config.ts`.
 
-1. **`src/instrumentation.ts` — fundir, não sobrescrever.** O `register()` atual sobe o worker BullMQ com guardas de `REDIS_URL`/`VERCEL`/`DISABLE_NOTIFICATION_WORKER`. A init do Sentry entra antes dessas guardas, e o arquivo passa a exportar `onRequestError`.
-2. **`withSentryConfig`** com `tunnelRoute: "/monitoring"` (adblock bloqueia `*.sentry.io` e come parte dos eventos de client), `widenClientFileUploadSourceMaps`, `disableLogger`.
+Quatro correções sobre o que o wizard gerou, todas com motivo que só apareceu na execução:
+
+1. **`src/instrumentation.ts` — fundido, não sobrescrito.** O `register()` sobe os workers BullMQ com guardas de `REDIS_URL`/`VERCEL`/`DISABLE_NOTIFICATION_WORKER`; `Sentry.init` entra antes delas e o arquivo exporta `onRequestError`.
+
+   **Restrição não óbvia:** o guard `if (process.env.NEXT_RUNTIME !== "nodejs") return;` precisa ser a primeira instrução da *mesma* função que faz os `await import()` dos workers. O Next troca essa variável por literal em cada bundle, e é isso que elimina a árvore do BullMQ do bundle de edge — que não suporta `node:crypto`. Extrair os imports para uma função auxiliar quebra a eliminação e o build passa a acusar `node-module-in-edge-runtime`. Verificado por bisect.
+
+2. **Sem `sentry.server.config.ts` e sem `sentry.edge.config.ts`.** A init do servidor é inline no `instrumentation.ts`. Não existe rota com `runtime = "edge"` no projeto e o proxy do Next 16 roda em Node, então um config de edge só criaria um bundle a mais para dar errado.
+
+3. **`withSentryConfig`** com `tunnelRoute: "/monitoring"`, `widenClientFileUpload`, `authToken` por env e `useRunAfterProductionCompileHook: true`. Esse último importa: `next build` no Next 16 roda Turbopack, onde o upload de source map é pós-compilação. O bloco `webpack: {}` que o wizard gerou (`automaticVercelMonitors`, `treeshake`) é inerte sob Turbopack e foi removido.
+
+4. **`monitoring` excluído do matcher em `src/proxy.ts`.** Não basta marcar a rota como pública: liberada em `PUBLIC_EXACT`, ela era entregue ao middleware do next-intl, que a tratava como página e respondia 404 (`x-middleware-rewrite: /pt-BR/monitoring`). O rewrite do Sentry só é alcançado quando o proxy não toca na requisição. Com a exclusão, o túnel responde 401 para envelope inválido — idêntico ao ingest direto.
 
 Módulo novo `src/lib/observability/`:
 
-| Arquivo | Responsabilidade |
-|---|---|
-| `sentry-scrubber.ts` | `beforeSend` / `beforeBreadcrumb`. Deny-list de chaves (`cpf`, `documentId`, `phone`, `whatsapp`, `birthDate`, `notes`, `message`, `content`, `address`) mais regex de CPF, telefone BR e e-mail aplicados a `request.data`, `extra`, `breadcrumbs` e à mensagem do evento. `sendDefaultPii: false`. |
+| Arquivo | Responsabilidade | Status |
+|---|---|---|
+| `sentry-shared-options.ts` | Opções comuns às inits de server e client: DSN e ambiente por env, `enabled: false` sem DSN, sample rate de tracing por ambiente, e o bloco `dataCollection` restritivo. | feito |
+| `sentry-scrubber.ts` | `beforeSend` / `beforeBreadcrumb`. Deny-list de chaves (`cpf`, `documentId`, `phone`, `whatsapp`, `birthDate`, `notes`, `message`, `content`, `address`) mais regex de CPF, telefone BR e e-mail aplicados a `request.data`, `extra`, `breadcrumbs` e à mensagem do evento. | pendente |
+
+**`dataCollection` é pré-requisito, não reforço.** O design tratava o scrubber como a camada de proteção de PII; a checagem dos docs do v10 mostrou que os defaults do SDK são o oposto disso. Todos os campos vêm **ligados**: `userInfo`, `cookies`, `httpHeaders` de request e response, `httpBodies` nos quatro tipos, `urlQueryParams` e `stackFrameVariables`. Aplicado ao domínio, o default enviaria para o Sentry o corpo das requests clínicas, a query string (`?q=<nome do paciente>`) e o valor das variáveis locais de cada stack frame — o objeto `Client` inteiro no momento da exception.
+
+Por isso `sentrySharedOptions` desliga cada categoria explicitamente. O `sentry-scrubber.ts` continua no plano como segunda camada, para o que passa por `captureException` manual, mas a primeira linha de defesa é o `dataCollection`.
 | `sentry-context.ts` | `setUser({ id })` — **só o id**, nunca nome ou e-mail. Tags `tenant.id`, `tenant.role`, `global.role`, `locale`. |
 | `error-taxonomy.ts` | Decide se o erro é enviado e com que nível. 400/401/403/404/409/422 esperados **não** são enviados (viram breadcrumb). 5xx → `error`. Falha de integração externa (WhatsApp, GCS, Redis, SMTP) → `error` + tag `integration`. |
 | `request-id.ts` | Gera e propaga `x-request-id`. |
@@ -73,7 +87,9 @@ Tags padrão em todo evento: `request_id`, `error.code`, `api.route`, `tenant.id
 
 **Error boundaries.** Criar `src/app/global-error.tsx` e `src/app/[locale]/error.tsx`: capturam a exception, exibem tela padrão e oferecem "Reportar problema" já com o `eventId` em mãos.
 
-**Variáveis de ambiente:** `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG=tercon`, `SENTRY_PROJECT=submanager`, `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT`, `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`. Sem DSN tudo vira no-op — dev local não quebra.
+**Variáveis de ambiente** (documentadas em `.env.example`): `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT`, `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_AUTH_TOKEN`. Sem DSN o SDK fica desligado e nada é enviado — é o modo padrão de dev local. `org` e `project` ficam literais no `next.config.ts`, alinhados à restrição de projeto único.
+
+Tracing: `0.1` em produção e `0` fora dela por padrão. O wizard tinha deixado `1` nos três configs, o que consumiria quota e afogaria o sinal de produção no ruído de desenvolvimento.
 
 O CSP atual (`connect-src 'self' https: wss:`) já permite o ingest; nenhuma mudança de header é necessária.
 
@@ -207,9 +223,9 @@ O projeto não tem unit tests configurados. Cobertura via Playwright E2E mais ve
 
 ## Ordem de execução
 
-1. Usuário roda o wizard do Sentry (árvore limpa antes, para o diff ficar isolado).
-2. Ajustar o que o wizard gerou: merge do `src/instrumentation.ts`, `tunnelRoute`; escrever `src/lib/observability/`.
-3. Error boundaries e captura no interceptor do `apiClient`.
+1. ~~Usuário roda o wizard do Sentry.~~ **Feito.**
+2. ~~Ajustar o que o wizard gerou.~~ **Feito** — ver as quatro correções acima. Verificado com `npx tsc --noEmit`, `eslint`, `next build` sem aviso de edge runtime, e boot real confirmando túnel em 401 e workers BullMQ subindo.
+3. Escrever `sentry-scrubber.ts`, `sentry-context.ts`, `error-taxonomy.ts`, `request-id.ts`; error boundaries e captura no interceptor do `apiClient`.
 4. Migration Prisma, rotas da API, `public/openapi.json`, §8 da ARCHITECTURE.
 5. Widget e i18n.
 6. Tela de triagem.
@@ -217,7 +233,7 @@ O projeto não tem unit tests configurados. Cobertura via Playwright E2E mais ve
 
 ## Riscos
 
-- **O wizard mexe em arquivos vivos** (`next.config.ts`, `src/instrumentation.ts`). Rodar com árvore limpa e revisar o diff antes de prosseguir; o worker BullMQ precisa continuar subindo.
+- **Regressão silenciosa no bundle de edge.** Refatorar `src/instrumentation.ts` de um jeito que tire o guard de runtime do escopo dos `await import()` reintroduz `node-module-in-edge-runtime`. O build sai com exit 0 mesmo assim — a falha só aparece em runtime. Qualquer mudança nesse arquivo pede conferir o log do build por `Edge Instrumentation`.
 - **Scrubber incompleto vaza PII pro Sentry.** A deny-list cobre o que existe hoje no schema; campo novo com dado sensível exige atualizar `sentry-scrubber.ts`. Vale nota na regra `infrastructure`.
 - **`captureFeedback` server-side falhando em silêncio.** É best-effort por decisão de design; a falha vira log estruturado, não erro pro usuário.
 
