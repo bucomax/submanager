@@ -12,6 +12,9 @@ export type SentryUserContext = {
   locale: string;
 };
 
+/** Chaves em um lugar só: o clear precisa zerar exatamente o que o apply escreve. */
+const CONTEXT_TAG_KEYS = ["tenant.id", "tenant.role", "global.role", "locale"] as const;
+
 export function applySentryUserContext(context: SentryUserContext): void {
   Sentry.setUser({ id: context.userId });
   Sentry.setTags({
@@ -24,4 +27,10 @@ export function applySentryUserContext(context: SentryUserContext): void {
 
 export function clearSentryUserContext(): void {
   Sentry.setUser(null);
+  // Sem zerar as tags, um evento capturado depois do logout — na tela de login ou
+  // no portal do paciente na mesma aba — sairia carimbado com o tenant anterior.
+  // Atribuir erro ao tenant errado é pior que não atribuir.
+  for (const key of CONTEXT_TAG_KEYS) {
+    Sentry.setTag(key, undefined);
+  }
 }
