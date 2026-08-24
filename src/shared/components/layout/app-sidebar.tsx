@@ -1,6 +1,7 @@
 "use client";
 
 import { Link, usePathname } from "@/i18n/navigation";
+import { FeedbackLauncher } from "@/features/feedback/app/components/feedback-launcher";
 import { Button } from "@/shared/components/ui/button";
 import {
   DropdownMenu,
@@ -196,6 +197,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden">
+        <FeedbackLauncher />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={

@@ -3,6 +3,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { FeedbackDialog } from "@/features/feedback/app/components/feedback-dialog";
+import { useFeedbackDialogStore } from "@/features/feedback/app/hooks/use-feedback-dialog-store";
 import { Button } from "@/shared/components/ui/button";
 import { useLastErrorStore } from "@/shared/stores/use-last-error-store";
 
@@ -20,6 +22,7 @@ export default function LocaleError({
 }) {
   const t = useTranslations("feedback.errorBoundary");
   const setLastError = useLastErrorStore((s) => s.setLastError);
+  const openFeedbackDialog = useFeedbackDialogStore((s) => s.openDialog);
   const [eventId, setEventId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,7 +54,12 @@ export default function LocaleError({
         <Button variant="outline" onClick={reset}>
           {t("retry")}
         </Button>
+        <Button onClick={() => openFeedbackDialog("bug")}>{t("report")}</Button>
       </div>
+      {/* A árvore da sidebar (e o `FeedbackLauncher` que normalmente monta o
+          dialog) some junto com o segmento que quebrou, então esta boundary
+          precisa montar o próprio `FeedbackDialog` para o botão acima funcionar. */}
+      <FeedbackDialog />
     </div>
   );
 }
