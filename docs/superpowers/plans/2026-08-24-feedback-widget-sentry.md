@@ -1276,8 +1276,9 @@ export const createFeedbackBodySchema = z.object({
   message: z.string().trim().min(10).max(2000),
   sentryEventId: z.string().trim().max(64).nullable().optional(),
   requestId: z.string().trim().max(128).nullable().optional(),
-  // Só o pathname: a rota rejeita qualquer coisa com query string.
-  pagePath: z.string().trim().min(1).max(512).regex(/^\/[^?#]*$/),
+  // Só o pathname. `(?!\/)` barra valor protocol-relative (`//evil.com`), que passaria
+  // pelo resto do padrão e viraria open redirect se a tela de triagem renderizar como href.
+  pagePath: z.string().trim().min(1).max(512).regex(/^\/(?!\/)[^?#]*$/),
   locale: z.string().trim().min(2).max(10),
 });
 
