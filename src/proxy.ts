@@ -3,7 +3,6 @@ import { withAuth } from "next-auth/middleware";
 import createMiddleware from "next-intl/middleware";
 
 import { routing } from "@/i18n/routing";
-import { REQUEST_ID_HEADER, resolveRequestId } from "@/lib/observability/request-id";
 
 // ---------------------------------------------------------------------------
 // i18n middleware (aplicado em todas as rotas de página)
@@ -66,11 +65,11 @@ export default async function proxy(req: NextRequest) {
     ? intlMiddleware(req)
     : await (authMiddleware as unknown as (r: NextRequest) => Promise<Response | undefined>)(req);
 
-  const resolved = response ?? NextResponse.next();
-
-  // O browser lê este header para carimbar o evento dele com o mesmo request_id.
-  resolved.headers.set(REQUEST_ID_HEADER, resolveRequestId(req));
-  return resolved;
+  // Sem carimbo de `x-request-id` aqui: resposta de página não passa por
+  // `tagRequestId`, então nada no Sentry usaria este valor — era um header que não
+  // correlacionava com nada (ver `report-api-error.ts`, que só lê o header de
+  // resposta de API, carimbado por `jsonError`/`jsonSuccess`).
+  return response ?? NextResponse.next();
 }
 
 export const config = {
