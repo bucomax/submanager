@@ -1,8 +1,9 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import createMiddleware from "next-intl/middleware";
 
 import { routing } from "@/i18n/routing";
+import { REQUEST_ID_HEADER, resolveRequestId } from "@/lib/observability/request-id";
 
 // ---------------------------------------------------------------------------
 // i18n middleware (aplicado em todas as rotas de página)
@@ -55,14 +56,21 @@ function isPublicPath(pathname: string): boolean {
 // ---------------------------------------------------------------------------
 // Proxy (middleware entry-point — Next.js 16)
 // ---------------------------------------------------------------------------
-export default function proxy(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (isPublicPath(pathname)) {
-    return intlMiddleware(req);
-  }
+  // `withAuth` é assíncrono por dentro (`getToken`) e, para rota interna do próprio
+  // next-auth (signIn/error/`_next`), devolve `undefined` em vez de Response — daí o
+  // `await` e o fallback abaixo, em vez do cast direto pra `Response` que havia antes.
+  const response = isPublicPath(pathname)
+    ? intlMiddleware(req)
+    : await (authMiddleware as unknown as (r: NextRequest) => Promise<Response | undefined>)(req);
 
-  return (authMiddleware as unknown as (r: NextRequest) => Response)(req);
+  const resolved = response ?? NextResponse.next();
+
+  // O browser lê este header para carimbar o evento dele com o mesmo request_id.
+  resolved.headers.set(REQUEST_ID_HEADER, resolveRequestId(req));
+  return resolved;
 }
 
 export const config = {

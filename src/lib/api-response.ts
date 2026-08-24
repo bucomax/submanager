@@ -1,5 +1,8 @@
+import * as Sentry from "@sentry/nextjs";
 import type { ApiErrorBody, ApiErrorEnvelope, ApiSuccessEnvelope } from "@/lib/api/envelope";
 import { createApiMeta } from "@/lib/api/envelope";
+import { severityForHttpStatus, shouldReportHttpStatus } from "@/lib/observability/error-taxonomy";
+import { currentRequestId } from "@/lib/observability/request-id";
 
 function meta() {
   return createApiMeta();
@@ -26,5 +29,17 @@ export function jsonError(
   const error: ApiErrorBody =
     details !== undefined ? { code, message, details } : { code, message };
   const body: ApiErrorEnvelope = { success: false, error, meta: meta() };
+
+  // `onRequestError` só enxerga exception que escapa do handler. Erro que o
+  // handler tratou e converteu em envelope passaria despercebido sem isto.
+  if (shouldReportHttpStatus(status)) {
+    Sentry.withScope((scope) => {
+      scope.setLevel(severityForHttpStatus(status));
+      scope.setTags({ "error.code": code, request_id: currentRequestId() ?? "none" });
+      scope.setFingerprint(["api-error", code, String(status)]);
+      Sentry.captureMessage(`API ${status} ${code}`);
+    });
+  }
+
   return Response.json(body, { status });
 }

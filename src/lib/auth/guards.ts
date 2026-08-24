@@ -2,6 +2,7 @@ import type { Session } from "next-auth";
 import { prisma } from "@/infrastructure/database/prisma";
 import { getApiT, type ApiT } from "@/lib/api/i18n";
 import { jsonError } from "@/lib/api-response";
+import { tagRequestId } from "@/lib/observability/request-id";
 import { getSession } from "./session";
 
 async function resolveApiT(request: Request | undefined, t?: ApiT): Promise<ApiT> {
@@ -15,6 +16,10 @@ export async function requireSession(): Promise<Session | null> {
 }
 
 export async function requireSessionOr401(request?: Request, t?: ApiT) {
+  // Primeira instrução: precisa marcar antes de qualquer `return`, inclusive o 401,
+  // para que o evento de erro no envelope carregue o mesmo request_id do browser.
+  tagRequestId(request);
+
   const session = await requireSession();
   if (!session) {
     const tr = await resolveApiT(request, t);
