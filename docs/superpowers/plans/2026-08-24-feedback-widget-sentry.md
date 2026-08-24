@@ -1593,6 +1593,7 @@ import { feedbackReportPrismaRepository } from "@/infrastructure/repositories/fe
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { buildPagination } from "@/lib/api/pagination";
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { requireSessionOr401, superAdminOr403 } from "@/lib/auth/guards";
 import { listFeedbackQuerySchema } from "@/lib/validators/feedback";
 import { toFeedbackDto } from "@/app/api/v1/feedback/to-feedback-dto";
@@ -1612,7 +1613,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listFeedbackQuerySchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const { rows, totalItems } = await feedbackReportPrismaRepository.listForSuperAdmin(parsed.data);
@@ -1632,6 +1633,7 @@ export async function GET(request: Request) {
 import { feedbackReportPrismaRepository } from "@/infrastructure/repositories/feedback-report.repository";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { requireSessionOr401, superAdminOr403 } from "@/lib/auth/guards";
 import { patchFeedbackBodySchema } from "@/lib/validators/feedback";
 import { toFeedbackDto } from "@/app/api/v1/feedback/to-feedback-dto";
@@ -1660,7 +1662,7 @@ export async function PATCH(
 
   const parsed = patchFeedbackBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const { id } = await context.params;
