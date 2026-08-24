@@ -4,8 +4,8 @@
  *
  * Uso: npx tsx scripts/observability/probe-scrubber.ts
  */
-import type { ErrorEvent } from "@sentry/nextjs";
-import { scrubSentryEvent } from "../../src/lib/observability/sentry-scrubber";
+import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
+import { scrubSentryBreadcrumb, scrubSentryEvent } from "../../src/lib/observability/sentry-scrubber";
 
 const event = {
   message: "falha ao salvar paciente 529.982.247-25",
@@ -46,6 +46,23 @@ if (leaks.length > 0) {
 
 if (!scrubbed.includes("cmg3k2p9x0001abcd")) {
   console.error("REGRESSÃO: id interno foi redigido, diagnóstico fica cego.");
+  process.exit(1);
+}
+
+// Breadcrumb de fetch (busca de paciente por nome, `src/app/api/v1/clients/route.ts`
+// lê `q` do query string): nome não bate CPF/telefone/e-mail, então só sobra de
+// pé se `stripQueryString` rodar sobre `data.url` — este caso é o que fecha essa
+// lacuna, um nível abaixo do `request.url` provado acima.
+const breadcrumb = {
+  category: "fetch",
+  data: { url: "https://app.local/api/v1/clients?q=Maria+Silva" },
+} as unknown as Breadcrumb;
+
+const scrubbedBreadcrumb = JSON.stringify(scrubSentryBreadcrumb(breadcrumb));
+
+if (scrubbedBreadcrumb.includes("Maria+Silva")) {
+  console.error("VAZAMENTO: nome do paciente sobreviveu na query string do breadcrumb.");
+  console.error(scrubbedBreadcrumb);
   process.exit(1);
 }
 

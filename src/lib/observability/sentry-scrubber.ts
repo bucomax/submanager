@@ -105,6 +105,9 @@ export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
   return event;
 }
 
+/** Chaves de breadcrumb (fetch/xhr/navigation) que carregam URL completa, com query string. */
+const URL_LIKE_BREADCRUMB_KEYS = ["url", "from", "to"] as const;
+
 export function scrubSentryBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   // `console` repassa argumentos crus de `console.log`, sem controle de quem chamou.
   if (breadcrumb.category === "console") return null;
@@ -113,6 +116,17 @@ export function scrubSentryBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null
     breadcrumb.message = redactSensitiveText(breadcrumb.message);
   }
   if (breadcrumb.data) {
+    // `stripQueryString` roda ANTES de `scrubValue`, não depois: busca por paciente
+    // (`?q=Maria+Silva`) é nome, e `redactSensitiveText`/`scrubValue` só reconhecem
+    // CPF, telefone e e-mail por regex — um nome passaria batido. Cortando a query
+    // string estruturalmente primeiro, o resultado final não depende de o regex
+    // cobrir esse formato; a ordem inversa deixaria a proteção refém do regex.
+    for (const key of URL_LIKE_BREADCRUMB_KEYS) {
+      const value = breadcrumb.data[key];
+      if (typeof value === "string") {
+        breadcrumb.data[key] = stripQueryString(value);
+      }
+    }
     breadcrumb.data = scrubValue(breadcrumb.data, new WeakSet()) as Breadcrumb["data"];
   }
   return breadcrumb;

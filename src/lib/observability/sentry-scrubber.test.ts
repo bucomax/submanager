@@ -138,6 +138,35 @@ describe("scrubSentryBreadcrumb", () => {
 
     expect(result?.message).toBe("buscou por [redacted]");
   });
+
+  it("descarta a query string de data.url em breadcrumb de fetch", () => {
+    const breadcrumb = {
+      category: "fetch",
+      data: { url: "https://app.local/api/v1/clients?q=Maria+Silva", method: "GET" },
+    } as unknown as Breadcrumb;
+
+    const result = scrubSentryBreadcrumb(breadcrumb);
+    const data = result?.data as Record<string, unknown>;
+
+    expect(data.url).toBe("https://app.local/api/v1/clients");
+    expect(data.method).toBe("GET");
+  });
+
+  it("descarta a query string de data.from e data.to em breadcrumb de navegação", () => {
+    const breadcrumb = {
+      category: "navigation",
+      data: {
+        from: "/dashboard/contacts?q=Maria+Silva",
+        to: "/dashboard/contacts/cmg3k2p9x0001abcd?q=Maria+Silva",
+      },
+    } as unknown as Breadcrumb;
+
+    const result = scrubSentryBreadcrumb(breadcrumb);
+    const data = result?.data as Record<string, unknown>;
+
+    expect(data.from).toBe("/dashboard/contacts");
+    expect(data.to).toBe("/dashboard/contacts/cmg3k2p9x0001abcd");
+  });
 });
 
 describe("SENSITIVE_KEY_DENYLIST", () => {
