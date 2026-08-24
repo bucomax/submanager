@@ -9,7 +9,6 @@ import {
   getActiveTenantIdOr400,
   requireSessionOr401,
 } from "@/lib/auth/guards";
-import { redactSensitiveText } from "@/lib/observability/sentry-scrubber";
 import { createFeedbackBodySchema } from "@/lib/validators/feedback";
 import type { CreateFeedbackResponseData } from "@/types/api/feedback-v1";
 
@@ -57,7 +56,7 @@ export async function POST(request: Request) {
     locale: parsed.data.locale,
   });
 
-  mirrorToSentry(row.type, row.sentryEventId, row.message);
+  mirrorToSentry(row.type, row.sentryEventId, row.id);
 
   const payload: CreateFeedbackResponseData = { feedback: toFeedbackDto(row) };
   return jsonSuccess(payload, { status: 201 });
@@ -67,17 +66,17 @@ export async function POST(request: Request) {
  * Espelho no Sentry, fora do caminho crítico: o Postgres é a fonte de verdade e
  * indisponibilidade do Sentry não pode derrubar o relato do usuário.
  */
-function mirrorToSentry(type: string, sentryEventId: string | null, message: string) {
+function mirrorToSentry(type: string, sentryEventId: string | null, feedbackId: string) {
   if (type !== "bug" || !sentryEventId) return;
   try {
-    // `Sentry.captureFeedback` monta um evento `type: "feedback"`, e `beforeSend`
-    // só roda para evento de erro (`type` ausente) — `scrubSentryEvent` nunca vê
-    // este payload. Por isso a redação é manual aqui, e só nesta cópia: o `message`
-    // gravado no Postgres pelo `create` acima continua íntegro, porque é a fonte
-    // de verdade que o triador lê e nunca sai do banco do próprio tenant.
+    // O texto livre do relato nunca sai do Postgres: neste domínio clínico ele
+    // costuma citar o nome do paciente, e nome é o único identificador que
+    // nenhuma regex de `redactSensitiveText` consegue remover com segurança.
+    // O evento no Sentry vira só um ponteiro — basta pra ligar o erro ao relato,
+    // e o texto completo já está em Configurações › Feedback pra quem for triar.
     Sentry.captureFeedback({
       associatedEventId: sentryEventId,
-      message: redactSensitiveText(message),
+      message: `Relato registrado no painel: ${feedbackId}`,
     });
   } catch {
     // silêncio proposital — ver comentário acima
