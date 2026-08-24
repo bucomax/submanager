@@ -518,26 +518,37 @@ git commit -m "feat(observability): adiciona contexto de tenant e taxonomia de e
 
 ### Task 3: `request-id` fim a fim e captura no servidor
 
+> **Revisão do controller (Ruling R2).** A versão original desta task propagava
+> o id mutando `req.headers` no proxy e guardava o valor num `AsyncLocalStorage`.
+> Nenhuma das duas coisas funciona no Next: header mutado no middleware não chega
+> ao route handler, e nada estabelecia o escopo do ALS, então `currentRequestId()`
+> devolveria `null` em toda chamada. A task abaixo usa a isolation scope do Sentry,
+> que o SDK do Next já cria por requisição, e o chokepoint natural do projeto:
+> `requireSessionOr401`, por onde toda rota autenticada passa e que já recebe o
+> `request`.
+
 **Files:**
 - Create: `src/lib/observability/request-id.ts`
 - Test: `src/lib/observability/request-id.test.ts`
-- Modify: `src/lib/api-response.ts`
+- Modify: `src/lib/auth/guards.ts:17-29` (`requireSessionOr401`)
+- Modify: `src/lib/api-response.ts` (`jsonError`)
 - Modify: `src/proxy.ts`
 
 **Interfaces:**
 - Consumes: `shouldReportHttpStatus`, `severityForHttpStatus` (Task 2).
-- Produces: `REQUEST_ID_HEADER` (`"x-request-id"`), `resolveRequestId(request: Request): string`, `currentRequestId(): string | null`, `runWithRequestId<T>(requestId: string, fn: () => T): T`.
+- Produces: `REQUEST_ID_HEADER` (`"x-request-id"`), `resolveRequestId(request: Request): string`, `tagRequestId(request: Request | undefined): string | null`, `currentRequestId(): string | null`.
 
 - [ ] **Step 1: Escrever o teste que falha**
 
 ```ts
 // src/lib/observability/request-id.test.ts
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import * as Sentry from "@sentry/nextjs";
 import {
   REQUEST_ID_HEADER,
   currentRequestId,
   resolveRequestId,
-  runWithRequestId,
+  tagRequestId,
 } from "@/lib/observability/request-id";
 
 describe("resolveRequestId", () => {
@@ -564,15 +575,29 @@ describe("resolveRequestId", () => {
   });
 });
 
-describe("runWithRequestId", () => {
-  it("expõe o id dentro do escopo", () => {
-    const seen = runWithRequestId("req-1", () => currentRequestId());
-
-    expect(seen).toBe("req-1");
+describe("tagRequestId", () => {
+  beforeEach(() => {
+    Sentry.getIsolationScope().clear();
   });
 
-  it("volta a null fora do escopo", () => {
-    runWithRequestId("req-1", () => currentRequestId());
+  it("grava a tag e devolve o id", () => {
+    const request = new Request("https://app.local/api/v1/feedback", {
+      headers: { [REQUEST_ID_HEADER]: "req-1" },
+    });
+
+    expect(tagRequestId(request)).toBe("req-1");
+    expect(currentRequestId()).toBe("req-1");
+  });
+
+  it("devolve null sem request, sem sujar a scope", () => {
+    expect(tagRequestId(undefined)).toBeNull();
+    expect(currentRequestId()).toBeNull();
+  });
+});
+
+describe("currentRequestId", () => {
+  it("devolve null quando nada foi marcado", () => {
+    Sentry.getIsolationScope().clear();
 
     expect(currentRequestId()).toBeNull();
   });
@@ -582,35 +607,44 @@ describe("runWithRequestId", () => {
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `npm run test:unit`
-Expected: FAIL — módulo não encontrado.
+Expected: FAIL — `Failed to resolve import "@/lib/observability/request-id"`.
 
 - [ ] **Step 3: Implementar**
 
 ```ts
 // src/lib/observability/request-id.ts
-import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
+import * as Sentry from "@sentry/nextjs";
 
 /**
- * Elo entre os dois lados de uma mesma falha: o evento capturado no servidor e
- * o capturado no browser carregam a mesma tag `request_id`. Sem isso um relato
- * de bug só aponta para o sintoma que o usuário viu.
+ * Elo entre os dois lados de uma mesma falha: o evento capturado no servidor e o
+ * capturado no browser carregam a mesma tag `request_id`. Sem isso um relato de
+ * bug só aponta para o sintoma que o usuário viu.
+ *
+ * O valor vive na isolation scope do Sentry, que o SDK do Next cria por
+ * requisição. Header mutado no proxy não chega ao route handler, então a scope é
+ * o único canal que atravessa middleware e handler sem tocar em toda rota.
  */
 export const REQUEST_ID_HEADER = "x-request-id";
 
-const storage = new AsyncLocalStorage<string>();
+const REQUEST_ID_TAG = "request_id";
 
 export function resolveRequestId(request: Request): string {
   const fromHeader = request.headers.get(REQUEST_ID_HEADER)?.trim();
   return fromHeader && fromHeader.length > 0 ? fromHeader : randomUUID();
 }
 
-export function runWithRequestId<T>(requestId: string, fn: () => T): T {
-  return storage.run(requestId, fn);
+/** Chamado no chokepoint de autenticação, por onde toda rota autenticada passa. */
+export function tagRequestId(request: Request | undefined): string | null {
+  if (!request) return null;
+  const requestId = resolveRequestId(request);
+  Sentry.getIsolationScope().setTag(REQUEST_ID_TAG, requestId);
+  return requestId;
 }
 
 export function currentRequestId(): string | null {
-  return storage.getStore() ?? null;
+  const tag = Sentry.getIsolationScope().getScopeData().tags[REQUEST_ID_TAG];
+  return typeof tag === "string" ? tag : null;
 }
 ```
 
@@ -619,31 +653,24 @@ export function currentRequestId(): string | null {
 Run: `npm run test:unit`
 Expected: PASS.
 
-- [ ] **Step 5: Propagar o header no proxy**
+- [ ] **Step 5: Marcar no chokepoint de autenticação**
 
-Em `src/proxy.ts`, dentro de `export default function proxy(req: NextRequest)`, antes do `if (isPublicPath(pathname))`:
+Em `src/lib/auth/guards.ts`, adicionar ao bloco de imports:
 
 ```ts
-  // Um id por requisição, propagado para o handler e devolvido ao browser.
-  // O SDK do Sentry lê a resposta e usa o mesmo valor na tag `request_id`.
-  const requestId = req.headers.get("x-request-id")?.trim() || crypto.randomUUID();
-  req.headers.set("x-request-id", requestId);
+import { tagRequestId } from "@/lib/observability/request-id";
 ```
 
-E envolver os dois `return` para carimbar a resposta:
+E, dentro de `requireSessionOr401`, como **primeira** instrução da função (antes do
+`await requireSession()`, para que o 401 também saia marcado):
 
 ```ts
-  const response = isPublicPath(pathname)
-    ? intlMiddleware(req)
-    : (authMiddleware as unknown as (r: NextRequest) => Response)(req);
-
-  response.headers.set("x-request-id", requestId);
-  return response;
+  tagRequestId(request);
 ```
 
 - [ ] **Step 6: Capturar 5xx no envelope de erro**
 
-Em `src/lib/api-response.ts`, adicionar os imports no topo:
+Em `src/lib/api-response.ts`, adicionar aos imports:
 
 ```ts
 import * as Sentry from "@sentry/nextjs";
@@ -666,16 +693,42 @@ E, dentro de `jsonError`, logo antes do `return`:
   }
 ```
 
-- [ ] **Step 7: Verificar**
+- [ ] **Step 7: Devolver o id ao browser**
+
+O proxy **não** deve tentar mutar `req.headers`: no Next isso não chega ao route
+handler. Ele só carimba a resposta, que é o que o SDK do browser lê.
+
+Em `src/proxy.ts`, substituir o corpo de `export default function proxy` por:
+
+```ts
+export default function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  const response = isPublicPath(pathname)
+    ? intlMiddleware(req)
+    : (authMiddleware as unknown as (r: NextRequest) => Response)(req);
+
+  // O browser lê este header para carimbar o evento dele com o mesmo id.
+  const requestId = req.headers.get("x-request-id")?.trim() || crypto.randomUUID();
+  response.headers.set("x-request-id", requestId);
+  return response;
+}
+```
+
+Se `authMiddleware` devolver algo que não seja `Response` (por exemplo `undefined`
+em algum caminho do `withAuth`), tratar o caso antes de mexer em `headers` em vez
+de forçar o tipo — e reportar isso como concern.
+
+- [ ] **Step 8: Verificar**
 
 Run: `npm run test:unit && npx tsc --noEmit && npm run build 2>&1 | grep -c "Edge Instrumentation"`
 Expected: PASS, `No errors found`, contagem `0`.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/lib/observability/ src/lib/api-response.ts src/proxy.ts
-git commit -m "feat(observability): propaga x-request-id e captura 5xx do envelope"
+git add src/lib/observability/ src/lib/api-response.ts src/lib/auth/guards.ts src/proxy.ts
+git commit -m "feat(observability): propaga request_id e captura 5xx do envelope"
 ```
 
 ---
@@ -808,6 +861,7 @@ Em `src/lib/api/http-client.ts`, adicionar aos imports do topo:
 ```ts
 import * as Sentry from "@sentry/nextjs";
 import { severityForHttpStatus, shouldReportHttpStatus } from "@/lib/observability/error-taxonomy";
+import { REQUEST_ID_HEADER } from "@/lib/observability/request-id";
 import { useLastErrorStore } from "@/shared/stores/use-last-error-store";
 ```
 
@@ -816,7 +870,7 @@ E, no handler de erro do `interceptors.response`, imediatamente antes do `return
 ```ts
     if (typeof window !== "undefined" && status && shouldReportHttpStatus(status)) {
       const route = original?.url ?? "unknown";
-      const requestId = error.response?.headers?.["x-request-id"] ?? null;
+      const requestId = error.response?.headers?.[REQUEST_ID_HEADER] ?? null;
       const eventId = Sentry.withScope((scope) => {
         scope.setLevel(severityForHttpStatus(status));
         scope.setTags({
