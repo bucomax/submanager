@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "next-intl";
+import { useEffect } from "react";
 import { DashboardBreadcrumb } from "@/shared/components/layout/dashboard-breadcrumb";
 import { LocaleSwitcher } from "@/shared/components/layout/locale-switcher";
 import { Separator } from "@/shared/components/ui/separator";
@@ -7,6 +9,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/shared/componen
 import { AppSidebar } from "@/shared/components/layout/app-sidebar";
 import { TenantSwitcher } from "@/shared/components/layout/tenant-switcher";
 import { ThemeToggle } from "@/shared/components/layout/theme-toggle";
+import { applySentryUserContext, clearSentryUserContext } from "@/lib/observability/sentry-context";
 import type { AppShellUser } from "@/shared/types/layout";
 import type { ReactNode } from "react";
 
@@ -24,6 +27,19 @@ type AppShellProps = {
 const headerToolbarSeparatorClass = "hidden h-10 sm:block";
 
 export function AppShell({ children, user, headerSlots, afterHeader }: AppShellProps) {
+  const locale = useLocale();
+
+  useEffect(() => {
+    applySentryUserContext({
+      userId: user.id,
+      tenantId: user.tenantId ?? null,
+      tenantRole: user.tenantRole ?? null,
+      globalRole: user.globalRole,
+      locale,
+    });
+    return () => clearSentryUserContext();
+  }, [user.id, user.tenantId, user.tenantRole, user.globalRole, locale]);
+
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
