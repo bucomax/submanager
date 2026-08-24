@@ -7,7 +7,8 @@ export type SettingsSectionId =
   | "opme"
   | "phases"
   | "apps"
-  | "admin";
+  | "admin"
+  | "feedback";
 
 const HASH_TO_SECTION: Record<string, SettingsSectionId> = {
   account: "account",
@@ -19,6 +20,7 @@ const HASH_TO_SECTION: Record<string, SettingsSectionId> = {
   phases: "phases",
   apps: "apps",
   admin: "admin",
+  feedback: "feedback",
 };
 
 export function sectionFromHash(hash: string): SettingsSectionId | null {

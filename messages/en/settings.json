@@ -12,7 +12,8 @@
     "whatsapp": "WhatsApp",
     "phases": "Pathway stages",
     "admin": "Administration",
-    "apps": "Apps"
+    "apps": "Apps",
+    "feedback": "Feedback"
   },
   "addUser": "Add user",
   "profile": {
@@ -393,5 +394,28 @@
       "incompleteToEnable": "Fill host, user, sender, and password (or keep a stored password) to enable.",
       "retry": "Try again"
     }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "columnType": "Type",
+    "columnMessage": "Message",
+    "columnAuthor": "Author",
+    "columnError": "Error",
+    "columnStatus": "Status",
+    "statusAria": "Report status",
+    "empty": "No feedback yet.",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "rangeLabel": "{count} reports",
+    "typeBug": "Bug",
+    "typeSuggestion": "Suggestion",
+    "typeQuestion": "Question",
+    "typeOther": "Other",
+    "statusOpen": "Open",
+    "statusTriaged": "Triaged",
+    "statusInProgress": "In progress",
+    "statusResolved": "Resolved",
+    "statusWontFix": "Won't fix",
+    "statusDuplicate": "Duplicate"
   }
 }

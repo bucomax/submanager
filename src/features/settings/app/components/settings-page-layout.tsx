@@ -3,6 +3,7 @@
 import { AdminAppList } from "@/features/apps/app/components/admin-app-list";
 import { PathwayStagesSettingsPanel } from "@/features/pathways/app/components/pathway-stages-settings-panel";
 import { ClinicSettingsCard } from "@/features/settings/app/components/clinic-settings-card";
+import { FeedbackTriageCard } from "@/features/settings/app/components/feedback-triage-card";
 import { OpmeSuppliersCard } from "@/features/settings/app/components/opme-suppliers-card";
 import { SuperAdminTenantsCard } from "@/features/settings/app/components/super-admin-tenants-card";
 import { EmailSettingsCard } from "@/features/settings/app/components/email-settings-card";
@@ -22,6 +23,7 @@ import {
   ClipboardList,
   Factory,
   Mail,
+  MessageSquareWarning,
   Shield,
   User,
   Users,
@@ -43,6 +45,7 @@ const NAV_DEFS: NavDef[] = [
   { id: "opme", icon: Factory },
   { id: "phases", icon: ClipboardList },
   { id: "apps", icon: Blocks, superAdminOnly: true },
+  { id: "feedback", icon: MessageSquareWarning, superAdminOnly: true },
   { id: "admin", icon: Shield, superAdminOnly: true },
 ];
 
@@ -149,6 +152,8 @@ export function SettingsPageLayout() {
         return <PathwayStagesSettingsPanel className="mt-0" />;
       case "apps":
         return <AdminAppList />;
+      case "feedback":
+        return <FeedbackTriageCard />;
       case "admin":
         return <SuperAdminTenantsCard />;
       default:

@@ -12,7 +12,8 @@
     "whatsapp": "WhatsApp",
     "phases": "Fases da jornada",
     "admin": "Administração",
-    "apps": "Apps"
+    "apps": "Apps",
+    "feedback": "Feedback"
   },
   "addUser": "Adicionar usuário",
   "profile": {
@@ -393,5 +394,28 @@
       "incompleteToEnable": "Preencha host, usuário, remetente e senha (ou senha já salva) para ativar.",
       "retry": "Tentar de novo"
     }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "columnType": "Tipo",
+    "columnMessage": "Mensagem",
+    "columnAuthor": "Autor",
+    "columnError": "Erro",
+    "columnStatus": "Status",
+    "statusAria": "Status do relato",
+    "empty": "Nenhum feedback ainda.",
+    "prevPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "rangeLabel": "{count} relatos",
+    "typeBug": "Bug",
+    "typeSuggestion": "Sugestão",
+    "typeQuestion": "Pergunta",
+    "typeOther": "Outro",
+    "statusOpen": "Aberto",
+    "statusTriaged": "Triado",
+    "statusInProgress": "Em andamento",
+    "statusResolved": "Resolvido",
+    "statusWontFix": "Não será feito",
+    "statusDuplicate": "Duplicado"
   }
 }
