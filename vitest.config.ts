@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/lib/observability/**/*.test.ts"],
+    include: ["src/lib/**/*.test.ts", "src/shared/**/*.test.ts"],
   },
   resolve: {
     alias: {
