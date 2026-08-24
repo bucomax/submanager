@@ -4,11 +4,16 @@ import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 import { loadRootEnv } from "./load-root-env";
+import { mintSessionCookie } from "./session-cookie";
 
 const STATE_FILE = resolve(process.cwd(), "e2e", ".invite-state.json");
+const SESSION_STATE_FILE = resolve(process.cwd(), "e2e", ".session-state.json");
+/** Super admin seedado (`packages/prisma/seed.ts`) com `activeTenantId` = primeiro tenant. */
+const E2E_SESSION_USER_EMAIL = "dev@bucomax.local";
 
 /**
  * Cria um `PatientSelfRegisterInvite` novo (uso único) e grava token + slug em `e2e/.invite-state.json`.
+ * Também emite um cookie de sessão NextAuth (`e2e/.session-state.json`) para specs autenticados.
  * Requer `DATABASE_URL` e tenant seedado (ex.: `clinica-alpha`).
  */
 export default async function globalSetup(): Promise<void> {
@@ -85,6 +90,12 @@ export default async function globalSetup(): Promise<void> {
 
     console.log(
       `[playwright global-setup] Dois convites E2E criados (UI + API) para /${tenantSlug}/patient-self-register`,
+    );
+
+    const sessionCookie = await mintSessionCookie(prisma, E2E_SESSION_USER_EMAIL);
+    writeFileSync(SESSION_STATE_FILE, JSON.stringify(sessionCookie, null, 2), "utf8");
+    console.log(
+      `[playwright global-setup] Cookie de sessão emitido para ${E2E_SESSION_USER_EMAIL}`,
     );
   } finally {
     await prisma.$disconnect();
