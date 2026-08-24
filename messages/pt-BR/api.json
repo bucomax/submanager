@@ -127,7 +127,8 @@
     "quickPhraseSlugConflict": "Já existe uma frase com este atalho.",
     "agendaEventNotFound": "Compromisso não encontrado.",
     "agendaRangeRequired": "Informe um intervalo de datas válido (from/to).",
-    "conversationAlreadyLinked": "Esta conversa já está vinculada a um paciente."
+    "conversationAlreadyLinked": "Esta conversa já está vinculada a um paciente.",
+    "feedbackNotFound": "Relato de feedback não encontrado."
   },
   "success": {
     "pathwayDeleted": "Jornada removida.",

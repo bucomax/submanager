@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { formatZodIssues } from "@/lib/api/zod-error";
-import { createFeedbackBodySchema, patchFeedbackBodySchema } from "@/lib/validators/feedback";
+import {
+  createFeedbackBodySchema,
+  listFeedbackQuerySchema,
+  patchFeedbackBodySchema,
+} from "@/lib/validators/feedback";
 
 describe("createFeedbackBodySchema", () => {
   const valid = {
@@ -64,6 +68,32 @@ describe("createFeedbackBodySchema", () => {
     const formatted = formatZodIssues(parsed.error);
     expect(formatted).not.toBe("");
     expect(formatted).toContain("message");
+  });
+});
+
+describe("listFeedbackQuerySchema", () => {
+  it("aplica os defaults de paginação quando nada é passado", () => {
+    const parsed = listFeedbackQuerySchema.safeParse({});
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data).toMatchObject({ page: 1, limit: 20 });
+  });
+
+  it("coage os números que chegam como string na query", () => {
+    const parsed = listFeedbackQuerySchema.safeParse({ page: "2", limit: "50" });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data).toMatchObject({ page: 2, limit: 50 });
+  });
+
+  it("rejeita limite acima do teto, que permitiria varrer a fila inteira num pedido", () => {
+    expect(listFeedbackQuerySchema.safeParse({ limit: "150" }).success).toBe(false);
+  });
+
+  it("rejeita status fora do enum", () => {
+    expect(listFeedbackQuerySchema.safeParse({ status: "bogus" }).success).toBe(false);
   });
 });
 

@@ -1,5 +1,8 @@
 import { toFeedbackDto } from "@/app/api/v1/feedback/to-feedback-dto";
-import { feedbackReportPrismaRepository } from "@/infrastructure/repositories/feedback-report.repository";
+import {
+  feedbackReportPrismaRepository,
+  isRecordNotFoundError,
+} from "@/infrastructure/repositories/feedback-report.repository";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { formatZodIssues } from "@/lib/api/zod-error";
@@ -31,8 +34,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   const { id } = await context.params;
-  const row = await feedbackReportPrismaRepository.updateStatus(id, parsed.data);
 
-  const payload: UpdateFeedbackResponseData = { feedback: toFeedbackDto(row) };
-  return jsonSuccess(payload);
+  try {
+    const row = await feedbackReportPrismaRepository.updateStatus(id, parsed.data);
+    const payload: UpdateFeedbackResponseData = { feedback: toFeedbackDto(row) };
+    return jsonSuccess(payload);
+  } catch (err) {
+    // Relato já removido ou id inválido: é 404, não falha do servidor. Sem isto o
+    // P2025 escaparia como exceção não tratada e poluiria a própria fila de triagem.
+    if (isRecordNotFoundError(err)) {
+      return jsonError("NOT_FOUND", apiT("errors.feedbackNotFound"), 404);
+    }
+    throw err;
+  }
 }

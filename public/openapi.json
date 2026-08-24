@@ -580,6 +580,7 @@
           "400": { "description": "JSON inválido" },
           "401": { "description": "Não autenticado" },
           "403": { "description": "Não é super_admin" },
+          "404": { "description": "Relato não encontrado" },
           "422": { "description": "Corpo inválido" }
         }
       }

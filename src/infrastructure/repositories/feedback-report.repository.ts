@@ -1,4 +1,4 @@
-import type { FeedbackStatus, FeedbackType, Prisma } from "@prisma/client";
+import { Prisma, type FeedbackStatus, type FeedbackType } from "@prisma/client";
 import { prisma } from "@/infrastructure/database/prisma";
 
 const authorSelect = { select: { id: true, name: true, email: true } } as const;
@@ -61,3 +61,8 @@ export const feedbackReportPrismaRepository = {
     });
   },
 };
+
+/** P2025: o Prisma lança isto quando o `update`/`delete` não encontra a linha. */
+export function isRecordNotFoundError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
+}

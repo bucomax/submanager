@@ -127,7 +127,8 @@
     "quickPhraseSlugConflict": "A phrase with this shortcut already exists.",
     "agendaEventNotFound": "Appointment not found.",
     "agendaRangeRequired": "Provide a valid date range (from/to).",
-    "conversationAlreadyLinked": "This conversation is already linked to a patient."
+    "conversationAlreadyLinked": "This conversation is already linked to a patient.",
+    "feedbackNotFound": "Feedback report not found."
   },
   "success": {
     "pathwayDeleted": "Pathway removed.",
