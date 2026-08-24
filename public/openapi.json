@@ -2924,6 +2924,39 @@
           "404": { "description": "App não encontrado" }
         }
       }
+    },
+    "/api/v1/feedback": {
+      "post": {
+        "summary": "Envia um relato de feedback (bug, sugestão, dúvida etc.)",
+        "tags": ["Feedback"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["type", "message", "pagePath", "locale"],
+                "properties": {
+                  "type": { "$ref": "#/components/schemas/FeedbackType" },
+                  "message": { "type": "string", "minLength": 10, "maxLength": 2000 },
+                  "sentryEventId": { "type": "string", "maxLength": 64, "nullable": true },
+                  "requestId": { "type": "string", "maxLength": 128, "nullable": true },
+                  "pagePath": { "type": "string", "maxLength": 512, "pattern": "^/[^?#]*$", "description": "Apenas o pathname — sem query string (LGPD)." },
+                  "locale": { "type": "string", "minLength": 2, "maxLength": 10 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "{ feedback: FeedbackDto }", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "feedback": { "$ref": "#/components/schemas/FeedbackDto" } } } } } } } },
+          "400": { "description": "JSON inválido ou tenant ausente" },
+          "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão no tenant ativo" },
+          "422": { "description": "Corpo inválido" }
+        }
+      }
     }
   },
   "components": {
@@ -2978,7 +3011,28 @@
           "readAt": { "type": "string", "format": "date-time", "nullable": true },
           "createdAt": { "type": "string", "format": "date-time" }
         }
-      }
+      },
+      "FeedbackDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "tenantId": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/FeedbackType" },
+          "status": { "$ref": "#/components/schemas/FeedbackStatus" },
+          "message": { "type": "string" },
+          "sentryEventId": { "type": "string", "nullable": true },
+          "requestId": { "type": "string", "nullable": true },
+          "pagePath": { "type": "string" },
+          "appVersion": { "type": "string", "nullable": true },
+          "locale": { "type": "string" },
+          "adminNote": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "resolvedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "author": { "type": "object", "nullable": true, "properties": { "id": { "type": "string" }, "name": { "type": "string", "nullable": true }, "email": { "type": "string" } } }
+        }
+      },
+      "FeedbackType": { "type": "string", "enum": ["bug", "suggestion", "question", "other"] },
+      "FeedbackStatus": { "type": "string", "enum": ["open", "triaged", "in_progress", "resolved", "wont_fix", "duplicate"] }
     },
     "securitySchemes": {
       "cookieAuth": {
