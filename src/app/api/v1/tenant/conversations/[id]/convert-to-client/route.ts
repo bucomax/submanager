@@ -1,3 +1,4 @@
+import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { postClientBodySchema } from "@/application/use-cases/client/create-client";
 import { convertConversationToClient } from "@/application/use-cases/conversations/convert-conversation-to-client";
 import { validateClientOptionalRefs } from "@/application/use-cases/client/validate-client-references";
@@ -55,6 +56,7 @@ export async function POST(request: Request, ctx: RouteCtx<{ id: string }>) {
     conversationId: id,
     actorUserId: auth.session!.user.id,
     data: parsed.data,
+    visibility: await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!),
   });
 
   if (!result.ok) {

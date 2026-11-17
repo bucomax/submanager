@@ -1,6 +1,8 @@
+import type { Prisma } from "@prisma/client";
+
 import { runCreateClient, type CreateClientBody } from "@/application/use-cases/client/create-client";
+import { clientPrismaRepository } from "@/infrastructure/repositories/client.repository";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
-import { prisma } from "@/infrastructure/database/prisma";
 import type { ClientDto } from "@/types/api/clients-v1";
 
 export type ConvertConversationToClientResult =
@@ -18,13 +20,16 @@ export async function convertConversationToClient(params: {
   conversationId: string;
   actorUserId: string;
   data: CreateClientBody;
+  /** Escopo de visibilidade do usuário sobre conversas (`{}` = sem restrição). */
+  visibility: Prisma.ConversationWhereInput;
 }): Promise<ConvertConversationToClientResult> {
-  const { tenantId, conversationId, actorUserId, data } = params;
+  const { tenantId, conversationId, actorUserId, data, visibility } = params;
 
-  const conversation = await prisma.conversation.findFirst({
-    where: { id: conversationId, tenantId },
-    select: { id: true, clientId: true },
-  });
+  const conversation = await conversationPrismaRepository.findVisibleLink(
+    tenantId,
+    conversationId,
+    visibility,
+  );
   if (!conversation) {
     return { ok: false, reason: "conversation_not_found" };
   }
@@ -33,7 +38,12 @@ export async function convertConversationToClient(params: {
   }
 
   const { client } = await runCreateClient({ tenantId, actorUserId, data });
-  await conversationPrismaRepository.linkClient(tenantId, conversationId, client.id);
+  const linked = await conversationPrismaRepository.linkClient(tenantId, conversationId, client.id);
+  if (!linked) {
+    // Outro convert vinculou primeiro: desfaz o paciente duplicado recém-criado.
+    await clientPrismaRepository.delete(tenantId, client.id, actorUserId);
+    return { ok: false, reason: "already_linked" };
+  }
 
   return { ok: true, client };
 }

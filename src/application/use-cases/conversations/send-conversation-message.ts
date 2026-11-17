@@ -1,4 +1,4 @@
-import type { Message } from "@prisma/client";
+import type { Message, Prisma } from "@prisma/client";
 
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { prisma } from "@/infrastructure/database/prisma";
@@ -9,6 +9,8 @@ export type SendConversationMessageInput = {
   conversationId: string;
   actorUserId: string;
   body: string;
+  /** Escopo de visibilidade do usuário sobre conversas (`{}` = sem restrição). */
+  visibility: Prisma.ConversationWhereInput;
 };
 
 export type SendConversationMessageResult =
@@ -28,7 +30,7 @@ export async function sendConversationMessage(
   input: SendConversationMessageInput,
 ): Promise<SendConversationMessageResult> {
   const conversation = await prisma.conversation.findFirst({
-    where: { id: input.conversationId, tenantId: input.tenantId },
+    where: { AND: [{ id: input.conversationId, tenantId: input.tenantId }, input.visibility] },
     include: { client: { select: { phone: true } } },
   });
   if (!conversation) {
@@ -56,6 +58,7 @@ export async function sendConversationMessage(
       status: trulyFailed ? "failed" : "sent",
       actorUserId: input.actorUserId,
     },
+    input.visibility,
   );
   // Conversa validada acima — createMessage só retorna null se o tenant não bater,
   // o que já foi checado; guarda extra só pro type narrowing do TS.

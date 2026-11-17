@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/infrastructure/database/prisma";
 
 const agendaEventWithRelations = {
@@ -5,18 +7,27 @@ const agendaEventWithRelations = {
   conversation: { select: { id: true, displayName: true } },
 } as const;
 
+/** `id` + `tenantId` + escopo de visibilidade do usuário (`{}` = sem restrição). */
+function visibleEventWhere(
+  tenantId: string,
+  id: string,
+  visibility: Prisma.AgendaEventWhereInput,
+): Prisma.AgendaEventWhereInput {
+  return { AND: [{ id, tenantId }, visibility] };
+}
+
 export const agendaEventPrismaRepository = {
-  async listByRange(tenantId: string, from: Date, to: Date) {
+  async listByRange(tenantId: string, from: Date, to: Date, visibility: Prisma.AgendaEventWhereInput) {
     return prisma.agendaEvent.findMany({
-      where: { tenantId, startsAt: { gte: from, lt: to } },
+      where: { AND: [{ tenantId, startsAt: { gte: from, lt: to } }, visibility] },
       include: agendaEventWithRelations,
       orderBy: { startsAt: "asc" },
     });
   },
 
-  async findByIdInTenant(tenantId: string, id: string) {
+  async findByIdInTenant(tenantId: string, id: string, visibility: Prisma.AgendaEventWhereInput) {
     return prisma.agendaEvent.findFirst({
-      where: { id, tenantId },
+      where: visibleEventWhere(tenantId, id, visibility),
       include: agendaEventWithRelations,
     });
   },
@@ -63,17 +74,20 @@ export const agendaEventPrismaRepository = {
       ownerUserId: string;
       notes: string | null;
     }>,
+    visibility: Prisma.AgendaEventWhereInput,
   ) {
     const { count } = await prisma.agendaEvent.updateMany({
-      where: { id, tenantId },
+      where: visibleEventWhere(tenantId, id, visibility),
       data: input,
     });
     if (count === 0) return null;
-    return agendaEventPrismaRepository.findByIdInTenant(tenantId, id);
+    return agendaEventPrismaRepository.findByIdInTenant(tenantId, id, visibility);
   },
 
-  async remove(tenantId: string, id: string) {
-    const { count } = await prisma.agendaEvent.deleteMany({ where: { id, tenantId } });
+  async remove(tenantId: string, id: string, visibility: Prisma.AgendaEventWhereInput) {
+    const { count } = await prisma.agendaEvent.deleteMany({
+      where: visibleEventWhere(tenantId, id, visibility),
+    });
     return count > 0;
   },
 };

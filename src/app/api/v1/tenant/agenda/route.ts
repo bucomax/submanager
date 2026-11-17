@@ -1,5 +1,9 @@
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { validateAgendaEventRefs } from "@/application/use-cases/agenda/validate-agenda-event-references";
+import {
+  loadAgendaEventVisibilityWhere,
+  loadConversationVisibilityWhere,
+} from "@/application/use-cases/shared/load-client-visibility-scope";
 import { sendConversationMessage } from "@/application/use-cases/conversations/send-conversation-message";
 import { agendaEventPrismaRepository } from "@/infrastructure/repositories/agenda-event.repository";
 import { getApiT } from "@/lib/api/i18n";
@@ -12,6 +16,7 @@ import {
 import { createAgendaEventBodySchema } from "@/lib/validators/agenda";
 import type { AgendaEventDto, AgendaEventType, AgendaListResponseData } from "@/types/api/agenda-v1";
 import { EVENT_TYPE_LABEL_PT_BR } from "@/lib/constants/agenda";
+import { agendaRefsErrorResponse } from "./agenda-refs-error-response";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +81,8 @@ export async function GET(request: Request) {
     return jsonError("VALIDATION_ERROR", apiT("errors.agendaRangeRequired"), 400);
   }
 
-  const rows = await agendaEventPrismaRepository.listByRange(tenantCtx.tenantId!, from, to);
+  const visibility = await loadAgendaEventVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const rows = await agendaEventPrismaRepository.listByRange(tenantCtx.tenantId!, from, to, visibility);
   const payload: AgendaListResponseData = { data: rows.map(toDto) };
   return jsonSuccess(payload);
 }
@@ -117,9 +123,8 @@ export async function POST(request: Request) {
       clientId: parsed.data.clientId,
       ownerUserId: parsed.data.ownerUserId,
     },
-    apiT,
   );
-  if (refsErr) return refsErr;
+  if (refsErr) return agendaRefsErrorResponse(refsErr, apiT);
 
   const row = await agendaEventPrismaRepository.create(tenantCtx.tenantId!, {
     conversationId: parsed.data.conversationId,
@@ -141,6 +146,7 @@ export async function POST(request: Request) {
       conversationId: row.conversationId,
       actorUserId: auth.session!.user.id,
       body: confirmationText,
+      visibility: await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!),
     });
   }
 

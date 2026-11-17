@@ -25,13 +25,24 @@ export type ListConversationsPagedOptions = {
   q?: string;
   cursor?: string;
   limit: number;
+  /** Escopo de visibilidade do usuário (ver `buildConversationVisibilityWhereInput`); `{}` = sem restrição. */
+  visibility: Prisma.ConversationWhereInput;
 };
+
+/** `id` + `tenantId` + escopo de visibilidade — única forma de localizar uma conversa por id. */
+function visibleConversationWhere(
+  tenantId: string,
+  conversationId: string,
+  visibility: Prisma.ConversationWhereInput,
+): Prisma.ConversationWhereInput {
+  return { AND: [{ id: conversationId, tenantId }, visibility] };
+}
 
 export const conversationPrismaRepository = {
   /** Todas as conversas do tenant, com a última mensagem de cada uma para montar o preview do card. */
-  async listByTenant(tenantId: string) {
+  async listByTenant(tenantId: string, visibility: Prisma.ConversationWhereInput) {
     return prisma.conversation.findMany({
-      where: { tenantId },
+      where: { AND: [{ tenantId }, visibility] },
       include: { ...conversationWithRelations, ...lastMessageOnly },
       orderBy: { lastMessageAt: "desc" },
     });
@@ -39,7 +50,7 @@ export const conversationPrismaRepository = {
 
   /** Lista paginada (cursor) com filtros de canal/etapa/busca — usada pela tela de Conversas. */
   async listByTenantPaged(tenantId: string, opts: ListConversationsPagedOptions) {
-    const where: Prisma.ConversationWhereInput = {
+    const filters: Prisma.ConversationWhereInput = {
       tenantId,
       ...(opts.channel ? { channel: opts.channel } : {}),
       ...(opts.status ? { status: opts.status } : {}),
@@ -57,6 +68,7 @@ export const conversationPrismaRepository = {
           }
         : {}),
     };
+    const where: Prisma.ConversationWhereInput = { AND: [filters, opts.visibility] };
 
     const [items, totalItems] = await Promise.all([
       prisma.conversation.findMany({
@@ -79,18 +91,22 @@ export const conversationPrismaRepository = {
   },
 
   /** Existência da conversa no tenant (sem carregar mensagens). */
-  async existsInTenant(tenantId: string, conversationId: string): Promise<boolean> {
+  async existsInTenant(
+    tenantId: string,
+    conversationId: string,
+    visibility: Prisma.ConversationWhereInput,
+  ): Promise<boolean> {
     const row = await prisma.conversation.findFirst({
-      where: { id: conversationId, tenantId },
+      where: visibleConversationWhere(tenantId, conversationId, visibility),
       select: { id: true },
     });
     return row != null;
   },
 
   /** Conversa do tenant com histórico completo de mensagens, ordenado do mais antigo ao mais recente. */
-  async findByIdInTenant(tenantId: string, conversationId: string) {
+  async findByIdInTenant(tenantId: string, conversationId: string, visibility: Prisma.ConversationWhereInput) {
     return prisma.conversation.findFirst({
-      where: { id: conversationId, tenantId },
+      where: visibleConversationWhere(tenantId, conversationId, visibility),
       include: {
         ...conversationWithRelations,
         messages: { orderBy: { createdAt: "asc" } },
@@ -99,23 +115,32 @@ export const conversationPrismaRepository = {
   },
 
   /** Muda a etapa (status) da conversa e marca quando a mudança ocorreu. Sempre escopado ao tenant. */
-  async updateStage(tenantId: string, conversationId: string, status: ConversationStatus) {
+  async updateStage(
+    tenantId: string,
+    conversationId: string,
+    status: ConversationStatus,
+    visibility: Prisma.ConversationWhereInput,
+  ) {
     const { count } = await prisma.conversation.updateMany({
-      where: { id: conversationId, tenantId },
+      where: visibleConversationWhere(tenantId, conversationId, visibility),
       data: { status, stageChangedAt: new Date() },
     });
     return count > 0;
   },
 
-  /** @deprecated use `updateStage` — mantido só para não quebrar chamadores existentes. */
-  async updateStatus(tenantId: string, conversationId: string, status: ConversationStatus) {
-    return conversationPrismaRepository.updateStage(tenantId, conversationId, status);
+  /** Conversa visível ao usuário com campos mínimos (cliente vinculado, canal, destinatário). */
+  async findVisibleLink(tenantId: string, conversationId: string, visibility: Prisma.ConversationWhereInput) {
+    return prisma.conversation.findFirst({
+      where: visibleConversationWhere(tenantId, conversationId, visibility),
+      select: { id: true, clientId: true },
+    });
   },
 
   /** Vincula a conversa a um `Client` recém-criado (conversão de lead). Sempre escopado ao tenant. */
+  /** Vincula só se a conversa ainda não tem paciente (converts concorrentes: só um vence). */
   async linkClient(tenantId: string, conversationId: string, clientId: string) {
     const { count } = await prisma.conversation.updateMany({
-      where: { id: conversationId, tenantId },
+      where: { id: conversationId, tenantId, clientId: null },
       data: { clientId },
     });
     return count > 0;
@@ -135,9 +160,10 @@ export const conversationPrismaRepository = {
       status: MessageStatus;
       actorUserId?: string;
     },
+    visibility: Prisma.ConversationWhereInput,
   ) {
     const conversation = await prisma.conversation.findFirst({
-      where: { id: conversationId, tenantId },
+      where: visibleConversationWhere(tenantId, conversationId, visibility),
       select: { id: true },
     });
     if (!conversation) return null;

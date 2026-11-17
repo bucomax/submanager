@@ -1,5 +1,9 @@
 import type { DayCount, IDashboardHomeRepository } from "@/application/ports/dashboard-home-repository.port";
 import {
+  buildClientVisibilityFlatFilter,
+  loadTenantMembershipClientScope,
+} from "@/application/use-cases/shared/load-client-visibility-scope";
+import {
   calendarDayKeyInTimeZone,
   DASHBOARD_CHART_TIMEZONE,
   lastNCalendarDaysInTimeZone,
@@ -38,6 +42,7 @@ const MS_PER_DAY = 86_400_000;
 export async function getDashboardHomeMetrics(
   tenantId: string,
   dashboardHome: IDashboardHomeRepository,
+  viewer: { userId: string; globalRole: string },
 ): Promise<GetDashboardHomeResult> {
   const now = new Date();
   const todayKeySp = calendarDayKeyInTimeZone(now, DASHBOARD_CHART_TIMEZONE);
@@ -46,6 +51,8 @@ export async function getDashboardHomeMetrics(
   const historyFrom = new Date(now.getTime() - HISTORY_DAYS * MS_PER_DAY);
 
   const repo = dashboardHome;
+  const scope = await loadTenantMembershipClientScope(viewer.userId, tenantId, viewer.globalRole);
+  const visibility = buildClientVisibilityFlatFilter(scope, viewer.userId);
 
   // Conversion rate: unique pathways with transitions in last 7 calendar days / active
   const dayKeys7 = lastNCalendarDaysInTimeZone(now, CHART_DAYS, DASHBOARD_CHART_TIMEZONE);
@@ -63,14 +70,14 @@ export async function getDashboardHomeMetrics(
     pathwaysTouchedLast7Days,
   ] = await Promise.all([
     repo.fetchPathwayOptions(tenantId),
-    repo.countActivePathways(tenantId),
-    repo.countTransitionsSince(tenantId, startTodaySp),
-    repo.countAwaitingAction(tenantId, staleThreshold),
-    repo.countCompletedSince(tenantId, startTodaySp),
-    repo.countTransitionsByDay(tenantId, historyFrom),
-    repo.countCompletionsByDay(tenantId, historyFrom),
-    repo.countStartsByDay(tenantId, historyFrom),
-    repo.countPathwaysWithTransitionSince(tenantId, last7DaysStart),
+    repo.countActivePathways(tenantId, visibility),
+    repo.countTransitionsSince(tenantId, startTodaySp, visibility),
+    repo.countAwaitingAction(tenantId, staleThreshold, visibility),
+    repo.countCompletedSince(tenantId, startTodaySp, visibility),
+    repo.countTransitionsByDay(tenantId, historyFrom, visibility),
+    repo.countCompletionsByDay(tenantId, historyFrom, visibility),
+    repo.countStartsByDay(tenantId, historyFrom, visibility),
+    repo.countPathwaysWithTransitionSince(tenantId, last7DaysStart, visibility),
   ]);
 
   const pathwayOptions: DashboardPathwayOption[] = rawPathways.map((p) => ({

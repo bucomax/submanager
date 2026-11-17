@@ -1,35 +1,38 @@
 import type { Session } from "next-auth";
 
-import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
+import {
+  findTenantClientVisibleToSession,
+  loadConversationVisibilityWhere,
+} from "@/application/use-cases/shared/load-client-visibility-scope";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { userPrismaRepository } from "@/infrastructure/repositories/user.repository";
-import type { ApiT } from "@/lib/api/i18n";
-import { jsonError } from "@/lib/api-response";
 
-/** Garante que conversa, paciente (no escopo do usuário) e responsável pertencem ao tenant ativo. */
+export type AgendaEventRefsError =
+  | "conversation_not_found"
+  | "patient_not_found"
+  | "invalid_assignee";
+
+/**
+ * Garante que conversa, paciente e responsável pertencem ao tenant ativo e que conversa/paciente
+ * estão no escopo de visibilidade do usuário. Retorna `null` quando tudo é válido.
+ */
 export async function validateAgendaEventRefs(
   session: Session,
   tenantId: string,
   refs: { conversationId?: string | null; clientId?: string | null; ownerUserId?: string },
-  apiT: ApiT,
-): Promise<Response | null> {
+): Promise<AgendaEventRefsError | null> {
   if (refs.conversationId) {
-    const exists = await conversationPrismaRepository.existsInTenant(tenantId, refs.conversationId);
-    if (!exists) {
-      return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
-    }
+    const visibility = await loadConversationVisibilityWhere(session, tenantId);
+    const exists = await conversationPrismaRepository.existsInTenant(tenantId, refs.conversationId, visibility);
+    if (!exists) return "conversation_not_found";
   }
   if (refs.clientId) {
     const client = await findTenantClientVisibleToSession(session, tenantId, refs.clientId, { id: true });
-    if (!client) {
-      return jsonError("NOT_FOUND", apiT("errors.patientNotFoundInTenant"), 404);
-    }
+    if (!client) return "patient_not_found";
   }
   if (refs.ownerUserId) {
     const owner = await userPrismaRepository.findById(tenantId, refs.ownerUserId);
-    if (!owner) {
-      return jsonError("VALIDATION_ERROR", apiT("errors.invalidAssigneeForTenant"), 422);
-    }
+    if (!owner) return "invalid_assignee";
   }
   return null;
 }

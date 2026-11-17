@@ -253,3 +253,83 @@ export async function filterNotificationsByClientScope(
     return canViewClientRow(c, scope, viewerUserId);
   });
 }
+
+/** Filtro plano de visibilidade (`null` = sem restrição naquele eixo). Usado em SQL cru (dashboard). */
+export type ClientVisibilityFlatFilter = {
+  opmeSupplierId: string | null;
+  assignedToUserId: string | null;
+};
+
+/** Mesma regra de `buildClientVisibilityWhereInput`, em forma plana. */
+export function buildClientVisibilityFlatFilter(
+  scope: TenantMembershipClientScope,
+  viewerUserId: string,
+): ClientVisibilityFlatFilter {
+  if (scope.role === "tenant_admin") {
+    return { opmeSupplierId: null, assignedToUserId: null };
+  }
+  return {
+    opmeSupplierId: scope.linkedOpmeSupplierId,
+    assignedToUserId: scope.restrictedToAssignedOnly ? viewerUserId : null,
+  };
+}
+
+function isUnrestrictedClientScope(scope: TenantMembershipClientScope): boolean {
+  return scope.role === "tenant_admin" || (!scope.restrictedToAssignedOnly && !scope.linkedOpmeSupplierId);
+}
+
+/**
+ * Visibilidade de `Conversation` (lead/WhatsApp):
+ * - com paciente vinculado: o paciente precisa estar no escopo do usuário;
+ * - sem paciente (lead puro): usuário vinculado a fornecedor OPME nunca vê; usuário "só atribuídos"
+ *   vê apenas se a conversa estiver atribuída a ele (`assignedToUserId`); irrestrito/admin vê todos.
+ */
+export function buildConversationVisibilityWhereInput(
+  scope: TenantMembershipClientScope,
+  viewerUserId: string,
+): Prisma.ConversationWhereInput {
+  if (isUnrestrictedClientScope(scope)) return {};
+  const clientWhere = buildClientVisibilityWhereInput(scope, viewerUserId);
+  if (scope.linkedOpmeSupplierId) {
+    return { client: clientWhere };
+  }
+  return {
+    OR: [{ client: clientWhere }, { clientId: null, assignedToUserId: viewerUserId }],
+  };
+}
+
+/**
+ * Visibilidade de `AgendaEvent`: com `clientId` segue o paciente; sem paciente mas com conversa segue a
+ * conversa; sem nenhum dos dois, usuário "só atribuídos" (sem OPME) vê apenas os que ele é responsável.
+ */
+export function buildAgendaEventVisibilityWhereInput(
+  scope: TenantMembershipClientScope,
+  viewerUserId: string,
+): Prisma.AgendaEventWhereInput {
+  if (isUnrestrictedClientScope(scope)) return {};
+  const clientWhere = buildClientVisibilityWhereInput(scope, viewerUserId);
+  const parts: Prisma.AgendaEventWhereInput[] = [
+    { client: clientWhere },
+    { clientId: null, conversation: buildConversationVisibilityWhereInput(scope, viewerUserId) },
+  ];
+  if (!scope.linkedOpmeSupplierId) {
+    parts.push({ clientId: null, conversationId: null, ownerUserId: viewerUserId });
+  }
+  return { OR: parts };
+}
+
+export async function loadConversationVisibilityWhere(
+  session: Session,
+  tenantId: string,
+): Promise<Prisma.ConversationWhereInput> {
+  const scope = await loadTenantMembershipClientScope(session.user.id, tenantId, session.user.globalRole);
+  return buildConversationVisibilityWhereInput(scope, session.user.id);
+}
+
+export async function loadAgendaEventVisibilityWhere(
+  session: Session,
+  tenantId: string,
+): Promise<Prisma.AgendaEventWhereInput> {
+  const scope = await loadTenantMembershipClientScope(session.user.id, tenantId, session.user.globalRole);
+  return buildAgendaEventVisibilityWhereInput(scope, session.user.id);
+}

@@ -1,3 +1,4 @@
+import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { getApiT } from "@/lib/api/i18n";
@@ -43,7 +44,8 @@ export async function GET(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const { id } = await ctx.params;
 
-  const row = await conversationPrismaRepository.findByIdInTenant(tenantCtx.tenantId!, id);
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const row = await conversationPrismaRepository.findByIdInTenant(tenantCtx.tenantId!, id, visibility);
   if (!row) {
     return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
   }
@@ -105,7 +107,13 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
     return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
-  const updated = await conversationPrismaRepository.updateStage(tenantCtx.tenantId!, id, parsed.data.status);
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const updated = await conversationPrismaRepository.updateStage(
+    tenantCtx.tenantId!,
+    id,
+    parsed.data.status,
+    visibility,
+  );
   if (!updated) {
     return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
   }

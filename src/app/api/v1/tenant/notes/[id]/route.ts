@@ -1,3 +1,4 @@
+import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { leadNotePrismaRepository } from "@/infrastructure/repositories/lead-note.repository";
 import { getApiT } from "@/lib/api/i18n";
@@ -62,7 +63,8 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
     return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
-  const row = await leadNotePrismaRepository.update(tenantCtx.tenantId!, id, parsed.data);
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const row = await leadNotePrismaRepository.update(tenantCtx.tenantId!, id, parsed.data, visibility);
   if (!row) {
     return jsonError("NOT_FOUND", apiT("errors.leadNoteNotFound"), 404);
   }
@@ -83,7 +85,8 @@ export async function DELETE(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const { id } = await ctx.params;
 
-  const removed = await leadNotePrismaRepository.remove(tenantCtx.tenantId!, id);
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const removed = await leadNotePrismaRepository.remove(tenantCtx.tenantId!, id, visibility);
   if (!removed) {
     return jsonError("NOT_FOUND", apiT("errors.leadNoteNotFound"), 404);
   }

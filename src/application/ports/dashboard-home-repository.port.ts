@@ -14,15 +14,21 @@ export type DayCount = {
   count: number;
 };
 
+/** Escopo de pacientes do usuário (`null` = sem restrição); ver `buildClientVisibilityFlatFilter`. */
+export type DashboardClientVisibility = {
+  opmeSupplierId: string | null;
+  assignedToUserId: string | null;
+};
+
 export interface IDashboardHomeRepository {
   fetchPathwayOptions(tenantId: string): Promise<DashboardPathwayOptionRow[]>;
-  countActivePathways(tenantId: string): Promise<number>;
-  countTransitionsSince(tenantId: string, since: Date): Promise<number>;
-  countAwaitingAction(tenantId: string, staleThreshold: Date): Promise<number>;
-  countCompletedSince(tenantId: string, since: Date): Promise<number>;
-  countTransitionsByDay(tenantId: string, since: Date): Promise<DayCount[]>;
+  countActivePathways(tenantId: string, visibility: DashboardClientVisibility): Promise<number>;
+  countTransitionsSince(tenantId: string, since: Date, visibility: DashboardClientVisibility): Promise<number>;
+  countAwaitingAction(tenantId: string, staleThreshold: Date, visibility: DashboardClientVisibility): Promise<number>;
+  countCompletedSince(tenantId: string, since: Date, visibility: DashboardClientVisibility): Promise<number>;
+  countTransitionsByDay(tenantId: string, since: Date, visibility: DashboardClientVisibility): Promise<DayCount[]>;
   /** Pathways distintos com ao menos uma transição desde `since`. */
-  countPathwaysWithTransitionSince(tenantId: string, since: Date): Promise<number>;
-  countCompletionsByDay(tenantId: string, since: Date): Promise<DayCount[]>;
-  countStartsByDay(tenantId: string, since: Date): Promise<DayCount[]>;
+  countPathwaysWithTransitionSince(tenantId: string, since: Date, visibility: DashboardClientVisibility): Promise<number>;
+  countCompletionsByDay(tenantId: string, since: Date, visibility: DashboardClientVisibility): Promise<DayCount[]>;
+  countStartsByDay(tenantId: string, since: Date, visibility: DashboardClientVisibility): Promise<DayCount[]>;
 }

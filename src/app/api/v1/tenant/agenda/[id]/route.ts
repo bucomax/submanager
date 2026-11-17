@@ -1,3 +1,4 @@
+import { loadAgendaEventVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { validateAgendaEventRefs } from "@/application/use-cases/agenda/validate-agenda-event-references";
 import { agendaEventPrismaRepository } from "@/infrastructure/repositories/agenda-event.repository";
@@ -11,6 +12,7 @@ import {
 import { updateAgendaEventBodySchema } from "@/lib/validators/agenda";
 import type { AgendaEventDto, AgendaEventType } from "@/types/api/agenda-v1";
 import type { RouteCtx } from "@/types/api/route-context";
+import { agendaRefsErrorResponse } from "../agenda-refs-error-response";
 
 export const dynamic = "force-dynamic";
 
@@ -83,14 +85,19 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
       clientId: rest.clientId,
       ownerUserId: rest.ownerUserId,
     },
-    apiT,
   );
-  if (refsErr) return refsErr;
+  if (refsErr) return agendaRefsErrorResponse(refsErr, apiT);
 
-  const row = await agendaEventPrismaRepository.update(tenantCtx.tenantId!, id, {
-    ...rest,
-    ...(parsedStartsAt ? { startsAt: parsedStartsAt } : {}),
-  });
+  const visibility = await loadAgendaEventVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const row = await agendaEventPrismaRepository.update(
+    tenantCtx.tenantId!,
+    id,
+    {
+      ...rest,
+      ...(parsedStartsAt ? { startsAt: parsedStartsAt } : {}),
+    },
+    visibility,
+  );
   if (!row) {
     return jsonError("NOT_FOUND", apiT("errors.agendaEventNotFound"), 404);
   }
@@ -111,7 +118,8 @@ export async function DELETE(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const { id } = await ctx.params;
 
-  const removed = await agendaEventPrismaRepository.remove(tenantCtx.tenantId!, id);
+  const visibility = await loadAgendaEventVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const removed = await agendaEventPrismaRepository.remove(tenantCtx.tenantId!, id, visibility);
   if (!removed) {
     return jsonError("NOT_FOUND", apiT("errors.agendaEventNotFound"), 404);
   }

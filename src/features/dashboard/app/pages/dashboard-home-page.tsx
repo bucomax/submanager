@@ -38,7 +38,10 @@ export async function DashboardHomePage({ user }: DashboardHomePageProps) {
   }
 
   const { pathwayOptions: pipelinePathways, metrics } = tenantId
-    ? await getDashboardHomeMetrics(tenantId, dashboardHomePrismaRepository)
+    ? await getDashboardHomeMetrics(tenantId, dashboardHomePrismaRepository, {
+        userId: user.id,
+        globalRole: user.globalRole,
+      })
     : {
         pathwayOptions: [],
         metrics: {

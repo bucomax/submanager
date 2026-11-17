@@ -1,3 +1,4 @@
+import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonSuccess } from "@/lib/api-response";
@@ -56,9 +57,10 @@ export async function GET(request: Request) {
   const channel = VALID_CHANNELS.find((c) => c === channelParam);
   const status = VALID_STATUSES.find((s) => s === statusParam);
 
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
   const { items, nextCursor, totalItems } = await conversationPrismaRepository.listByTenantPaged(
     tenantCtx.tenantId!,
-    { channel, status, q, cursor, limit },
+    { channel, status, q, cursor, limit, visibility },
   );
 
   const data: ConversationListItemDto[] = items.map((row) => ({

@@ -1,5 +1,6 @@
+import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { formatZodIssues } from "@/lib/api/zod-error";
-import { prisma } from "@/infrastructure/database/prisma";
+import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { leadNotePrismaRepository } from "@/infrastructure/repositories/lead-note.repository";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -52,7 +53,8 @@ export async function GET(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const { id } = await ctx.params;
 
-  const rows = await leadNotePrismaRepository.listByConversation(tenantCtx.tenantId!, id);
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const rows = await leadNotePrismaRepository.listByConversation(tenantCtx.tenantId!, id, visibility);
   const payload: LeadNotesResponseData = { data: rows.map(toDto) };
   return jsonSuccess(payload);
 }
@@ -82,10 +84,8 @@ export async function POST(request: Request, ctx: RouteCtx<{ id: string }>) {
     return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
-  const conversation = await prisma.conversation.findFirst({
-    where: { id, tenantId: tenantCtx.tenantId! },
-    select: { clientId: true },
-  });
+  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const conversation = await conversationPrismaRepository.findVisibleLink(tenantCtx.tenantId!, id, visibility);
   if (!conversation) {
     return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
   }

@@ -1,3 +1,4 @@
+import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { sendConversationMessage } from "@/application/use-cases/conversations/send-conversation-message";
 import { getApiT } from "@/lib/api/i18n";
@@ -44,6 +45,7 @@ export async function POST(request: Request, ctx: RouteCtx<{ id: string }>) {
     conversationId: id,
     actorUserId: auth.session!.user.id,
     body: parsed.data.body,
+    visibility: await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!),
   });
 
   if (!result.ok) {
