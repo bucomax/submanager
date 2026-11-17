@@ -137,6 +137,8 @@ model User {
   emailVerified                     DateTime?
   image                             String?
   passwordHash                      String?
+  /// Incrementado ao trocar/redefinir senha: JWTs emitidos com versão antiga deixam de valer.
+  sessionVersion                    Int                           @default(0)
   globalRole                        GlobalRole                    @default(user)
   activeTenantId                    String?
   activeTenant                      Tenant?                       @relation("UserActiveTenant", fields: [activeTenantId], references: [id], onDelete: SetNull)
@@ -344,6 +346,10 @@ model Client {
   portalPasswordHash String?
   /// Última vez que a senha do portal foi definida ou alterada (invalida cookies com `pwdv` desatualizado).
   portalPasswordChangedAt DateTime?
+  /// Falhas consecutivas de login por senha no portal (limite persistente, independe de Redis).
+  portalFailedLoginCount Int @default(0)
+  /// Login por senha bloqueado até este instante após exceder o limite de falhas.
+  portalLockedUntil DateTime?
   assignedToUserId String?
   assignedTo       User?            @relation("ClientAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   opmeSupplierId   String?
@@ -792,7 +798,7 @@ model AuditEvent {
   tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /** Null em eventos só de tenant/equipe (ex.: login staff) sem paciente associado. */
   clientId         String?
-  client           Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client           Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
   patientPathwayId String?
   patientPathway   PatientPathway?    @relation(fields: [patientPathwayId], references: [id], onDelete: SetNull)
   actorUserId      String?
