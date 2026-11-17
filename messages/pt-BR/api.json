@@ -61,6 +61,7 @@
     "superAdminOnly": "Apenas super_admin.",
     "invitePermissionDenied": "Sem permissão para convidar neste tenant.",
     "manageMembersPermissionDenied": "Sem permissão para gerir membros neste tenant.",
+    "managePathwaysPermissionDenied": "Sem permissão para gerir fluxos neste tenant.",
     "deletePatientForbidden": "Apenas administradores do tenant podem excluir pacientes.",
     "tenantRequired": "Selecione um tenant ativo.",
     "tenantInactive": "Este tenant está desativado. Reative-o na administração ou escolha outro tenant.",

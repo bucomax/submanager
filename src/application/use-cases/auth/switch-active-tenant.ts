@@ -1,5 +1,7 @@
+import { AuditEventType } from "@prisma/client";
 import type { Session } from "next-auth";
 
+import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
 import { userPrismaRepository } from "@/infrastructure/repositories/user.repository";
 import { requireSuperAdmin } from "@/lib/auth/guards";
@@ -34,6 +36,18 @@ export async function runSwitchActiveTenant(params: {
   }
 
   await userPrismaRepository.setActiveTenantId(userId, tenantId);
+
+  // §5.5: super_admin atuando cross-tenant (sem membership) é sempre auditado.
+  if (!membershipRole) {
+    await auditEventPrismaRepository.recordCanonical({
+      tenantId,
+      clientId: null,
+      patientPathwayId: null,
+      actorUserId: userId,
+      eventType: AuditEventType.SUPER_ADMIN_TENANT_ENTERED,
+      payload: { tenantId },
+    });
+  }
 
   return {
     ok: true,

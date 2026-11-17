@@ -1,5 +1,9 @@
 import { computeSlaHealthStatus } from "@/domain/pathway/sla-health";
 import { pathwaySummaryReportPrismaRepository } from "@/infrastructure/repositories/pathway-summary-report.repository";
+import {
+  buildClientVisibilityWhereInput,
+  type TenantMembershipClientScope,
+} from "@/application/use-cases/shared/load-client-visibility-scope";
 import { buildPagination } from "@/lib/api/pagination";
 import type { ReportsSummaryResponseData } from "@/types/api/reports-v1";
 
@@ -12,6 +16,8 @@ export type GeneratePathwaySummaryInput = {
   opmeSupplierId?: string;
   page: number;
   limit: number;
+  scope: TenantMembershipClientScope;
+  viewerUserId: string;
 };
 
 /**
@@ -20,7 +26,7 @@ export type GeneratePathwaySummaryInput = {
 export async function generatePathwaySummary(
   input: GeneratePathwaySummaryInput,
 ): Promise<ReportsSummaryResponseData> {
-  const { tenantId, periodDays, pathwayId, opmeSupplierId, page, limit } = input;
+  const { tenantId, periodDays, pathwayId, opmeSupplierId, page, limit, scope, viewerUserId } = input;
   const now = new Date();
   const periodStart = new Date(now.getTime() - periodDays * MS_PER_DAY);
 
@@ -29,6 +35,7 @@ export async function generatePathwaySummary(
     periodStart,
     pathwayId,
     opmeSupplierId,
+    clientVisibilityWhere: buildClientVisibilityWhereInput(scope, viewerUserId),
   });
 
   const byStageMap = new Map<string, { id: string; label: string; count: number; sortOrder: number }>();

@@ -19,6 +19,19 @@ export class PatientPathwayPrismaRepository implements IPatientPathwayRepository
     });
   }
 
+  /** Existe no tenant e o paciente passa no filtro de visibilidade (RBAC). */
+  async existsWithClientWhere(
+    tenantId: string,
+    patientPathwayId: string,
+    clientWhere: Prisma.ClientWhereInput,
+  ): Promise<boolean> {
+    const row = await prisma.patientPathway.findFirst({
+      where: { id: patientPathwayId, tenantId, client: clientWhere },
+      select: { id: true },
+    });
+    return row != null;
+  }
+
   async findActive(tenantId: string, clientId: string) {
     return prisma.patientPathway.findMany({
       where: { tenantId, clientId, completedAt: null },

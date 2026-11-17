@@ -1,3 +1,4 @@
+import { validateAgendaEventRefs } from "@/application/use-cases/agenda/validate-agenda-event-references";
 import { sendConversationMessage } from "@/application/use-cases/conversations/send-conversation-message";
 import { agendaEventPrismaRepository } from "@/infrastructure/repositories/agenda-event.repository";
 import { getApiT } from "@/lib/api/i18n";
@@ -106,6 +107,18 @@ export async function POST(request: Request) {
   if (Number.isNaN(startsAt.getTime())) {
     return jsonError("VALIDATION_ERROR", apiT("errors.agendaRangeRequired"), 422);
   }
+
+  const refsErr = await validateAgendaEventRefs(
+    auth.session!,
+    tenantCtx.tenantId!,
+    {
+      conversationId: parsed.data.conversationId,
+      clientId: parsed.data.clientId,
+      ownerUserId: parsed.data.ownerUserId,
+    },
+    apiT,
+  );
+  if (refsErr) return refsErr;
 
   const row = await agendaEventPrismaRepository.create(tenantCtx.tenantId!, {
     conversationId: parsed.data.conversationId,

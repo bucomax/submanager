@@ -1,3 +1,4 @@
+import { isPatientPathwayVisibleToSession } from "@/application/use-cases/shared/is-patient-pathway-visible";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import {
@@ -36,6 +37,10 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
   }
 
   const { patientPathwayId, itemId } = await ctx.params;
+
+  if (!(await isPatientPathwayVisibleToSession(auth.session!, tenantCtx.tenantId, patientPathwayId))) {
+    return jsonError("NOT_FOUND", apiT("errors.patientPathwayNotFound"), 404);
+  }
 
   const result = await runPatchPatientChecklistItem({
     tenantId: tenantCtx.tenantId,

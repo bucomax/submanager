@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/infrastructure/database/prisma";
 
 const SCAN_LIMIT = 5_000;
@@ -8,17 +10,25 @@ export class PathwaySummaryReportPrismaRepository {
     periodStart: Date;
     pathwayId?: string;
     opmeSupplierId?: string;
+    /** Filtro de visibilidade de pacientes (RBAC) aplicado ao `client`. */
+    clientVisibilityWhere: Prisma.ClientWhereInput;
   }) {
-    const { tenantId, periodStart, pathwayId, opmeSupplierId } = input;
+    const { tenantId, periodStart, pathwayId, opmeSupplierId, clientVisibilityWhere } = input;
+    const clientWhere: Prisma.ClientWhereInput = {
+      AND: [
+        {
+          deletedAt: null,
+          ...(opmeSupplierId ? { opmeSupplierId } : {}),
+        },
+        clientVisibilityWhere,
+      ],
+    };
 
     const patientPathwayWhere = {
       tenantId,
       createdAt: { gte: periodStart },
       ...(pathwayId ? { pathwayId } : {}),
-      client: {
-        deletedAt: null,
-        ...(opmeSupplierId ? { opmeSupplierId } : {}),
-      },
+      client: clientWhere,
     };
 
     const [rows, transitionsInPeriod] = await Promise.all([
@@ -64,10 +74,7 @@ export class PathwaySummaryReportPrismaRepository {
           patientPathway: {
             tenantId,
             ...(pathwayId ? { pathwayId } : {}),
-            client: {
-              deletedAt: null,
-              ...(opmeSupplierId ? { opmeSupplierId } : {}),
-            },
+            client: clientWhere,
           },
         },
       }),

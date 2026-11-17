@@ -103,6 +103,7 @@ enum AuditEventType {
   WHATSAPP_PATIENT_CONFIRMED
   TENANT_EMAIL_DOMAIN_CONFIGURED
   TENANT_EMAIL_DOMAIN_REMOVED
+  SUPER_ADMIN_TENANT_ENTERED
 }
 
 /** Validação na ficha quando o paciente envia arquivo pelo portal. */

@@ -1,4 +1,5 @@
 import { generatePathwaySummary } from "@/application/use-cases/report/generate-pathway-summary";
+import { loadTenantMembershipClientScope } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import {
@@ -35,6 +36,12 @@ export async function GET(request: Request) {
 
   const { periodDays, pathwayId, opmeSupplierId, page, limit } = parsed.data;
 
+  const scope = await loadTenantMembershipClientScope(
+    auth.session!.user.id,
+    tenantCtx.tenantId,
+    auth.session!.user.globalRole,
+  );
+
   const data = await generatePathwaySummary({
     tenantId: tenantCtx.tenantId,
     periodDays,
@@ -42,6 +49,8 @@ export async function GET(request: Request) {
     opmeSupplierId,
     page,
     limit,
+    scope,
+    viewerUserId: auth.session!.user.id,
   });
 
   return jsonSuccess(data);

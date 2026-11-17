@@ -78,6 +78,15 @@ export const conversationPrismaRepository = {
     return { items: page, nextCursor, totalItems };
   },
 
+  /** Existência da conversa no tenant (sem carregar mensagens). */
+  async existsInTenant(tenantId: string, conversationId: string): Promise<boolean> {
+    const row = await prisma.conversation.findFirst({
+      where: { id: conversationId, tenantId },
+      select: { id: true },
+    });
+    return row != null;
+  },
+
   /** Conversa do tenant com histórico completo de mensagens, ordenado do mais antigo ao mais recente. */
   async findByIdInTenant(tenantId: string, conversationId: string) {
     return prisma.conversation.findFirst({

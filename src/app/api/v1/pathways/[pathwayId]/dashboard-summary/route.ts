@@ -2,7 +2,11 @@ import { resolvePublishedPathwayVersion } from "@/infrastructure/database/pathwa
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { buildKanbanClientWhereForSession } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
+import {
+  assertActiveTenantMembership,
+  getActiveTenantIdOr400,
+  requireSessionOr401,
+} from "@/lib/auth/guards";
 import { dashboardPathwayOpmeQuerySchema } from "@/lib/validators/kanban";
 import { loadDashboardPathwaySummary } from "@/application/use-cases/pathway/load-dashboard-pathway-summary";
 import type { RouteCtx } from "@/types/api/route-context";
@@ -17,6 +21,8 @@ export async function GET(request: Request, ctx: RouteCtx) {
 
   const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (tenantCtx.response) return tenantCtx.response;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
+  if (forbidden) return forbidden;
 
   const { pathwayId } = await ctx.params;
 

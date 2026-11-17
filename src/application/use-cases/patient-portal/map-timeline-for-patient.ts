@@ -52,6 +52,7 @@ function sanitizeAuditPayloadForPatient(
       };
     case "TENANT_EMAIL_DOMAIN_CONFIGURED":
     case "TENANT_EMAIL_DOMAIN_REMOVED":
+    case "SUPER_ADMIN_TENANT_ENTERED":
       return {};
     default:
       return {};

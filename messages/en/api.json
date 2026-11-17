@@ -61,6 +61,7 @@
     "superAdminOnly": "Super admin only.",
     "invitePermissionDenied": "No permission to invite in this tenant.",
     "manageMembersPermissionDenied": "No permission to manage members in this tenant.",
+    "managePathwaysPermissionDenied": "No permission to manage pathways in this tenant.",
     "deletePatientForbidden": "Only tenant administrators can delete patients.",
     "tenantRequired": "Select an active tenant.",
     "tenantInactive": "This tenant is disabled. Re-enable it in administration or choose another tenant.",

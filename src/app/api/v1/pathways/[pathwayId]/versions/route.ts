@@ -1,6 +1,11 @@
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
+import {
+  assertActiveTenantMembership,
+  assertTenantAdminOrSuper,
+  getActiveTenantIdOr400,
+  requireSessionOr401,
+} from "@/lib/auth/guards";
 import { postPathwayVersionBodySchema } from "@/lib/validators/pathway";
 import { runCreatePathwayVersionDraft } from "@/application/use-cases/pathway/create-pathway-version-draft";
 import type { RouteCtx } from "@/types/api/route-context";
@@ -14,6 +19,16 @@ export async function POST(request: Request, ctx: RouteCtx) {
 
   const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (tenantCtx.response) return tenantCtx.response;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
+  if (forbidden) return forbidden;
+  const adminErr = await assertTenantAdminOrSuper(
+    auth.session!,
+    tenantCtx.tenantId,
+    request,
+    apiT,
+    "errors.managePathwaysPermissionDenied",
+  );
+  if (adminErr) return adminErr;
 
   const { pathwayId } = await ctx.params;
 

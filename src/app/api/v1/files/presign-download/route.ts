@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     tenantId,
     fileId: parsed.data.fileId,
     actorUserId: auth.session!.user.id,
+    session: auth.session!,
   });
 
   if (!result.ok) {

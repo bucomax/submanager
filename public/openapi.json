@@ -1087,7 +1087,7 @@
         },
         "responses": {
           "200": { "description": "downloadUrl + expiresInSeconds" },
-          "404": { "description": "Arquivo não encontrado no tenant" },
+          "404": { "description": "Arquivo não encontrado no tenant (inclui arquivo de paciente fora do escopo de visibilidade do usuário)" },
           "503": { "description": "Armazenamento (GCS) não configurado" },
           "422": { "description": "Validação" }
         }
@@ -1504,7 +1504,8 @@
         "responses": {
           "200": { "description": "Lista `pathways` + `publishedVersion` opcional" },
           "400": { "description": "Tenant não selecionado" },
-          "401": { "description": "Não autenticado" }
+          "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" }
         }
       },
       "post": {
@@ -1530,6 +1531,7 @@
           "201": { "description": "Criado (`pathway`)" },
           "400": { "description": "Tenant não selecionado" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "422": { "description": "Validação" }
         }
       }
@@ -1543,6 +1545,7 @@
         "responses": {
           "200": { "description": "OK" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
           "404": { "description": "Não encontrado" }
         }
       },
@@ -1567,6 +1570,7 @@
         "responses": {
           "200": { "description": "OK" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "404": { "description": "Não encontrado" },
           "422": { "description": "Validação ou nenhum campo" }
         }
@@ -1579,6 +1583,7 @@
         "responses": {
           "200": { "description": "Removido" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "404": { "description": "Não encontrado" },
           "409": { "description": "Pacientes na jornada" }
         }
@@ -1594,6 +1599,7 @@
           "200": { "description": "`pathwayId` + `version` + `stages` ordenados por sortOrder" },
           "400": { "description": "Tenant não selecionado" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
           "404": { "description": "Jornada não encontrada" },
           "409": { "description": "Nenhuma versão publicada" }
         }
@@ -1615,6 +1621,7 @@
           "200": { "description": "`columns[]` com `data[]` + `pagination` (padrão page/limit/totalItems/…) por coluna, `slaStatus` em cada item" },
           "400": { "description": "Tenant não selecionado" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
           "404": { "description": "Jornada não encontrada" },
           "409": { "description": "Nenhuma versão publicada" },
           "422": { "description": "Query inválida" }
@@ -1637,6 +1644,7 @@
         "responses": {
           "200": { "description": "`data[]` + `pagination` (page, limit, totalItems, totalPages, hasNextPage, hasPreviousPage)" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
           "404": { "description": "Jornada/etapa não encontrada" },
           "409": { "description": "Nenhuma versão publicada" }
         }
@@ -1654,6 +1662,7 @@
         "responses": {
           "200": { "description": "`totals`: total, ok, warning, danger" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
           "404": { "description": "Jornada não encontrada" },
           "409": { "description": "Nenhuma versão publicada" },
           "422": { "description": "Query inválida" }
@@ -1673,6 +1682,7 @@
         "responses": {
           "200": { "description": "`data[]` (alertas) + `pagination` (padrão page/limit/totalItems/…)" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
           "404": { "description": "Jornada não encontrada" },
           "409": { "description": "Nenhuma versão publicada" }
         }
@@ -1704,6 +1714,7 @@
         "responses": {
           "201": { "description": "Versão criada" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "404": { "description": "Jornada não encontrada" },
           "422": { "description": "Validação" }
         }
@@ -1721,6 +1732,7 @@
         "responses": {
           "200": { "description": "Publicado com `stages`" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "404": { "description": "Jornada ou versão não encontrada" },
           "409": { "description": "Ex.: etapa removida com pacientes na versão publicada" },
           "422": { "description": "Grafo sem nodes ou responsáveis inválidos" }
@@ -1755,6 +1767,7 @@
         "responses": {
           "200": { "description": "`data.preview`: canPublish, issues, publishedStagePatientCounts, proposedStageKeys, removedStageKeys, …" },
           "401": { "description": "Não autenticado" },
+          "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "404": { "description": "Jornada ou versão não encontrada" },
           "422": { "description": "JSON inválido ou body inválido" }
         }
@@ -1809,7 +1822,8 @@
         "responses": {
           "200": { "description": "OK" },
           "401": { "description": "Não autenticado" },
-          "404": { "description": "Não encontrado" }
+          "403": { "description": "Sem acesso ao tenant ativo" },
+          "404": { "description": "Não encontrado no tenant (inclui paciente fora do escopo de visibilidade do usuário)" }
         }
       }
     },
@@ -1870,7 +1884,8 @@
         "responses": {
           "200": { "description": "`item` com `checklistItemId`, `completed` e `completedAt`" },
           "401": { "description": "Não autenticado" },
-          "404": { "description": "Jornada do paciente ou item não encontrado" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
+          "404": { "description": "Não encontrado no tenant (inclui paciente fora do escopo de visibilidade do usuário)" },
           "422": { "description": "Validação ou item fora da etapa atual" }
         }
       }
@@ -1884,7 +1899,8 @@
         "responses": {
           "200": { "description": "`dispatches[]`" },
           "401": { "description": "Não autenticado" },
-          "404": { "description": "Jornada não encontrada no tenant" }
+          "403": { "description": "Sem acesso ao tenant ativo" },
+          "404": { "description": "Não encontrado no tenant (inclui paciente fora do escopo de visibilidade do usuário)" }
         }
       }
     },
@@ -2847,7 +2863,9 @@
         },
         "responses": {
           "201": { "description": "AgendaEventDto criado" },
-          "422": { "description": "Corpo inválido" }
+          "403": { "description": "Sem acesso ao tenant ativo" },
+          "404": { "description": "Conversa ou paciente (fora do escopo incluído) não encontrado no tenant" },
+          "422": { "description": "Corpo inválido ou ownerUserId sem membership ativa no tenant" }
         }
       }
     },
@@ -2860,7 +2878,8 @@
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
         "responses": {
           "200": { "description": "AgendaEventDto atualizado" },
-          "404": { "description": "Compromisso não encontrado neste tenant" },
+          "403": { "description": "Sem acesso ao tenant ativo" },
+          "404": { "description": "Compromisso, conversa ou paciente não encontrado no tenant" },
           "422": { "description": "Corpo inválido" }
         }
       },

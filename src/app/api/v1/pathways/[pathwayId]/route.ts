@@ -1,6 +1,11 @@
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
+import {
+  assertActiveTenantMembership,
+  assertTenantAdminOrSuper,
+  getActiveTenantIdOr400,
+  requireSessionOr401,
+} from "@/lib/auth/guards";
 import { patchPathwayBodySchema } from "@/lib/validators/pathway";
 import {
   getCarePathwayDetail,
@@ -19,6 +24,8 @@ export async function GET(request: Request, ctx: RouteCtx) {
 
   const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (tenantCtx.response) return tenantCtx.response;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
+  if (forbidden) return forbidden;
 
   const { pathwayId } = await ctx.params;
   const row = await getCarePathwayDetail(tenantCtx.tenantId, pathwayId);
@@ -45,6 +52,16 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
 
   const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (tenantCtx.response) return tenantCtx.response;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
+  if (forbidden) return forbidden;
+  const adminErr = await assertTenantAdminOrSuper(
+    auth.session!,
+    tenantCtx.tenantId,
+    request,
+    apiT,
+    "errors.managePathwaysPermissionDenied",
+  );
+  if (adminErr) return adminErr;
 
   const { pathwayId } = await ctx.params;
 
@@ -95,6 +112,16 @@ export async function DELETE(request: Request, ctx: RouteCtx) {
 
   const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (tenantCtx.response) return tenantCtx.response;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
+  if (forbidden) return forbidden;
+  const adminErr = await assertTenantAdminOrSuper(
+    auth.session!,
+    tenantCtx.tenantId,
+    request,
+    apiT,
+    "errors.managePathwaysPermissionDenied",
+  );
+  if (adminErr) return adminErr;
 
   const { pathwayId } = await ctx.params;
   const result = await runDeleteCarePathway(tenantCtx.tenantId, pathwayId);

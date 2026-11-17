@@ -1,7 +1,12 @@
 import { getCachedPathwaysList } from "@/infrastructure/cache/cached-pathways-list";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
+import {
+  assertActiveTenantMembership,
+  assertTenantAdminOrSuper,
+  getActiveTenantIdOr400,
+  requireSessionOr401,
+} from "@/lib/auth/guards";
 import { postPathwayBodySchema } from "@/lib/validators/pathway";
 import { runCreateCarePathway } from "@/application/use-cases/pathway/create-care-pathway";
 
@@ -15,6 +20,8 @@ export async function GET(request: Request) {
   const ctx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (ctx.response) return ctx.response;
   const { tenantId } = ctx;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantId, request, apiT);
+  if (forbidden) return forbidden;
 
   const data = await getCachedPathwaysList(tenantId);
   return jsonSuccess(data);
@@ -28,6 +35,16 @@ export async function POST(request: Request) {
   const ctx = await getActiveTenantIdOr400(auth.session!, request, apiT);
   if (ctx.response) return ctx.response;
   const { tenantId } = ctx;
+  const forbidden = await assertActiveTenantMembership(auth.session!, tenantId, request, apiT);
+  if (forbidden) return forbidden;
+  const adminErr = await assertTenantAdminOrSuper(
+    auth.session!,
+    tenantId,
+    request,
+    apiT,
+    "errors.managePathwaysPermissionDenied",
+  );
+  if (adminErr) return adminErr;
 
   let body: unknown;
   try {
