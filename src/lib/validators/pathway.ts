@@ -36,6 +36,8 @@ export const postStageTransitionBodySchema = z
     note: z.string().max(2000).optional(),
     force: z.boolean().optional(),
     overrideReason: z.string().max(2000).optional(),
+    /** Chave de idempotência opcional (ex.: UUID gerado pelo cliente); replay devolve a transição já feita. */
+    correlationId: z.string().min(8).max(128).optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.force) return;

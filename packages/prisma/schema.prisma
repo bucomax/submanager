@@ -553,7 +553,7 @@ model PatientNote {
   clientId     String
   client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   authorUserId String
-  author       User     @relation("PatientNoteAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  author       User     @relation("PatientNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
   content      String   @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -763,17 +763,20 @@ model StageTransition {
   toStageId        String
   toStage          PathwayStage   @relation("TransitionTo", fields: [toStageId], references: [id], onDelete: Restrict)
   actorUserId      String
-  actor            User           @relation("StageTransitionActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  actor            User           @relation("StageTransitionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   note             String?        @db.Text
   /** Justificativa quando a transição ignora checklist obrigatório incompleto (`force` na API). */
   ruleOverrideReason String?      @db.Text
   forcedByUserId   String?
   forcedByUser     User?          @relation("StageTransitionForcedBy", fields: [forcedByUserId], references: [id], onDelete: SetNull)
   dispatchStub     Json?
+  /** Chave de idempotência opcional enviada pelo cliente; replay retorna a transição existente. */
+  correlationId    String?
 
   createdAt          DateTime          @default(now())
   channelDispatches  ChannelDispatch[]
 
+  @@unique([patientPathwayId, correlationId])
   @@index([patientPathwayId])
   @@index([forcedByUserId])
 }

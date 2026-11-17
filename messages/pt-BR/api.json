@@ -22,6 +22,7 @@
     "noPublishedVersionWithStages": "Não há versão publicada com etapas para esta jornada. Publique uma versão primeiro.",
     "patientAlreadyInJourney": "Este paciente já está em uma jornada.",
     "patientAlreadyInStage": "O paciente já está nesta etapa.",
+    "stageTransitionConflict": "A etapa do paciente mudou ou há uma transição em andamento. Atualize e tente novamente.",
     "tenantNotFound": "Tenant não encontrado.",
     "emailResendNotConfigured": "O envio de e-mail ainda não está disponível neste ambiente.",
     "emailDomainAlreadyConfigured": "Já existe um domínio configurado. Remova-o antes de cadastrar outro.",

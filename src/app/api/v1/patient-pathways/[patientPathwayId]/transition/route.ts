@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 import { getApiT } from "@/lib/api/i18n";
 import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -6,6 +8,7 @@ import {
   getActiveTenantIdOr400,
   requireSessionOr401,
 } from "@/lib/auth/guards";
+import { loadTenantMembershipClientScope } from "@/application/use-cases/shared/load-client-visibility-scope";
 import {
   postStageTransitionBodySchema,
   runTransitionPatientStage,
@@ -44,11 +47,18 @@ export async function POST(request: Request, ctx: RouteCtx) {
     );
   }
 
+  const scope = await loadTenantMembershipClientScope(
+    actorUserId,
+    tenantCtx.tenantId,
+    auth.session!.user.globalRole,
+  );
+
   const outcome = await runTransitionPatientStage({
     tenantId: tenantCtx.tenantId,
     actorUserId,
     patientPathwayId,
     input: parsed.data,
+    clientVisibility: { scope, viewerUserId: actorUserId },
   });
 
   if (!outcome.ok) {
@@ -70,11 +80,13 @@ export async function POST(request: Request, ctx: RouteCtx) {
       case "ALREADY_IN_TARGET_STAGE":
         return jsonError("VALIDATION_ERROR", apiT("errors.patientAlreadyInStage"), 422);
       case "LOCK_CONFLICT":
-        return jsonError("CONFLICT", "Transition already in progress.", 409);
-      case "INTERNAL_AFTER_TX":
-        return jsonError("INTERNAL", apiT("errors.dbUnavailable"), 500);
+      case "STAGE_CONFLICT":
+        return jsonError("CONFLICT", apiT("errors.stageTransitionConflict"), 409);
     }
   }
+
+  // Notificação/e-mail/WhatsApp pós-commit: roda após a resposta e a plataforma mantém a função viva.
+  after(outcome.afterCommit);
 
   return jsonSuccess(outcome.data);
 }

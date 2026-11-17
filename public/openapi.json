@@ -1828,7 +1828,8 @@
                 "required": ["toStageId"],
                 "properties": {
                   "toStageId": { "type": "string" },
-                  "note": { "type": "string", "maxLength": 2000 }
+                  "note": { "type": "string", "maxLength": 2000 },
+                  "correlationId": { "type": "string", "minLength": 8, "maxLength": 128, "description": "Chave de idempotência; replay com mesmo toStageId devolve 200 com o estado atual" }
                 }
               }
             }
@@ -1838,6 +1839,7 @@
           "200": { "description": "Etapa atualizada" },
           "401": { "description": "Não autenticado" },
           "404": { "description": "Instância ou etapa inválida" },
+          "409": { "description": "Conflito: transição concorrente, lock ocupado ou correlationId reutilizado com outro toStageId" },
           "422": { "description": "Validação ou já na etapa" }
         }
       }
