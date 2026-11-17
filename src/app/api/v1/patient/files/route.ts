@@ -84,6 +84,9 @@ export async function POST(request: Request) {
         { declaredMime: result.declaredMime },
       );
     }
+    if (result.code === "FILE_TOO_LARGE") {
+      return jsonError("PAYLOAD_TOO_LARGE", trans("errors.fileTooLarge"), 413);
+    }
     if (result.code === "CONFLICT") {
       return jsonError("CONFLICT", trans("errors.fileAlreadyRegistered"), 409);
     }

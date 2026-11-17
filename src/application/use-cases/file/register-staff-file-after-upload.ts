@@ -4,10 +4,13 @@ import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-
 import { fileAssetPrismaRepository } from "@/infrastructure/repositories/file-asset.repository";
 import {
   computeSha256HexForGcsObjectKey,
+  deleteObjectFromBucket,
+  getGcsObjectSize,
   keyMatchesFileRegisterIntent,
   publicUrlForKey,
   readFirstBytesFromGcsObject,
 } from "@/infrastructure/storage/gcs-storage";
+import { MAX_UPLOAD_SIZE_BYTES } from "@/lib/constants/file-upload";
 import { MAGIC_BYTES_READ_SIZE, validateMagicBytes } from "@/lib/utils/magic-bytes";
 import { postFileRegisterBodySchema } from "@/lib/validators/file";
 import type { z } from "zod";
@@ -31,7 +34,7 @@ export type RegisterStaffFileAfterUploadResult =
         createdAt: string;
       };
     }
-  | { ok: false; code: "INVALID_KEY" | "MIME_MISMATCH"; declaredMime?: string }
+  | { ok: false; code: "INVALID_KEY" | "MIME_MISMATCH" | "FILE_TOO_LARGE"; declaredMime?: string }
   | { ok: false; code: "CONFLICT" | "DATABASE_SCHEMA_PENDING" | "INTERNAL" };
 
 export async function runRegisterStaffFileAfterUpload(params: {
@@ -46,6 +49,15 @@ export async function runRegisterStaffFileAfterUpload(params: {
   }
 
   try {
+    // O tamanho declarado pelo cliente não é confiável: usa o do objeto no bucket (fail-open sem GCS).
+    const actualSizeBytes = await getGcsObjectSize(data.key);
+    if (actualSizeBytes !== null && actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
+      await deleteObjectFromBucket(data.key).catch((err) =>
+        console.error("[registerStaffFileAfterUpload] oversize object cleanup failed:", err),
+      );
+      return { ok: false, code: "FILE_TOO_LARGE" };
+    }
+
     try {
       const header = await Promise.race([
         readFirstBytesFromGcsObject(data.key, MAGIC_BYTES_READ_SIZE),
@@ -77,7 +89,7 @@ export async function runRegisterStaffFileAfterUpload(params: {
       r2Key: data.key,
       fileName: data.fileName,
       mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
+      sizeBytes: actualSizeBytes ?? data.sizeBytes,
       clientId: data.clientId ?? null,
       sha256Hash,
     });

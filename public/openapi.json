@@ -1061,6 +1061,7 @@
           },
           "403": { "description": "Chave inválida" },
           "409": { "description": "Já registrado" },
+          "413": { "description": "Objeto no bucket excede o tamanho máximo (removido)" },
           "503": {
             "description": "Schema do banco desatualizado (rodar `prisma migrate deploy` no ambiente de produção); código `DATABASE_SCHEMA_PENDING`"
           },
@@ -2405,6 +2406,7 @@
           "403": { "description": "Chave inválida para o tenant" },
           "404": { "description": "Paciente inexistente ou removido" },
           "409": { "description": "Arquivo já registrado" },
+          "413": { "description": "Objeto no bucket excede o tamanho máximo (removido)" },
           "422": { "description": "Validação" }
         }
       }

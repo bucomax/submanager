@@ -206,7 +206,23 @@ export function keyMatchesFileRegisterIntent(
   );
 }
 
-export async function presignPutObject(key: string, mimeType: string): Promise<string> {
+/** Header que o cliente DEVE enviar no PUT quando a URL foi assinada com `maxSizeBytes`. */
+export const GCS_CONTENT_LENGTH_RANGE_HEADER = "x-goog-content-length-range";
+
+export function contentLengthRangeHeaderValue(maxSizeBytes: number): string {
+  return `0,${maxSizeBytes}`;
+}
+
+/**
+ * URL assinada v4 para PUT.
+ * Com `maxSizeBytes`, assina `x-goog-content-length-range` (GCS recusa corpo maior). O cliente passa a precisar
+ * enviar o header no PUT e o CORS do bucket precisa liberá-lo em `responseHeader` — por isso é opt-in.
+ */
+export async function presignPutObject(
+  key: string,
+  mimeType: string,
+  options?: { maxSizeBytes?: number },
+): Promise<string> {
   const bucket = getStorage().bucket(bucketNameOrThrow());
   const file = bucket.file(key);
   const [url] = await file.getSignedUrl({
@@ -214,8 +230,32 @@ export async function presignPutObject(key: string, mimeType: string): Promise<s
     action: "write",
     expires: Date.now() + UPLOAD_URL_TTL_SECONDS * 1000,
     contentType: mimeType,
+    ...(options?.maxSizeBytes !== undefined
+      ? {
+          extensionHeaders: {
+            [GCS_CONTENT_LENGTH_RANGE_HEADER]: contentLengthRangeHeaderValue(options.maxSizeBytes),
+          },
+        }
+      : {}),
   });
   return url;
+}
+
+/**
+ * Tamanho real (bytes) do objeto no bucket, via metadata.
+ * Retorna `null` se GCS não estiver configurado, o objeto não existir ou a leitura falhar.
+ */
+export async function getGcsObjectSize(key: string): Promise<number | null> {
+  if (!isGcsConfigured()) return null;
+  try {
+    const bucket = getStorage().bucket(bucketNameOrThrow());
+    const [metadata] = await bucket.file(key).getMetadata();
+    const size = Number(metadata.size);
+    return Number.isFinite(size) ? size : null;
+  } catch (err) {
+    console.warn("[gcs] object metadata read failed:", err);
+    return null;
+  }
 }
 
 export async function presignGetObject(key: string, expiresInSeconds = 300): Promise<string> {

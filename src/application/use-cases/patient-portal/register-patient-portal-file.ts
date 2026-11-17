@@ -10,10 +10,13 @@ import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emit
 import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
 import {
   computeSha256HexForGcsObjectKey,
+  deleteObjectFromBucket,
+  getGcsObjectSize,
   keyMatchesFileRegisterIntent,
   publicUrlForKey,
   readFirstBytesFromGcsObject,
 } from "@/infrastructure/storage/gcs-storage";
+import { MAX_UPLOAD_SIZE_BYTES } from "@/lib/constants/file-upload";
 import { MAGIC_BYTES_READ_SIZE, validateMagicBytes } from "@/lib/utils/magic-bytes";
 import type { ApiT } from "@/lib/api/i18n";
 import { patientPortalFileRegisterBodySchema } from "@/lib/validators/patient-portal-files";
@@ -35,7 +38,7 @@ export type RegisterPatientPortalFileResult =
         createdAt: string;
       };
     }
-  | { ok: false; code: "INVALID_KEY" | "MIME_MISMATCH"; declaredMime?: string }
+  | { ok: false; code: "INVALID_KEY" | "MIME_MISMATCH" | "FILE_TOO_LARGE"; declaredMime?: string }
   | { ok: false; code: "CONFLICT" | "INTERNAL" };
 
 export async function runRegisterPatientPortalFile(params: {
@@ -49,6 +52,15 @@ export async function runRegisterPatientPortalFile(params: {
 
   if (!keyMatchesFileRegisterIntent(data.key, tenantId, clientId)) {
     return { ok: false, code: "INVALID_KEY" };
+  }
+
+  // O tamanho declarado pelo cliente não é confiável: usa o do objeto no bucket (fail-open sem GCS).
+  const actualSizeBytes = await getGcsObjectSize(data.key);
+  if (actualSizeBytes !== null && actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
+    await deleteObjectFromBucket(data.key).catch((err) =>
+      console.error("[registerPatientPortalFile] oversize object cleanup failed:", err),
+    );
+    return { ok: false, code: "FILE_TOO_LARGE" };
   }
 
   try {
@@ -74,7 +86,7 @@ export async function runRegisterPatientPortalFile(params: {
         r2Key: data.key,
         fileName: data.fileName,
         mimeType: data.mimeType,
-        sizeBytes: data.sizeBytes,
+        sizeBytes: actualSizeBytes ?? data.sizeBytes,
         sha256Hash,
       });
     } catch (error) {

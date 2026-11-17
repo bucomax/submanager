@@ -22,6 +22,7 @@
     "noPublishedVersionWithStages": "There is no published version with stages for this pathway. Publish a version first.",
     "patientAlreadyInJourney": "This patient is already on a journey.",
     "patientAlreadyInStage": "The patient is already on this stage.",
+    "fileTooLarge": "The file exceeds the maximum allowed size.",
     "stageTransitionConflict": "The patient stage changed or a transition is in progress. Refresh and try again.",
     "tenantNotFound": "Tenant not found.",
     "emailResendNotConfigured": "Email sending is not available in this environment yet.",
