@@ -1,4 +1,6 @@
-import { SignJWT, jwtVerify } from "jose";
+import { hkdfSync } from "crypto";
+
+import { SignJWT, decodeJwt, jwtVerify } from "jose";
 
 const ALG = "HS256";
 const ISSUER = "submanager";
@@ -7,10 +9,26 @@ const AUDIENCE = "submanager-app";
 /** Token lifetime: 15 minutes */
 const TOKEN_TTL_SECONDS = 15 * 60;
 
-function getSecret(): Uint8Array {
+function getBaseSecret(): string {
   const secret = process.env.APP_TOKEN_SECRET ?? process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("APP_TOKEN_SECRET not set");
-  return new TextEncoder().encode(secret);
+  return secret;
+}
+
+/**
+ * Chave por app: HKDF-SHA256(base secret, info = `submanager-app-token:${appId}`).
+ * O segredo base nunca sai do servidor; um vendor que conhece a chave do seu app
+ * não consegue forjar tokens de outros apps nem sessões NextAuth.
+ */
+export function deriveAppTokenKey(appId: string): Uint8Array {
+  const key = hkdfSync(
+    "sha256",
+    Buffer.from(getBaseSecret(), "utf8"),
+    Buffer.alloc(0),
+    Buffer.from(`submanager-app-token:${appId}`, "utf8"),
+    32,
+  );
+  return new Uint8Array(key);
 }
 
 // ---------------------------------------------------------------------------
@@ -51,7 +69,7 @@ export async function generateAppScopedToken(params: {
     .setAudience(AUDIENCE)
     .setIssuedAt(now)
     .setExpirationTime(now + TOKEN_TTL_SECONDS)
-    .sign(getSecret());
+    .sign(deriveAppTokenKey(params.appId));
 }
 
 // ---------------------------------------------------------------------------
@@ -62,7 +80,10 @@ export async function verifyAppScopedToken(
   token: string,
 ): Promise<AppScopedTokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getSecret(), {
+    const unverifiedAid = decodeJwt(token).aid;
+    if (typeof unverifiedAid !== "string" || !unverifiedAid) return null;
+
+    const { payload } = await jwtVerify(token, deriveAppTokenKey(unverifiedAid), {
       issuer: ISSUER,
       audience: AUDIENCE,
       algorithms: [ALG],
@@ -73,7 +94,7 @@ export async function verifyAppScopedToken(
     const aid = payload.aid as string | undefined;
     const slug = payload.slug as string | undefined;
 
-    if (!sub || !tid || !aid || !slug) return null;
+    if (!sub || !tid || !aid || !slug || aid !== unverifiedAid) return null;
 
     return { sub, tid, aid, slug };
   } catch {

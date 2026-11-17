@@ -1,9 +1,8 @@
 import bcrypt from "bcryptjs";
-import { AuditEventType } from "@prisma/client";
+import { AuditEventType, GlobalRole } from "@prisma/client";
 
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
 import { userPrismaRepository } from "@/infrastructure/repositories/user.repository";
-import { prisma } from "@/infrastructure/database/prisma";
 
 export type AdminSetInviteePasswordInput = {
   userId: string;
@@ -15,17 +14,20 @@ export type AdminSetInviteePasswordInput = {
 export type AdminSetInviteePasswordErrorCode =
   | "USER_NOT_FOUND"
   | "MEMBERSHIP_MISSING"
-  | "SELF_NOT_ALLOWED";
+  | "SELF_NOT_ALLOWED"
+  | "USER_NOT_ELIGIBLE";
 
 export type AdminSetInviteePasswordResult =
   | { ok: true; userId: string }
   | { ok: false; code: AdminSetInviteePasswordErrorCode };
 
 /**
- * Admin sets or overrides the password for any tenant member.
- * Works for both pending invitees (passwordHash === null) and members who already have a password.
- * Invalidates all remaining INVITE_SET_PASSWORD tokens after setting the password.
- * The actor cannot reset their own password via this route — use the authenticated change-password flow instead.
+ * Admin sets the first password of a PENDING invitee (passwordHash === null).
+ * Refuses (USER_NOT_ELIGIBLE) when the target is super_admin, already has a password, or belongs
+ * to any other tenant — the password is global, so overriding it would be an account takeover
+ * (even for super_admin actors: users with a password must use the reset e-mail flow).
+ * Invalidates all remaining INVITE_SET_PASSWORD tokens and revokes existing sessions.
+ * The actor cannot use this route on themselves.
  */
 export async function runAdminSetInviteePassword(
   input: AdminSetInviteePasswordInput,
@@ -36,25 +38,23 @@ export async function runAdminSetInviteePassword(
     return { ok: false, code: "SELF_NOT_ALLOWED" };
   }
 
-  const user = await prisma.user.findFirst({
-    where: { id: userId, deletedAt: null },
-    select: { id: true, passwordHash: true },
-  });
+  const user = await userPrismaRepository.findUserForAdminSetPassword(userId, tenantId);
 
   if (!user) {
     return { ok: false, code: "USER_NOT_FOUND" };
   }
 
-  const membership = await prisma.tenantMembership.findUnique({
-    where: { userId_tenantId: { userId, tenantId } },
-    select: { id: true },
-  });
-
-  if (!membership) {
+  if (!user.hasMembershipInTenant) {
     return { ok: false, code: "MEMBERSHIP_MISSING" };
   }
 
-  const wasPending = user.passwordHash === null;
+  if (
+    user.globalRole === GlobalRole.super_admin ||
+    user.passwordHash !== null ||
+    user.hasMembershipInOtherTenant
+  ) {
+    return { ok: false, code: "USER_NOT_ELIGIBLE" };
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
@@ -66,7 +66,7 @@ export async function runAdminSetInviteePassword(
     patientPathwayId: null,
     actorUserId,
     eventType: AuditEventType.STAFF_PASSWORD_RESET,
-    payload: { userId, by: "admin_manual", actorUserId, wasPending },
+    payload: { userId, by: "admin_manual", actorUserId, wasPending: true },
   });
 
   return { ok: true, userId };

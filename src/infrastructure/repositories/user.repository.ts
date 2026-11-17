@@ -1,5 +1,6 @@
 import { AuthTokenPurpose, GlobalRole, TenantRole } from "@prisma/client";
 
+import { hashAuthToken } from "@/lib/auth/auth-token-hash";
 import { formatTaxDocumentDisplay } from "@/lib/validators/tax-document";
 
 import type {
@@ -165,7 +166,7 @@ export class UserPrismaRepository implements IUserRepository {
       if (needsInviteEmail) {
         await tx.userAuthToken.create({
           data: {
-            token,
+            token: hashAuthToken(token),
             userId,
             tenantId,
             purpose: AuthTokenPurpose.INVITE_SET_PASSWORD,
@@ -202,7 +203,7 @@ export class UserPrismaRepository implements IUserRepository {
 
       await tx.userAuthToken.create({
         data: {
-          token,
+          token: hashAuthToken(token),
           userId: user.id,
           tenantId,
           purpose: AuthTokenPurpose.INVITE_SET_PASSWORD,
@@ -221,7 +222,7 @@ export class UserPrismaRepository implements IUserRepository {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
-        data: { passwordHash },
+        data: { passwordHash, sessionVersion: { increment: 1 } },
       }),
       prisma.userAuthToken.updateMany({
         where: {
@@ -244,7 +245,7 @@ export class UserPrismaRepository implements IUserRepository {
   async createPasswordResetToken(params: { token: string; userId: string; expiresAt: Date }) {
     await prisma.userAuthToken.create({
       data: {
-        token: params.token,
+        token: hashAuthToken(params.token),
         userId: params.userId,
         purpose: AuthTokenPurpose.PASSWORD_RESET,
         expiresAt: params.expiresAt,
@@ -254,7 +255,7 @@ export class UserPrismaRepository implements IUserRepository {
 
   async findUserAuthTokenWithUserForReset(token: string) {
     const row = await prisma.userAuthToken.findUnique({
-      where: { token },
+      where: { token: hashAuthToken(token) },
       include: { user: true },
     });
     if (!row) {
@@ -283,6 +284,7 @@ export class UserPrismaRepository implements IUserRepository {
         where: { id: userId },
         data: {
           passwordHash,
+          sessionVersion: { increment: 1 },
           ...(activeTenantId ? { activeTenantId } : {}),
         },
       }),
@@ -301,6 +303,27 @@ export class UserPrismaRepository implements IUserRepository {
     return m?.tenantId ?? null;
   }
 
+  /** Dados para decidir se o admin do tenant pode definir senha do usuário (convite pendente). */
+  async findUserForAdminSetPassword(userId: string, tenantId: string) {
+    const row = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: {
+        id: true,
+        globalRole: true,
+        passwordHash: true,
+        memberships: { select: { tenantId: true } },
+      },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      globalRole: row.globalRole,
+      passwordHash: row.passwordHash,
+      hasMembershipInTenant: row.memberships.some((m) => m.tenantId === tenantId),
+      hasMembershipInOtherTenant: row.memberships.some((m) => m.tenantId !== tenantId),
+    };
+  }
+
   async findActiveUserPasswordHash(userId: string) {
     return prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -311,7 +334,7 @@ export class UserPrismaRepository implements IUserRepository {
   async updateUserPasswordHash(userId: string, passwordHash: string) {
     await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: { passwordHash, sessionVersion: { increment: 1 } },
     });
   }
 
@@ -358,7 +381,7 @@ export class UserPrismaRepository implements IUserRepository {
 
   async findInviteSetPasswordPreview(token: string): Promise<InviteSetPasswordPreviewDto | null> {
     const row = await prisma.userAuthToken.findUnique({
-      where: { token },
+      where: { token: hashAuthToken(token) },
       include: {
         user: { select: { name: true, email: true, deletedAt: true } },
         tenant: { select: { name: true, taxId: true } },

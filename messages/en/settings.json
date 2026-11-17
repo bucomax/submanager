@@ -43,6 +43,7 @@
     "retry": "Try again"
   },
   "password": {
+    "successSignInAgain": "Password updated. For security, please sign in again.",
     "title": "Password",
     "description": "Change the password used to sign in with email and password.",
     "current": "Current password",

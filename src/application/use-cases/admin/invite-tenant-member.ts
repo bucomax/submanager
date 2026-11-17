@@ -1,7 +1,9 @@
+import { AuditEventType } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 
 import type { TenantMembershipRole } from "@/application/ports/user-repository.port";
+import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
 import { getInviteSetPasswordHtml } from "@/infrastructure/email/email-templates";
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
 import { resolveTenantSender } from "@/infrastructure/email/resolve-tenant-sender";
@@ -72,10 +74,70 @@ async function sendInviteSetPasswordEmail(
   });
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Usuário existente (com senha) foi adicionado a uma clínica: avisa por e-mail e registra auditoria.
+ * Best-effort — nunca bloqueia nem lança.
+ */
+async function notifyExistingUserAddedToTenant(params: {
+  userId: string;
+  emailNorm: string;
+  name: string | null | undefined;
+  role: TenantMembershipRole;
+  tenant: { id: string; name: string };
+  actorUserId?: string;
+}): Promise<void> {
+  const { userId, emailNorm, name, role, tenant, actorUserId } = params;
+  try {
+    await auditEventPrismaRepository.recordCanonical({
+      tenantId: tenant.id,
+      clientId: null,
+      patientPathwayId: null,
+      actorUserId: actorUserId ?? null,
+      eventType: AuditEventType.TENANT_MEMBER_ADDED,
+      payload: { userId, role, actorUserId: actorUserId ?? null },
+    });
+  } catch (err) {
+    console.warn("[invite] failed to record audit for existing user added to tenant:", userId, err);
+  }
+
+  try {
+    if (!(await canSendEmailForTenant(tenant.id))) return;
+    const clinic = escapeHtml(tenant.name.trim());
+    const greeting = escapeHtml(name?.trim() || "Olá");
+    const { from, useSmtp } = await resolveTenantSender(tenant.id);
+    const { error } = await sendEmail({
+      to: emailNorm,
+      from,
+      subject: `SubManager — Você foi adicionado a ${tenant.name.trim()}`,
+      html: `<p>${greeting},</p><p>Sua conta SubManager foi adicionada à clínica <strong>${clinic}</strong>. Sua senha não foi alterada.</p><p>Se você não esperava este acesso, entre em contato com a clínica ou com o suporte.</p>`,
+      text: `Sua conta SubManager foi adicionada à clínica ${tenant.name.trim()}. Sua senha não foi alterada. Se você não esperava este acesso, entre em contato com a clínica ou com o suporte.`,
+      tenantId: tenant.id,
+      useSmtp,
+    });
+    if (error) {
+      console.warn("[invite] failed to send added-to-tenant notice:", userId, error.message);
+    }
+  } catch (err) {
+    console.warn("[invite] failed to send added-to-tenant notice:", userId, err);
+  }
+}
+
 /**
  * Convida usuário ao tenant: cria conta sem senha e envia link para definir senha (Resend).
+ * Usuário existente com senha é adicionado direto e recebe aviso por e-mail (best-effort).
  */
-export async function runInviteTenantMember(input: InviteTenantMemberInput): Promise<
+export async function runInviteTenantMember(
+  input: InviteTenantMemberInput,
+  options: { actorUserId?: string } = {},
+): Promise<
   { ok: true; data: InviteTenantMemberSuccess } | { ok: false; code: InviteTenantMemberErrorCode }
 > {
   const { email, name, tenantId, role } = input;
@@ -117,6 +179,14 @@ export async function runInviteTenantMember(input: InviteTenantMemberInput): Pro
     });
 
     if (!needsInviteEmail) {
+      await notifyExistingUserAddedToTenant({
+        userId: existing.id,
+        emailNorm,
+        name: trimmedName,
+        role: rolePort,
+        tenant: tenantForEmail,
+        actorUserId: options.actorUserId,
+      });
       return {
         ok: true,
         data: {

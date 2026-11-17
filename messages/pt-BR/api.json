@@ -1,5 +1,7 @@
 {
   "errors": {
+    "appNotFound": "App não encontrado.",
+    "cannotSetPasswordForActiveUser": "Só é possível definir a senha de convites pendentes. Para usuários com senha ativa, use a redefinição por e-mail.",
     "internalError": "Erro interno ao processar o pedido. Tente de novo em instantes.",
     "invalidJson": "Corpo JSON inválido.",
     "pathwayNotFound": "Jornada não encontrada.",

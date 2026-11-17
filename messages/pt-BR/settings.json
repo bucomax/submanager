@@ -43,6 +43,7 @@
     "retry": "Tentar de novo"
   },
   "password": {
+    "successSignInAgain": "Senha atualizada. Por segurança, entre novamente.",
     "title": "Senha",
     "description": "Altere a senha usada para entrar com e-mail e senha.",
     "current": "Senha atual",

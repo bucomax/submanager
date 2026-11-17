@@ -45,6 +45,7 @@ export function auditEventTypeToCategory(type: string): ClientTimelineEventCateg
     case "PATIENT_PORTAL_LINK_GENERATED":
     case "PATIENT_PORTAL_LOGIN_FAILED":
     case "SUPER_ADMIN_TENANT_ENTERED":
+    case "TENANT_MEMBER_ADDED":
       return "security";
 
     case "AUDIT_EXPORT_GENERATED":

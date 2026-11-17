@@ -941,7 +941,9 @@ Quando a plataforma for escolhida, será necessário:
 - [x] App Viewer com external_link (botão "Abrir app" em nova aba)
 - [x] App Viewer com internal (registry de componentes — WhatsApp mapeado)
 - [x] Token scoped para iframe — JWT 15min via `POST /api/v1/tenant/apps/:appId/token` (`jose` HS256)
-- [x] Lib `app-scoped-token.ts` com `generateAppScopedToken` / `verifyAppScopedToken`
+  - Chave **por app**: `HKDF-SHA256(APP_TOKEN_SECRET, salt vazio, info "submanager-app-token:<appId>", 32 bytes)`. O segredo base nunca sai do servidor; um fornecedor não forja token de outro app. Fallback de base: `NEXTAUTH_SECRET` (definir `APP_TOKEN_SECRET` separado é o recomendado).
+  - Fornecedor obtém a chave do seu app em `GET /api/v1/admin/apps/:appId/token-secret` (super_admin, `secretHex`) e verifica HS256 conferindo `aid` == appId.
+- [x] Lib `app-scoped-token.ts` com `generateAppScopedToken` / `verifyAppScopedToken` / `deriveAppTokenKey`
 - [x] CSP dinâmico via middleware (`ALLOWED_IFRAME_ORIGINS` env var + security headers)
 - [x] Error boundary + timeout (15s) no iframe com retry
 - [x] postMessage protocol completo:

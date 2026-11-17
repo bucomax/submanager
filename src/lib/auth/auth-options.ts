@@ -68,9 +68,18 @@ export const authOptions: NextAuthOptions = {
       if (uid) {
         const row = await prisma.user.findFirst({
           where: { id: uid, deletedAt: null },
-          select: { globalRole: true },
+          select: { globalRole: true, sessionVersion: true },
         });
         if (!row) {
+          token.invalid = true;
+          return token;
+        }
+        if (user?.id || token.sv === undefined) {
+          // Login novo (ou token legado sem `sv`, que equivale à versão 0): fixa a versão atual.
+          token.sv = user?.id ? row.sessionVersion : 0;
+        }
+        // Troca/reset de senha incrementa User.sessionVersion e derruba JWTs emitidos antes.
+        if (token.sv !== row.sessionVersion) {
           token.invalid = true;
           return token;
         }

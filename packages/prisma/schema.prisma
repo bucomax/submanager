@@ -104,6 +104,7 @@ enum AuditEventType {
   TENANT_EMAIL_DOMAIN_CONFIGURED
   TENANT_EMAIL_DOMAIN_REMOVED
   SUPER_ADMIN_TENANT_ENTERED
+  TENANT_MEMBER_ADDED
 }
 
 /** Validação na ficha quando o paciente envia arquivo pelo portal. */

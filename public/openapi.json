@@ -374,8 +374,8 @@
     },
     "/api/v1/admin/invites/set-password": {
       "post": {
-        "summary": "Define ou redefine a senha de um membro do tenant",
-        "description": "Permite ao admin (super_admin ou tenant_admin) definir a senha de um membro — tanto para convites pendentes (sem senha) quanto para redefinição emergencial de membros com senha existente. O actor não pode alterar a própria senha por esta rota. Invalida todos os tokens `INVITE_SET_PASSWORD` ativos após o set/reset. Audit event `STAFF_PASSWORD_RESET` inclui discriminador `wasPending`.",
+        "summary": "Define a senha de um convite pendente",
+        "description": "Permite ao admin (super_admin ou tenant_admin) definir a senha de um membro com convite pendente (sem senha). Recusa (403 USER_NOT_ELIGIBLE) alvo super_admin, alvo que já tem senha ou que pertence a outro tenant — nesses casos use a redefinição por e-mail. Incrementa sessionVersion do alvo. O actor não pode alterar a própria senha por esta rota. Invalida todos os tokens `INVITE_SET_PASSWORD` ativos após o set/reset. Audit event `STAFF_PASSWORD_RESET` inclui discriminador `wasPending`.",
         "tags": ["Admin"],
         "security": [{ "cookieAuth": [] }],
         "requestBody": {
@@ -2508,6 +2508,23 @@
           "201": { "description": "App criado", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "app": { "$ref": "#/components/schemas/AppDto" } } } } } } } },
           "403": { "description": "Apenas super_admin" },
           "422": { "description": "Erro de validação" }
+        }
+      }
+    },
+    "/api/v1/admin/apps/{appId}/token-secret": {
+      "get": {
+        "summary": "Chave HS256 do token de iframe deste app (admin)",
+        "description": "Chave derivada por HKDF do segredo base, exclusiva do app. O fornecedor a usa para verificar o token do iframe; o segredo base nunca é exposto. Apenas super_admin. Resposta com Cache-Control: no-store.",
+        "tags": ["Admin"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "appId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "{ appId, algorithm: \"HS256\", secretHex }" },
+          "401": { "description": "Não autenticado" },
+          "403": { "description": "Apenas super_admin" },
+          "404": { "description": "App não encontrado" }
         }
       }
     },

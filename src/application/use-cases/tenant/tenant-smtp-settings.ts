@@ -1,5 +1,5 @@
 import { decryptTenantSecret, encryptTenantSecret } from "@/infrastructure/crypto/tenant-secret";
-import { sendEmailViaSmtp } from "@/infrastructure/email/smtp-send.client";
+import { SMTP_GENERIC_ERROR_MESSAGE, sendEmailViaSmtp } from "@/infrastructure/email/smtp-send.client";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
 import type { PatchTenantSmtpBody } from "@/lib/validators/tenant-smtp";
 import type { TenantSmtpDto } from "@/types/api/tenant-smtp-v1";
@@ -186,7 +186,7 @@ export async function testTenantSmtp(
     },
   );
   if (res.error) {
-    return { ok: false, code: "SEND_FAILED", message: res.error.message };
+    return { ok: false, code: "SEND_FAILED", message: SMTP_GENERIC_ERROR_MESSAGE };
   }
   return { ok: true, message: "E-mail de teste enviado." };
 }

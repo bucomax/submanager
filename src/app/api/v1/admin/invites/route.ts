@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const perm = await assertTenantInvitePermission(auth.session!, tenantId, request, apiT);
   if (perm) return perm;
 
-  const outcome = await runInviteTenantMember({ email, name, tenantId, role });
+  const outcome = await runInviteTenantMember({ email, name, tenantId, role }, { actorUserId: auth.session!.user.id });
 
   if (!outcome.ok) {
     switch (outcome.code) {

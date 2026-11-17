@@ -9,8 +9,8 @@ import { runAdminSetInviteePassword } from "@/application/use-cases/admin/set-in
 export const dynamic = "force-dynamic";
 
 /**
- * Define ou redefine a senha de qualquer membro do tenant.
- * Funciona tanto para convites pendentes (sem senha) quanto para overrides emergenciais.
+ * Define a primeira senha de um convidado pendente (sem senha, sem membership em outro tenant, não super_admin).
+ * Usuários que já têm senha devem usar o fluxo de e-mail de redefinição (403 USER_NOT_ELIGIBLE).
  * Requer: super_admin ou tenant_admin do tenant informado.
  * O actor não pode redefinir a própria senha por esta rota.
  */
@@ -57,6 +57,8 @@ export async function POST(request: Request) {
         return jsonError("NOT_FOUND", apiT("errors.membershipNotFound"), 404);
       case "SELF_NOT_ALLOWED":
         return jsonError("FORBIDDEN", apiT("errors.cannotResetOwnPassword"), 403);
+      case "USER_NOT_ELIGIBLE":
+        return jsonError("FORBIDDEN", apiT("errors.cannotSetPasswordForActiveUser"), 403);
     }
   }
 

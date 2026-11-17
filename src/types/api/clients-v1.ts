@@ -268,7 +268,8 @@ export type ClientTimelineAuditEventType =
   | "WHATSAPP_PATIENT_CONFIRMED"
   | "TENANT_EMAIL_DOMAIN_CONFIGURED"
   | "TENANT_EMAIL_DOMAIN_REMOVED"
-  | "SUPER_ADMIN_TENANT_ENTERED";
+  | "SUPER_ADMIN_TENANT_ENTERED"
+  | "TENANT_MEMBER_ADDED";
 
 /** Transição legada na timeline (inclui instância da jornada). */
 export type ClientTimelineLegacyTransitionDto = ClientDetailTransitionDto & {

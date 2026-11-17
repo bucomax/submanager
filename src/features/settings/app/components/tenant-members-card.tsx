@@ -224,14 +224,15 @@ export function TenantMembersCard() {
                       </SelectContent>
                     </Select>
                     <div className="flex items-center justify-end gap-1">
-                      {!isSelf ? (
+                      {/* Definir senha manualmente só vale para convite pendente (sem senha); demais usam "esqueci a senha". */}
+                      {!isSelf && !member.hasPassword ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           disabled={busy}
                           onClick={() => openSetPasswordDialog(member.userId)}
-                          aria-label={member.hasPassword ? t("resetPassword") : t("setPassword")}
+                          aria-label={t("setPassword")}
                         >
                           <KeyRound className="size-4" />
                         </Button>

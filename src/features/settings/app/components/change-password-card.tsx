@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyRound, Loader2 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useForm, useWatch } from "react-hook-form";
 
@@ -45,8 +46,10 @@ export function ChangePasswordCard() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
-      toast.success(t("success"));
+      // Trocar a senha revoga todas as sessões (sessionVersion), inclusive esta: novo login.
+      toast.success(t("successSignInAgain"));
       form.reset();
+      await signOut({ callbackUrl: "/login" });
     } catch {
       /* erro: toast global no apiClient */
     }

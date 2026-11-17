@@ -21,5 +21,7 @@ declare module "next-auth/jwt" {
     globalRole?: string;
     /** Conta desativada (soft delete) — sessão deve ser tratada como inválida. */
     invalid?: boolean;
+    /** `User.sessionVersion` no momento do login — divergência invalida a sessão. */
+    sv?: number;
   }
 }
