@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import {
   buildUploadObjectKey,
   isGcsConfigured,
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
 
   const parsed = patientPortalFilePresignBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const { tenantId, clientId } = portalCtx.data.portal;

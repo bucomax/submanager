@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import {
   isUniqueConstraintError,
   quickPhrasePrismaRepository,
@@ -59,7 +60,7 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const parsed = upsertQuickPhraseBodySchema.partial().safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   try {

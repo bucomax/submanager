@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonIfPrismaSchemaMismatch } from "@/lib/api/prisma-schema-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
       fresh: url.searchParams.get("fresh") ?? undefined,
     });
     if (!parsed.success) {
-      return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+      return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
     }
 
     const payload = await runListClientsPage({

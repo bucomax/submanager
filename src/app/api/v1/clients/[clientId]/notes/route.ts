@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { buildPagination } from "@/lib/api/pagination";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -37,7 +38,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     limit: url.searchParams.get("limit") ?? undefined,
   });
   if (!parsedQuery.success) {
-    return jsonError("VALIDATION_ERROR", parsedQuery.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsedQuery.error), 422);
   }
 
   const { page, limit } = parsedQuery.data;
@@ -93,7 +94,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
 
   const parsed = postClientNoteBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const note = await createClientNote({

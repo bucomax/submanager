@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { runReviewClientPortalFile } from "@/application/use-cases/client/review-client-portal-file";
@@ -45,7 +46,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
 
   const parsed = patchClientFileReviewBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const result = await runReviewClientPortalFile({

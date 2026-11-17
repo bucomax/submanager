@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { requireActivePatientPortalClient } from "@/lib/auth/patient-portal-request";
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
     limit: url.searchParams.get("limit") ?? undefined,
   });
   if (!parsedQ.success) {
-    return jsonError("VALIDATION_ERROR", parsedQ.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsedQ.error), 422);
   }
   const { page, limit } = parsedQ.data;
 

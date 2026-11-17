@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
@@ -29,7 +30,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     categories: url.searchParams.get("categories") ?? undefined,
   });
   if (!parsedQ.success) {
-    return jsonError("VALIDATION_ERROR", parsedQ.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsedQ.error), 422);
   }
 
   const { clientId } = await ctx.params;

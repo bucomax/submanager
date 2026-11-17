@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { buildPagination } from "@/lib/api/pagination";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     limit: url.searchParams.get("limit") ?? undefined,
   });
   if (!parsedQ.success) {
-    return jsonError("VALIDATION_ERROR", parsedQ.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsedQ.error), 422);
   }
   const { page, limit } = parsedQ.data;
   const { tenantId, clientId } = portalCtx.data.portal;
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
   const parsed = patientPortalFileRegisterBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const { tenantId, clientId } = portalCtx.data.portal;

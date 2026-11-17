@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -93,7 +94,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!parsed.success) {
     return jsonError(
       "VALIDATION_ERROR",
-      parsed.error.flatten().formErrors.join("; "),
+      formatZodIssues(parsed.error),
       422,
     );
   }

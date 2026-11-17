@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import {
   getPathwayVersionForTenant,
   updateDraftPathwayVersionForTenant,
@@ -78,7 +79,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
 
   const parsed = patchPathwayVersionBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const row = await updateDraftPathwayVersionForTenant({

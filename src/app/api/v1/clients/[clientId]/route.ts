@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getApiT } from "@/lib/api/i18n";
 import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -33,7 +34,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     limit: url.searchParams.get("limit") ?? undefined,
   });
   if (!parsedQ.success) {
-    return jsonError("VALIDATION_ERROR", parsedQ.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsedQ.error), 422);
   }
   const { page, limit } = parsedQ.data;
 

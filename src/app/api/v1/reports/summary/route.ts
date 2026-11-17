@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { generatePathwaySummary } from "@/application/use-cases/report/generate-pathway-summary";
 import { loadTenantMembershipClientScope } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { getApiT } from "@/lib/api/i18n";
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     limit: url.searchParams.get("limit") ?? undefined,
   });
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const { periodDays, pathwayId, opmeSupplierId, page, limit } = parsed.data;

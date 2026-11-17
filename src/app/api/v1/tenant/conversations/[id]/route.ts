@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -101,7 +102,7 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const parsed = patchConversationStatusBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const updated = await conversationPrismaRepository.updateStage(tenantCtx.tenantId!, id, parsed.data.status);

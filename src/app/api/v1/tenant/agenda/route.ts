@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { validateAgendaEventRefs } from "@/application/use-cases/agenda/validate-agenda-event-references";
 import { sendConversationMessage } from "@/application/use-cases/conversations/send-conversation-message";
 import { agendaEventPrismaRepository } from "@/infrastructure/repositories/agenda-event.repository";
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 
   const parsed = createAgendaEventBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const startsAt = new Date(parsed.data.startsAt);

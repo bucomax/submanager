@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { createApiMeta } from "@/lib/api/envelope";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError } from "@/lib/api-response";
@@ -38,7 +39,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
 
   const parsed = postPatientPortalPasswordVerifyBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const identifier = parsePortalLoginInput(parsed.data.login);

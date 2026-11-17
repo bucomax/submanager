@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { leadNotePrismaRepository } from "@/infrastructure/repositories/lead-note.repository";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -58,7 +59,7 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
 
   const parsed = upsertLeadNoteBodySchema.partial().safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const row = await leadNotePrismaRepository.update(tenantCtx.tenantId!, id, parsed.data);

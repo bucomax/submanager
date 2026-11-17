@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { resolvePublishedPathwayVersion } from "@/infrastructure/database/pathway-published";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -34,7 +35,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     opmeSupplierId: url.searchParams.get("opmeSupplierId") ?? undefined,
   });
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
   const { search: searchRaw, limit, page, opmeSupplierId } = parsed.data;
   const search = searchRaw ?? "";

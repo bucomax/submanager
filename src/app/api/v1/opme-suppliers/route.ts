@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { getCachedOpmeSuppliersPage } from "@/infrastructure/cache/cached-opme-suppliers-list";
 import { runCreateOpmeSupplier } from "@/application/use-cases/opme/create-opme-supplier";
 import { buildPagination } from "@/lib/api/pagination";
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
     includeInactive: url.searchParams.get("includeInactive") ?? undefined,
   });
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const { limit, page, q, includeInactive } = parsed.data;
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
 
   const parsed = postOpmeSupplierBodySchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
   const result = await runCreateOpmeSupplier({

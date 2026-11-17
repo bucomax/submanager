@@ -1,3 +1,4 @@
+import { formatZodIssues } from "@/lib/api/zod-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { superAdminOr403, requireSessionOr401 } from "@/lib/auth/guards";
 import { getApiT } from "@/lib/api/i18n";
@@ -98,7 +99,7 @@ export async function POST(request: Request, context: RouteContext) {
   // Presign
   const presignParsed = presignBodySchema.safeParse(body);
   if (!presignParsed.success) {
-    return jsonError("VALIDATION_ERROR", presignParsed.error.flatten().formErrors.join("; "), 422);
+    return jsonError("VALIDATION_ERROR", formatZodIssues(presignParsed.error), 422);
   }
 
   const ext = presignParsed.data.fileName.split(".").pop() ?? "png";
