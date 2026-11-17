@@ -15,7 +15,8 @@ export type PatientPortalLinkTokenMagicLinkRow = {
 export interface IPatientPortalLinkTokenRepository {
   findByTokenForMagicLinkExchange(token: string): Promise<PatientPortalLinkTokenMagicLinkRow | null>;
 
-  markSingleUseConsumed(id: string, usedAt: Date): Promise<void>;
+  /** Marca uso de forma atômica; false se outro request já consumiu o token. */
+  consumeSingleUseIfUnused(id: string, usedAt: Date): Promise<boolean>;
 
   createPortalLinkToken(params: {
     clientId: string;

@@ -10,6 +10,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const { rateLimit } = await import("@/lib/api/rate-limit");
+  const limited = await rateLimit("patientPortalPublicIp");
+  if (limited) return limited;
+
   const url = new URL(request.url);
   const token = (url.searchParams.get("token") ?? "").trim();
 

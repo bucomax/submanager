@@ -2041,6 +2041,7 @@
           "200": { "description": "Sessão criada (Set-Cookie)" },
           "401": { "description": "Token inválido, expirado ou já usado" },
           "404": { "description": "Clínica não encontrada ou inativa" },
+          "429": { "description": "Limite de solicitações (header Retry-After)" },
           "503": { "description": "Segredo de assinatura ausente" }
         }
       }
@@ -2114,6 +2115,7 @@
         "responses": {
           "200": { "description": "Sessão criada (Set-Cookie)" },
           "401": { "description": "Código inválido ou expirado" },
+          "429": { "description": "Limite de solicitações (header Retry-After)" },
           "503": { "description": "Segredo ausente" }
         }
       }
@@ -2151,7 +2153,8 @@
           "200": {
             "description": "`{ hasPassword: boolean }` — se clínica inexistente, retorna `hasPassword: false`"
           },
-          "422": { "description": "Formato de login inválido" }
+          "422": { "description": "Formato de login inválido" },
+          "429": { "description": "Limite de solicitações (header Retry-After)" }
         }
       }
     },

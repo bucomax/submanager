@@ -32,7 +32,8 @@ export async function runExchangePatientPortalMagicLink(params: {
   }
 
   if (row.singleUse) {
-    await patientPortalLinkTokenPrismaRepository.markSingleUseConsumed(row.id, now);
+    const consumed = await patientPortalLinkTokenPrismaRepository.consumeSingleUseIfUnused(row.id, now);
+    if (!consumed) return { ok: false };
   }
 
   const exp = Math.floor(Date.now() / 1000) + PATIENT_PORTAL_SESSION_MAX_AGE_SEC;

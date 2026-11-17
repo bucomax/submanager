@@ -1,7 +1,7 @@
 import { createApiMeta } from "@/lib/api/envelope";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError } from "@/lib/api-response";
-import { rateLimit } from "@/lib/api/rate-limit";
+import { hashRateLimitKey, rateLimit } from "@/lib/api/rate-limit";
 import { appendPatientPortalSessionCookie } from "@/lib/auth/patient-portal-session";
 import { AuditEventType } from "@prisma/client";
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
@@ -18,6 +18,9 @@ import type { RouteCtx } from "@/types/api/route-context";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request, ctx: RouteCtx) {
+  const ipLimited = await rateLimit("patientPortalPublicIp");
+  if (ipLimited) return ipLimited;
+
   const apiT = await getApiT(request);
   const { tenantSlug: rawSlug } = await ctx.params;
   const tenantSlug = rawSlug.trim().toLowerCase();
@@ -45,7 +48,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
 
   const limited = await rateLimit(
     "patientPortalPassword",
-    `pp-login-pw:${tenant.id}:${portalLoginRateKey(identifier)}`,
+    `pp-login-pw:${tenant.id}:${hashRateLimitKey(portalLoginRateKey(identifier))}`,
   );
   if (limited) return limited;
 
@@ -73,7 +76,15 @@ export async function POST(request: Request, ctx: RouteCtx) {
           eventType: AuditEventType.PATIENT_PORTAL_LOGIN_FAILED,
           payload: auditPayload,
         })
-        .catch(() => {});
+        .catch((err: unknown) => {
+          // Sem PII: só ids internos e causa.
+          console.error("[patient-portal] failed-login audit not recorded", {
+            tenantId: tenant.id,
+            clientId: result.client?.id,
+            reason: auditPayload.reason,
+            error: err instanceof Error ? err.message : "unknown",
+          });
+        });
     }
     return jsonError("UNAUTHORIZED", apiT("errors.patientPortalPasswordInvalid"), 401);
   }

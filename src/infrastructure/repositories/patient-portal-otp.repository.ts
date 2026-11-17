@@ -37,18 +37,22 @@ export class PatientPortalOtpPrismaRepository implements IPatientPortalOtpReposi
     });
   }
 
-  async incrementChallengeAttempts(id: string) {
-    await prisma.patientPortalOtpChallenge.update({
-      where: { id },
+  /** Reserva atomicamente uma tentativa (antes de comparar). false = limite atingido/consumido. */
+  async reserveChallengeAttempt(id: string, maxAttempts: number): Promise<boolean> {
+    const { count } = await prisma.patientPortalOtpChallenge.updateMany({
+      where: { id, consumedAt: null, attempts: { lt: maxAttempts } },
       data: { attempts: { increment: 1 } },
     });
+    return count === 1;
   }
 
-  async markChallengeConsumed(id: string) {
-    await prisma.patientPortalOtpChallenge.update({
-      where: { id },
+  /** Consome atomicamente; false se já consumido por outra requisição. */
+  async consumeChallengeIfPending(id: string): Promise<boolean> {
+    const { count } = await prisma.patientPortalOtpChallenge.updateMany({
+      where: { id, consumedAt: null },
       data: { consumedAt: new Date() },
     });
+    return count === 1;
   }
 }
 

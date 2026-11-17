@@ -13,7 +13,9 @@ export interface IPatientPortalOtpRepository {
     tenantId: string,
   ): Promise<{ id: string; codeHash: string; attempts: number } | null>;
 
-  incrementChallengeAttempts(id: string): Promise<void>;
+  /** Reserva atomicamente uma tentativa; false = limite atingido ou desafio consumido. */
+  reserveChallengeAttempt(id: string, maxAttempts: number): Promise<boolean>;
 
-  markChallengeConsumed(id: string): Promise<void>;
+  /** Consome atomicamente; false se outra requisição já consumiu. */
+  consumeChallengeIfPending(id: string): Promise<boolean>;
 }

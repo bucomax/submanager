@@ -28,17 +28,24 @@ export async function runVerifyPatientPortalOtp(params: {
     return { ok: false, code: "invalid" };
   }
 
-  if (challenge.attempts >= PATIENT_PORTAL_OTP_MAX_ATTEMPTS) {
+  // Reserva a tentativa ANTES de comparar: palpites paralelos não escapam do limite.
+  const reserved = await patientPortalOtpPrismaRepository.reserveChallengeAttempt(
+    challenge.id,
+    PATIENT_PORTAL_OTP_MAX_ATTEMPTS,
+  );
+  if (!reserved) {
     return { ok: false, code: "invalid" };
   }
 
   const expectedHash = hashPatientPortalOtpCode(code);
   if (!timingSafeEqualStrings(expectedHash, challenge.codeHash)) {
-    await patientPortalOtpPrismaRepository.incrementChallengeAttempts(challenge.id);
     return { ok: false, code: "invalid" };
   }
 
-  await patientPortalOtpPrismaRepository.markChallengeConsumed(challenge.id);
+  const consumed = await patientPortalOtpPrismaRepository.consumeChallengeIfPending(challenge.id);
+  if (!consumed) {
+    return { ok: false, code: "invalid" };
+  }
 
   const exp = Math.floor(Date.now() / 1000) + PATIENT_PORTAL_SESSION_MAX_AGE_SEC;
   const sessionPayload: PatientPortalSessionPayload = {

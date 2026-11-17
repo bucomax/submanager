@@ -30,11 +30,13 @@ export class PatientPortalLinkTokenPrismaRepository implements IPatientPortalLin
     };
   }
 
-  async markSingleUseConsumed(id: string, usedAt: Date) {
-    await prisma.patientPortalLinkToken.update({
-      where: { id },
+  /** Marca uso de forma atômica; false se outro request já consumiu o token. */
+  async consumeSingleUseIfUnused(id: string, usedAt: Date): Promise<boolean> {
+    const { count } = await prisma.patientPortalLinkToken.updateMany({
+      where: { id, usedAt: null },
       data: { usedAt },
     });
+    return count === 1;
   }
 
   async createPortalLinkToken(params: {
