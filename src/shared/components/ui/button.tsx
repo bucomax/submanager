@@ -61,7 +61,8 @@ function Button({
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   // Base UI merge coloca `getButtonProps` por último e força `type: "button"`, quebrando `<form>` + `type="submit"`.
-  if (type === "submit" || type === "reset") {
+  // Com `render`, o Base UI precisa controlar o elemento: não cair no `<button>` nativo (descartaria `render`).
+  if ((type === "submit" || type === "reset") && props.render === undefined) {
     return (
       <button
         type={type}

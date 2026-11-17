@@ -250,8 +250,8 @@ export function ClientDetailView({ clientId }: ClientDetailViewProps) {
           toast.success(t("portalLink.openedTabClipboardManual"));
         }
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("portalLink.error"));
+    } catch {
+      /* erro: toast global no apiClient */
     } finally {
       setPortalLinkBusy(null);
     }

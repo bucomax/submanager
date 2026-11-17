@@ -2,6 +2,7 @@
 
 import { useCreatePathway } from "@/features/pathways/app/hooks/use-create-pathway";
 import { usePathways } from "@/features/pathways/app/hooks/use-pathways";
+import { useCanManagePathways } from "@/shared/hooks/use-can-manage-pathways";
 import { Link, useRouter } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
 import {
@@ -32,6 +33,7 @@ export function PathwaysList() {
   const t = useTranslations("pathways.list");
   const router = useRouter();
   const { pathways, loading, error, reload } = usePathways();
+  const { canManage } = useCanManagePathways();
   const { createPathway } = useCreatePathway();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
@@ -100,14 +102,16 @@ export function PathwaysList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button type="button" size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4" />
-          {t("newPathway")}
-        </Button>
-      </div>
+      {canManage ? (
+        <div className="flex justify-end">
+          <Button type="button" size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="size-4" />
+            {t("newPathway")}
+          </Button>
+        </div>
+      ) : null}
 
-      <Dialog open={dialogOpen} onOpenChange={onDialogOpenChange}>
+      <Dialog open={dialogOpen && canManage} onOpenChange={onDialogOpenChange}>
         <StandardDialogContent
           title={t("newPathwayDialogTitle")}
           description={

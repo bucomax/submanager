@@ -27,6 +27,8 @@
     "back": "Voltar"
   },
   "editor": {
+    "noVersionToView": "Este fluxo ainda não tem versão para visualizar.",
+    "readOnlyHint": "Você tem acesso somente leitura a este fluxo. Apenas administradores da clínica podem editá-lo e publicá-lo.",
     "loadError": "Não foi possível carregar o editor.",
     "save": "Salvar rascunho",
     "saveSuccess": "Rascunho salvo.",

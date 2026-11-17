@@ -39,12 +39,15 @@ import { Card, CardContent, CardFooter } from "@/shared/components/ui/card";
 import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useCanManagePathways } from "@/shared/hooks/use-can-manage-pathways";
 
 const EMPTY_NODES: Node[] = [];
 
 export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEditorProps) {
   const t = useTranslations("pathways.columnEditor");
   const tEditor = useTranslations("pathways.editor");
+  const { canManage } = useCanManagePathways();
+  const readOnly = !canManage;
   const {
     loading,
     error,
@@ -58,7 +61,7 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
     publishSavedDraft,
     hasPublishableGraphChanges,
     reload,
-  } = usePathwayDraftVersion(pathwayId);
+  } = usePathwayDraftVersion(pathwayId, canManage);
   /**
    * Rascunho local das etapas. O grafo do servidor é a semente: enquanto `graphJson`
    * mantiver a mesma identidade valem as edições locais; quando ele é recarregado
@@ -140,7 +143,7 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
     publishPreviewLoading,
     publishPreviewError,
     refreshPublishPreview,
-  } = usePathwayPublishPreview(pathwayId, versionId, localGraphJson);
+  } = usePathwayPublishPreview(pathwayId, versionId, localGraphJson, canManage);
 
   const publishBlockedByPreview =
     publishPreviewLoading ||
@@ -155,7 +158,7 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
   }
 
   async function handleSave() {
-    if (!versionId) return;
+    if (!versionId || readOnly) return;
     try {
       await saveDraft(graphPayload());
       toast.success(tEditor("saveSuccess"));
@@ -165,7 +168,7 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
   }
 
   async function handlePublish() {
-    if (!versionId || isDraftDirty || !hasPublishableGraphChanges || publishBlockedByPreview) return;
+    if (readOnly || !versionId || isDraftDirty || !hasPublishableGraphChanges || publishBlockedByPreview) return;
     try {
       await publishSavedDraft();
       toast.success(tEditor("publishSuccess"));
@@ -426,7 +429,7 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
         <CardContent className="space-y-2 py-0">
           <Alert variant="info">
             <Info className="size-4 shrink-0" aria-hidden />
-            <AlertDescription>{tEditor("draftHint")}</AlertDescription>
+            <AlertDescription>{readOnly ? tEditor("readOnlyHint") : tEditor("draftHint")}</AlertDescription>
           </Alert>
           {publishPreviewError ? (
             <Alert variant="destructive">
@@ -470,6 +473,7 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
           <p className="text-muted-foreground text-sm">{t("listHint")}</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={nodes.map((n) => n.id)} strategy={verticalListSortingStrategy}>
+              <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
               <ul className="flex flex-col gap-2" role="list">
                 {nodes.map((node) => (
                   <li key={node.id} className="list-none">
@@ -490,15 +494,18 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
                       onAddStageDocuments={addStageDocuments}
                       onRemoveStageDocument={removeStageDocument}
                       onRemove={requestRemoveStage}
-                      disableRemove={nodes.length <= 1}
+                      disableRemove={readOnly || nodes.length <= 1}
                     />
                   </li>
                 ))}
               </ul>
+              </fieldset>
             </SortableContext>
           </DndContext>
         </CardContent>
         <CardFooter className="flex flex-wrap items-center gap-2 border-t">
+          {readOnly ? null : (
+            <>
           <Button type="button" variant="outline" size="sm" onClick={addStage}>
             <Plus className="size-4" />
             {tEditor("addStage")}
@@ -572,6 +579,8 @@ export function PathwayStagesColumnEditor({ pathwayId }: PathwayStagesColumnEdit
             }
             return publishBtn;
           })()}
+            </>
+          )}
           <Button nativeButton={false} variant="ghost" size="sm" render={<Link href={`/dashboard/pathways/${pathwayId}`} />}>
             <ExternalLink className="size-4" />
             {t("openFlowEditor")}

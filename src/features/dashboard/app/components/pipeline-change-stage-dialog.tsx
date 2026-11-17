@@ -110,7 +110,7 @@ export function PipelineChangeStageDialog({
       onOpenChange(false);
       await onSuccess();
     } catch {
-      toast.error(t("modals.changeStage.completeError"));
+      /* erro: toast global no apiClient */
     } finally {
       setCompleting(false);
     }

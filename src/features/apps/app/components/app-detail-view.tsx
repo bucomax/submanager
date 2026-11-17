@@ -177,7 +177,8 @@ export function AppDetailView({ appId }: Props) {
                 {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do storage */}
                 <img
                   src={ss.imageUrl}
-                  alt={ss.caption?.["pt-BR"] ?? ss.caption?.["en"] ?? ""}
+                  alt={ss.caption?.["pt-BR"] ?? ss.caption?.["en"] ?? t("screenshotAlt", { name: data.name, index: idx + 1 })}
+                  loading="lazy"
                   className="h-48 w-auto object-cover"
                 />
                 {ss.caption && (
@@ -226,7 +227,8 @@ export function AppDetailView({ appId }: Props) {
                     {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do storage */}
                     <img
                       src={ss.imageUrl}
-                      alt={caption ?? ""}
+                      alt={caption ?? t("screenshotAlt", { name: data.name, index: lightboxIndex + 1 })}
+                      loading="lazy"
                       className="max-h-[80vh] w-auto object-contain"
                     />
 

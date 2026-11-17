@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useCanManagePathways } from "@/shared/hooks/use-can-manage-pathways";
 
 type PathwayStagesSettingsPanelProps = {
   /** Ex.: `mt-0` quando a seção já define espaçamento (layout de Configurações). */
@@ -27,6 +28,7 @@ type PathwayStagesSettingsPanelProps = {
 export function PathwayStagesSettingsPanel({ className }: PathwayStagesSettingsPanelProps) {
   const t = useTranslations("pathways.columnEditor");
   const tList = useTranslations("pathways.list");
+  const { canManage } = useCanManagePathways();
   const { pathways, loading } = usePathways();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -82,16 +84,18 @@ export function PathwayStagesSettingsPanel({ className }: PathwayStagesSettingsP
                   </SelectContent>
                 </Select>
               </Field>
-              <Button
-                nativeButton={false}
-                variant="outline"
-                size="sm"
-                className="w-full shrink-0 sm:w-auto"
-                render={<Link href="/dashboard/pathways" />}
-              >
-                <Plus className="size-4" />
-                {tList("newPathway")}
-              </Button>
+              {canManage ? (
+                <Button
+                  nativeButton={false}
+                  variant="outline"
+                  size="sm"
+                  className="w-full shrink-0 sm:w-auto"
+                  render={<Link href="/dashboard/pathways" />}
+                >
+                  <Plus className="size-4" />
+                  {tList("newPathway")}
+                </Button>
+              ) : null}
             </div>
             {effectivePathwayId ? (
               <div className="border-border/55 mt-2 space-y-4 border-t pt-8">

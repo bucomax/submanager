@@ -15,7 +15,11 @@ import { savedDraftGraphDiffersFromPublished } from "@/features/pathways/app/uti
 import type { PathwayVersionDetail } from "@/features/pathways/app/types/pathways";
 import { useTranslations } from "next-intl";
 
-export function usePathwayDraftVersion(pathwayId: string) {
+/**
+ * @param canManage `false` = somente leitura: nunca cria versão (a API retorna 403) e
+ * exibe a versão publicada mais recente (ou o rascunho, se nada foi publicado).
+ */
+export function usePathwayDraftVersion(pathwayId: string, canManage: boolean) {
   const t = useTranslations("pathways.editor");
   const [loading, setLoading] = useState(true);
   const [versionId, setVersionId] = useState<string | null>(null);
@@ -52,7 +56,15 @@ export function usePathwayDraftVersion(pathwayId: string) {
       let nextVersionNumber: number;
       let nextGraphJson: unknown;
 
-      if (drafts[0]) {
+      if (!canManage) {
+        const viewable = publishedDetail ?? (drafts[0] ? await getPathwayVersion(pathwayId, drafts[0].id) : null);
+        if (!viewable) {
+          throw new Error(t("noVersionToView"));
+        }
+        nextVersionId = viewable.id;
+        nextVersionNumber = viewable.version;
+        nextGraphJson = viewable.graphJson;
+      } else if (drafts[0]) {
         nextVersionId = drafts[0].id;
         const detail = await getPathwayVersion(pathwayId, nextVersionId);
         nextVersionNumber = detail.version;
@@ -88,7 +100,7 @@ export function usePathwayDraftVersion(pathwayId: string) {
     } finally {
       setLoading(false);
     }
-  }, [pathwayId, t]);
+  }, [pathwayId, t, canManage]);
 
   const hasPublishableGraphChanges = useMemo(
     () => savedDraftGraphDiffersFromPublished(graphJson, publishedGraphSnapshot),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { ArrowLeft, ArrowRight, Loader2, Save, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useForm, useWatch } from "react-hook-form";
@@ -129,8 +129,9 @@ export function CreateTenantWizardDialog({
     email: "",
   });
 
+  const resolver = useTranslatedZodResolver<CreateTenantWizardValues>(createTenantWizardSchema);
   const form = useForm<CreateTenantWizardValues>({
-    resolver: zodResolver(createTenantWizardSchema),
+    resolver,
     defaultValues,
   });
 

@@ -16,6 +16,14 @@
     "en": "English"
   },
   "forms": {
+    "password": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "colorPicker": {
+      "select": "Select color",
+      "openSystemPicker": "Open system color picker"
+    },
     "fieldHintAria": "Show hint for this field"
   }
 }

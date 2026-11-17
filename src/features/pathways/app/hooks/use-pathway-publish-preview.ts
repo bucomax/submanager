@@ -14,6 +14,8 @@ export function usePathwayPublishPreview(
   versionId: string | null,
   /** Grafo atual do editor (`{ nodes, edges }`). Enviado ao preview para incluir alterações não salvas. */
   localGraphJson: unknown,
+  /** `false` evita chamadas ao preview (somente admin pode publicar). */
+  enabled = true,
 ) {
   const [preview, setPreview] = useState<PathwayPublishPreviewDto | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,7 @@ export function usePathwayPublishPreview(
 
   const refreshPublishPreview = useCallback(
     async (graph: unknown) => {
-      if (!versionId) return;
+      if (!versionId || !enabled) return;
       const my = ++seq.current;
       setLoading(true);
       setError(null);
@@ -42,11 +44,11 @@ export function usePathwayPublishPreview(
         }
       }
     },
-    [pathwayId, versionId],
+    [pathwayId, versionId, enabled],
   );
 
   useEffect(() => {
-    if (!versionId) {
+    if (!versionId || !enabled) {
       setPreview(null);
       setError(null);
       return;
@@ -55,7 +57,7 @@ export function usePathwayPublishPreview(
       void refreshPublishPreview(localGraphJson);
     }, DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
-  }, [versionId, localGraphJson, refreshPublishPreview]);
+  }, [versionId, enabled, localGraphJson, refreshPublishPreview]);
 
   return {
     publishPreview: preview,

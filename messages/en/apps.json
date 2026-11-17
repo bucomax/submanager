@@ -36,6 +36,7 @@
     "pendingConfig": "Configure"
   },
   "detail": {
+    "screenshotAlt": "Screenshot {index} of {name}",
     "back": "Back to catalog",
     "about": "About this app",
     "info": "Information",
@@ -98,6 +99,9 @@
       "close": "Close"
     },
     "wizard": {
+      "screenshotRemove": "Remove",
+      "screenshotMoveLeft": "Move left",
+      "screenshotAlt": "Screenshot {index}",
       "step1": "Visual identity",
       "step2": "Configuration",
       "step3": "Preview",

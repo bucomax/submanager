@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthSuspenseFallback } from "@/features/auth/app/components/auth-suspense-fallback";
-import { translatedZodResolver } from "@/features/clients/app/utils/translated-zod-resolver";
+import { translatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import {
   patientSelfRegisterFormSchema,
   type PatientSelfRegisterFormValues,

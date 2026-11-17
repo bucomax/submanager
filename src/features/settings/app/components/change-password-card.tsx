@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { KeyRound, Loader2 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -28,8 +28,9 @@ export function ChangePasswordCard() {
   const t = useTranslations("settings.password");
   const tStrength = useTranslations("clients.selfRegister.passwordStrength");
   const { submitChangePassword } = useChangePassword();
+  const resolver = useTranslatedZodResolver<ChangePasswordFormValues>(changePasswordFormSchema);
   const form = useForm<ChangePasswordFormValues>({
-    resolver: zodResolver(changePasswordFormSchema),
+    resolver,
     defaultValues: {
       currentPassword: "",
       newPassword: "",

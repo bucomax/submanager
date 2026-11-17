@@ -7,6 +7,8 @@ type Props = {
   iconUrl: string | null | undefined;
   accentColor: string | null | undefined;
   size?: "xs" | "sm" | "md" | "lg";
+  /** Texto alternativo; omitir quando o nome do app já aparece ao lado (decorativo). */
+  alt?: string;
   className?: string;
 };
 
@@ -17,7 +19,7 @@ const SIZE_MAP = {
   lg: { container: "size-16 rounded-2xl", icon: "size-8", img: "size-16 rounded-2xl" },
 } as const;
 
-export function AppIcon({ iconUrl, accentColor, size = "md", className }: Props) {
+export function AppIcon({ iconUrl, accentColor, size = "md", alt = "", className }: Props) {
   const s = SIZE_MAP[size];
 
   if (iconUrl) {
@@ -25,7 +27,8 @@ export function AppIcon({ iconUrl, accentColor, size = "md", className }: Props)
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={iconUrl}
-        alt=""
+        alt={alt}
+        loading="lazy"
         className={cn(s.img, "shrink-0 object-cover", className)}
       />
     );

@@ -36,6 +36,7 @@
     "pendingConfig": "Configurar"
   },
   "detail": {
+    "screenshotAlt": "Captura de tela {index} de {name}",
     "back": "Voltar ao catálogo",
     "about": "Sobre este app",
     "info": "Informações",
@@ -98,6 +99,9 @@
       "close": "Fechar"
     },
     "wizard": {
+      "screenshotRemove": "Remover",
+      "screenshotMoveLeft": "Mover para a esquerda",
+      "screenshotAlt": "Captura de tela {index}",
       "step1": "Identidade visual",
       "step2": "Configuração",
       "step3": "Preview",

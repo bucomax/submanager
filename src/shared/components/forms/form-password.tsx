@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Controller, useFormContext } from "react-hook-form";
 import { Button } from "@/shared/components/ui/button";
 import { FieldLabelWithHint } from "@/shared/components/forms/field-label-with-hint";
@@ -34,6 +35,7 @@ export function FormPassword({
 }: FormPasswordProps) {
   const { control } = useFormContext();
   const inputId = id ?? name;
+  const t = useTranslations("global.forms.password");
   const [visible, setVisible] = React.useState(false);
 
   return (
@@ -52,6 +54,7 @@ export function FormPassword({
               autoComplete={autoComplete}
               value={field.value ?? ""}
               aria-invalid={!!fieldState.error}
+              aria-describedby={fieldState.error ? `${inputId}-error` : undefined}
               className={cn("pr-10", className)}
             />
             <Button
@@ -61,12 +64,12 @@ export function FormPassword({
               tabIndex={-1}
               className="absolute right-0.5 shrink-0"
               onClick={() => setVisible((v) => !v)}
-              aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+              aria-label={visible ? t("hide") : t("show")}
             >
               {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
             </Button>
           </div>
-          <FieldError>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
+          <FieldError id={`${inputId}-error`}>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
         </Field>
       )}
     />

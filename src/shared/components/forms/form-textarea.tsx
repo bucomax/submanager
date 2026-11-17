@@ -40,12 +40,13 @@ export function FormTextarea({
             {...textareaProps}
             value={field.value ?? ""}
             aria-invalid={!!fieldState.error}
+            aria-describedby={fieldState.error ? `${inputId}-error` : undefined}
             className={cn(
               "border-input bg-transparent placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex min-h-[4.5rem] w-full rounded-lg border px-2.5 py-2 text-base transition-colors outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
               className,
             )}
           />
-          <FieldError>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
+          <FieldError id={`${inputId}-error`}>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
         </Field>
       )}
     />

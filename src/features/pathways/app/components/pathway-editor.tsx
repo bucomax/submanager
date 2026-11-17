@@ -33,6 +33,7 @@ import {
 import type { PathwayEditorProps, SelectedPathwayNodeUpdate } from "@/features/pathways/app/types/components";
 import type { StageSlaField } from "@/features/pathways/app/types/column-editor";
 import { cn } from "@/lib/utils";
+import { useCanManagePathways } from "@/shared/hooks/use-can-manage-pathways";
 import { toast } from "@/lib/toast";
 import { LabeledNonNegativeIntegerUnitField } from "@/shared/components/forms";
 import type { LabeledSelectOption } from "@/shared/components/forms/labeled-select";
@@ -57,7 +58,8 @@ import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
-function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
+function PathwayEditorInner({ pathwayId, canManage }: PathwayEditorProps & { canManage: boolean }) {
+  const readOnly = !canManage;
   const t = useTranslations("pathways.editor");
   const tCol = useTranslations("pathways.columnEditor");
   const { resolvedTheme } = useTheme();
@@ -76,7 +78,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
     publishSavedDraft,
     hasPublishableGraphChanges,
     reload,
-  } = usePathwayDraftVersion(pathwayId);
+  } = usePathwayDraftVersion(pathwayId, canManage);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   /**
@@ -148,7 +150,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
     publishPreviewLoading,
     publishPreviewError,
     refreshPublishPreview,
-  } = usePathwayPublishPreview(pathwayId, versionId, localGraphJson);
+  } = usePathwayPublishPreview(pathwayId, versionId, localGraphJson, canManage);
 
   const publishBlockedByPreview =
     publishPreviewLoading ||
@@ -164,30 +166,33 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      if (readOnly) return;
       setEdges((eds) => addEdge(params, eds));
     },
-    [setEdges],
+    [readOnly, setEdges],
   );
 
   async function handleSave() {
-    if (!versionId) return;
+    if (!versionId || readOnly) return;
+    if (!pathwayName.trim()) {
+      toast.error(t("pathwayNameRequired"));
+      return;
+    }
     try {
       await saveDraft({ nodes, edges });
       toast.success(t("saveSuccess"));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : t("saveError");
-      toast.error(msg);
+    } catch {
+      /* erro: toast global no apiClient */
     }
   }
 
   async function handlePublish() {
-    if (!versionId || isDraftDirty || !hasPublishableGraphChanges || publishBlockedByPreview) return;
+    if (readOnly || !versionId || isDraftDirty || !hasPublishableGraphChanges || publishBlockedByPreview) return;
     try {
       await publishSavedDraft();
       toast.success(t("publishSuccess"));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : t("publishError");
-      toast.error(msg);
+    } catch {
+      /* erro: toast global no apiClient */
     }
   }
 
@@ -420,7 +425,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
         <CardHeader className="space-y-3 border-b py-4">
           <Alert variant="info">
             <Info className="size-4 shrink-0" aria-hidden />
-            <AlertDescription>{t("draftHint")}</AlertDescription>
+            <AlertDescription>{readOnly ? t("readOnlyHint") : t("draftHint")}</AlertDescription>
           </Alert>
           {publishPreviewError ? (
             <Alert variant="destructive">
@@ -465,6 +470,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
               id="pathway-name"
               value={pathwayName}
               onChange={(e) => setPathwayName(e.target.value)}
+              readOnly={readOnly}
               placeholder={t("pathwayNamePlaceholder")}
               autoComplete="off"
             />
@@ -482,8 +488,10 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
             onPaneClick={() => setSelectedId(null)}
             fitView
             fitViewOptions={pathwayEditorFitViewOptions}
-            nodesDraggable
-            nodesConnectable
+            nodesDraggable={!readOnly}
+            nodesConnectable={!readOnly}
+            edgesReconnectable={!readOnly}
+            deleteKeyCode={readOnly ? null : undefined}
             elementsSelectable
           >
             <Background />
@@ -491,6 +499,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
             <MiniMap />
           </ReactFlow>
         </div>
+        {readOnly ? null : (
         <CardFooter className="flex flex-wrap items-center gap-2 border-t">
           <Button type="button" variant="outline" size="sm" onClick={addStage}>
             <Plus className="size-4" />
@@ -566,6 +575,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
             return publishBtn;
           })()}
         </CardFooter>
+        )}
       </Card>
 
       <Dialog
@@ -610,7 +620,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
         <CardHeader>
           <CardTitle>{t("stagePropsTitle")}</CardTitle>
           <CardDescription>{t("stagePropsDescription")}</CardDescription>
-          {selectedNode ? (
+          {selectedNode && !readOnly ? (
             <CardAction>
               <Tooltip>
                 <TooltipTrigger
@@ -641,7 +651,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
           {!selectedNode ? (
             <p className="text-muted-foreground text-sm">{t("selectNode")}</p>
           ) : (
-            <>
+            <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-5 border-0 p-0">
               <div className="border-border/60 bg-muted/10 space-y-3 rounded-xl border p-4">
                 <Field className="min-w-0">
                   <FieldLabel htmlFor="stage-label">{tCol("stageName")}</FieldLabel>
@@ -706,7 +716,7 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
                 onDocumentsAdded={addStageDocumentsSelected}
                 onRemove={removeStageDocumentSelected}
               />
-            </>
+            </fieldset>
           )}
         </CardContent>
       </Card>
@@ -715,9 +725,13 @@ function PathwayEditorInner({ pathwayId }: PathwayEditorProps) {
 }
 
 export function PathwayEditor(props: PathwayEditorProps) {
+  const { canManage, isLoading } = useCanManagePathways();
+  if (isLoading) {
+    return <Skeleton className="h-[420px] w-full rounded-xl" />;
+  }
   return (
     <ReactFlowProvider>
-      <PathwayEditorInner {...props} />
+      <PathwayEditorInner {...props} canManage={canManage} />
     </ReactFlowProvider>
   );
 }

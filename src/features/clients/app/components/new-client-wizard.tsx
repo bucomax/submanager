@@ -1,6 +1,6 @@
 "use client";
 
-import { translatedZodResolver } from "@/features/clients/app/utils/translated-zod-resolver";
+import { translatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { useCreateClientFlow } from "@/features/clients/app/hooks/use-create-client-flow";
 import { useClientPathwayOptions } from "@/features/clients/app/hooks/use-client-pathway-options";
 import { useRouter } from "@/i18n/navigation";

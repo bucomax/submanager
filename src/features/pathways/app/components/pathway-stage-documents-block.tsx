@@ -48,13 +48,13 @@ export function PathwayStageDocumentsBlock({
       try {
         const { downloadUrl } = await requestFileDownloadPresign({ fileId: fileAssetId });
         window.open(downloadUrl, "_blank", "noopener,noreferrer");
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : t("stageDocumentsOpenError"));
+      } catch {
+        /* erro: toast global no apiClient */
       } finally {
         setOpeningId(null);
       }
     },
-    [t],
+    [],
   );
 
   const handleFiles = useCallback(

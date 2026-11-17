@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
 import {
@@ -159,8 +159,9 @@ export function AdminAppWizardDialog({ open, onOpenChange, editApp, onSaved }: P
     [editApp],
   );
 
+  const resolver = useTranslatedZodResolver<WizardValues>(wizardSchema);
   const form = useForm<WizardValues>({
-    resolver: zodResolver(wizardSchema),
+    resolver,
     defaultValues,
   });
 

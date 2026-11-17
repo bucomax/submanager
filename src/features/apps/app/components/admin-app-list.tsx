@@ -1,11 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { notifyActiveAppsMenuInvalidated } from "@/features/apps/app/lib/invalidate-active-apps";
 import { getAdminApps, deleteApp, publishApp } from "@/features/apps/app/services/admin-apps.service";
 import { activateApp, deactivateApp, getActiveApps } from "@/features/apps/app/services/apps.service";
 import { AdminAppStorePreviewDialog } from "@/features/apps/app/components/admin-app-store-preview-dialog";
-import { AdminAppWizardDialog } from "@/features/apps/app/components/admin-app-wizard-dialog";
 import { AppIcon } from "@/features/apps/app/components/app-icon";
 import type { AppDto } from "@/types/api/apps-v1";
 import { Button } from "@/shared/components/ui/button";
@@ -15,6 +15,12 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { Eye, EyeOff, Pencil, Plus, Power, PowerOff, Store, Trash2, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+/** Wizard pesado (react-hook-form + zod + uploads): fora do bundle inicial da listagem. */
+const AdminAppWizardDialog = dynamic(
+  () => import("@/features/apps/app/components/admin-app-wizard-dialog").then((m) => m.AdminAppWizardDialog),
+  { ssr: false },
+);
 
 export function AdminAppList() {
   const t = useTranslations("apps.admin");

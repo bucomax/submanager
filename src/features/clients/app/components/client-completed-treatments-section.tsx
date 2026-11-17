@@ -5,7 +5,6 @@ import { useClientFileDownload } from "@/features/clients/app/hooks/use-client-f
 import type { ClientCompletedTreatmentDto, ClientDetailClientDto } from "@/types/api/clients-v1";
 import { uniqueActors } from "@/features/clients/app/utils/treatments";
 import { formatDateTime } from "@/lib/utils/date";
-import { toast } from "@/lib/toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/shared/components/ui/card";
 import { ClientDetailCardTitle } from "@/features/clients/app/components/client-detail-card-title";
@@ -58,7 +57,7 @@ export function ClientCompletedTreatmentsSection({
     try {
       await openDownload(fileId);
     } catch {
-      toast.error(tFiles("downloadError"));
+      /* erro: toast global no apiClient */
     }
   }
 

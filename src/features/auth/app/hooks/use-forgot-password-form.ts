@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { requestForgotPassword } from "../services/forgot-password.service";
@@ -11,8 +11,9 @@ export function useForgotPasswordForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const resolver = useTranslatedZodResolver<ForgotPasswordFormValues>(forgotPasswordSchema);
   const form = useForm<ForgotPasswordFormValues>({
-    resolver: zodResolver(forgotPasswordSchema),
+    resolver,
     defaultValues: { email: "" },
   });
 

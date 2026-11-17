@@ -57,7 +57,7 @@ export function ClientDetailFilesCard({ clientId, onFilesMutated }: ClientDetail
     try {
       await openDownload(fileId);
     } catch {
-      toast.error(t("downloadError"));
+      /* erro: toast global no apiClient */
     }
   }
 

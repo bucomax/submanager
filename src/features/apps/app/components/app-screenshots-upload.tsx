@@ -209,7 +209,8 @@ export function AppScreenshotsUpload({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.imageUrl}
-                alt=""
+                alt={tw("screenshotAlt", { index: idx + 1 })}
+                loading="lazy"
                 className="size-full object-cover"
               />
 
@@ -220,7 +221,8 @@ export function AppScreenshotsUpload({
                     type="button"
                     className="rounded-full bg-white/90 p-1 text-xs hover:bg-white"
                     onClick={() => void handleMoveUp(idx)}
-                    title="Mover para esquerda"
+                    title={tw("screenshotMoveLeft")}
+                    aria-label={tw("screenshotMoveLeft")}
                   >
                     <GripVertical className="size-3.5" />
                   </button>
@@ -230,7 +232,8 @@ export function AppScreenshotsUpload({
                   className="rounded-full bg-white/90 p-1 text-destructive hover:bg-white"
                   onClick={() => void handleRemove(item.id)}
                   disabled={removingId === item.id}
-                  title="Remover"
+                  title={tw("screenshotRemove")}
+                  aria-label={tw("screenshotRemove")}
                 >
                   {removingId === item.id ? (
                     <Loader2 className="size-3.5 animate-spin" />

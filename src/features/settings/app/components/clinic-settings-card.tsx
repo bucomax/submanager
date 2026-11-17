@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { Loader2, RefreshCw, Save } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
@@ -40,8 +40,9 @@ export function ClinicSettingsCard() {
     saveClinicSettings,
   } = useClinicSettings();
 
+  const resolver = useTranslatedZodResolver<ClinicSettingsFormValues>(clinicSettingsFormSchema);
   const form = useForm<ClinicSettingsFormValues>({
-    resolver: zodResolver(clinicSettingsFormSchema),
+    resolver,
     defaultValues: {
       name: "",
       taxId: "",

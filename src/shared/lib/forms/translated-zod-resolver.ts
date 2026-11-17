@@ -2,6 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { FieldErrors, FieldValues, Resolver, ResolverOptions } from "react-hook-form";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import type { ZodType } from "zod";
 
 import { translateZodApiMessage } from "@/lib/api/zod-i18n";
@@ -57,4 +59,15 @@ export function translatedZodResolver<T extends FieldValues>(
     }
     return result;
   }) as Resolver<T>;
+}
+
+/** Hook: resolver RHF com mensagens `@api/...` traduzidas (namespace `api`). */
+export function useTranslatedZodResolver<T extends FieldValues>(
+  schema: ZodType<FieldValues, FieldValues>,
+): Resolver<T> {
+  const tApi = useTranslations("api");
+  return useMemo(
+    () => translatedZodResolver<T>(schema, (key) => tApi(key as Parameters<typeof tApi>[0])),
+    [schema, tApi],
+  );
 }

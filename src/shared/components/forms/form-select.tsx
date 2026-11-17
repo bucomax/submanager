@@ -66,6 +66,7 @@ export function FormSelect({
                 id={selectId}
                 className={cn("w-full", className)}
                 aria-invalid={!!fieldState.error}
+                aria-describedby={fieldState.error ? `${selectId}-error` : undefined}
               >
                 <SelectValue placeholder={placeholder ?? "Selecione…"}>{selectedLabel}</SelectValue>
               </SelectTrigger>
@@ -77,7 +78,7 @@ export function FormSelect({
                 ))}
               </SelectContent>
             </Select>
-            <FieldError>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
+            <FieldError id={`${selectId}-error`}>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
           </Field>
         );
       }}

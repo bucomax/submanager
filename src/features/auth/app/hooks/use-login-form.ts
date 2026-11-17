@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { normalizeCallbackPath } from "@/features/auth/app/utils/callback-path";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -18,8 +18,9 @@ export function useLoginForm() {
   const defaultCallback = "/dashboard";
   const callbackUrl = normalizeCallbackPath(searchParams.get("callbackUrl"), defaultCallback);
 
+  const resolver = useTranslatedZodResolver<LoginFormValues>(loginSchema);
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+    resolver,
     defaultValues: { email: "", password: "" },
   });
 

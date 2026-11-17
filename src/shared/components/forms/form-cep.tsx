@@ -95,6 +95,7 @@ export function FormCep({
                 name={field.name}
                 ref={field.ref}
                 aria-invalid={!!fieldState.error}
+                aria-describedby={fieldState.error ? `${inputId}-error` : undefined}
                 className={className}
               />
               {loading ? (
@@ -104,7 +105,7 @@ export function FormCep({
                 />
               ) : null}
             </div>
-            <FieldError>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
+            <FieldError id={`${inputId}-error`}>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
           </Field>
         );
       }}

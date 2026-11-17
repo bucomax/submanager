@@ -15,10 +15,14 @@ export function useCopyPortalLink() {
       setBusyClientId(clientId);
       try {
         const { enterUrl } = await createPatientPortalLink(clientId, { sendEmail: false });
-        await navigator.clipboard.writeText(enterUrl);
-        toast.success(t("portalLinkCopied"));
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : t("portalLinkError"));
+        try {
+          await navigator.clipboard.writeText(enterUrl);
+          toast.success(t("portalLinkCopied"));
+        } catch {
+          toast.error(t("portalLinkError"));
+        }
+      } catch {
+        /* erro: toast global no apiClient */
       } finally {
         setBusyClientId(null);
       }

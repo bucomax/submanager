@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Loader2, RefreshCw, Save } from "lucide-react";
@@ -31,8 +31,9 @@ export function AccountProfileCard() {
   const t = useTranslations("settings.profile");
   const { profile, loading, error, reload, saveProfile } = useAccountProfile();
 
+  const resolver = useTranslatedZodResolver<ProfileFormValues>(profileFormSchema);
   const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+    resolver,
     defaultValues: { name: "", image: "" },
   });
 

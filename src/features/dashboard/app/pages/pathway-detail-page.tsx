@@ -1,4 +1,4 @@
-import { PathwayEditor } from "@/features/pathways/app/components/pathway-editor";
+import { PathwayEditorLazy } from "@/features/pathways/app/components/pathway-editor-lazy";
 import { DashboardPage } from "@/shared/components/layout/dashboard-page";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/shared/components/ui/button";
@@ -27,7 +27,7 @@ export async function PathwayDetailPage({ pathwayId }: PathwayDetailPageProps) {
         </Button>
       }
     >
-      <PathwayEditor pathwayId={pathwayId} />
+      <PathwayEditorLazy pathwayId={pathwayId} />
     </DashboardPage>
   );
 }

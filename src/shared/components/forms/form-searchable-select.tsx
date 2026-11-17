@@ -95,10 +95,11 @@ export function FormSearchableSelect({
             emptyMessage={emptyMessage}
             disabled={disabled}
             invalid={!!fieldState.error}
+            errorId={`${selectId}-error`}
             className={className}
             clearable={clearable}
           />
-          <FieldError>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
+          <FieldError id={`${selectId}-error`}>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
         </Field>
       )}
     />
@@ -119,6 +120,7 @@ export type SearchableSelectDropdownProps = {
   emptyMessage?: string;
   disabled?: boolean;
   invalid?: boolean;
+  errorId?: string;
   className?: string;
   clearable?: boolean;
 };
@@ -133,6 +135,7 @@ export function SearchableSelectDropdown({
   emptyMessage = "Nenhum resultado.",
   disabled,
   invalid,
+  errorId,
   className,
   clearable,
 }: SearchableSelectDropdownProps) {
@@ -259,6 +262,7 @@ export function SearchableSelectDropdown({
         aria-controls={listboxId}
         aria-haspopup="listbox"
         aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
         disabled={disabled}
         onClick={() => (open ? closeDropdown() : openDropdown())}
         className={cn(

@@ -1,8 +1,7 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -39,7 +38,7 @@ export function useManualSetPassword({
 }: UseManualSetPasswordOptions) {
   const t = useTranslations("settings.manualSetPassword");
 
-  const resolver = useMemo(() => zodResolver(manualSetPasswordSchema), []);
+  const resolver = useTranslatedZodResolver<ManualSetPasswordFormValues>(manualSetPasswordSchema);
 
   const form = useForm<ManualSetPasswordFormValues>({
     resolver,

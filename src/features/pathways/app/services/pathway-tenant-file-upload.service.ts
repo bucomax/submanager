@@ -40,7 +40,7 @@ export async function uploadTenantLibraryFile(
     const presignRes = await apiClient.post<ApiEnvelope<PresignResponseData>>("/api/v1/files/presign", {
       fileName: file.name,
       mimeType,
-    });
+    }, { skipErrorToast: true });
     if (!presignRes.data.success) {
       throw new Error(presignRes.data.error.message);
     }
@@ -63,7 +63,7 @@ export async function uploadTenantLibraryFile(
       fileName: file.name,
       mimeType,
       sizeBytes: file.size,
-    });
+    }, { skipErrorToast: true });
     bump(96);
     if (!regRes.data.success) {
       throw new Error(regRes.data.error.message);

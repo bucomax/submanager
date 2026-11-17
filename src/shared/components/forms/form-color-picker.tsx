@@ -7,6 +7,7 @@ import { FieldLabelWithHint } from "@/shared/components/forms/field-label-with-h
 import { Field, FieldError } from "@/shared/components/ui/field";
 import { cn } from "@/lib/utils";
 import { PaletteIcon, XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Preset colors
@@ -64,6 +65,7 @@ export function FormColorPicker({
             onChange={(v) => field.onChange(v)}
             disabled={disabled}
             invalid={!!fieldState.error}
+            errorId={`${pickerId}-error`}
             clearable={clearable}
           />
           <FieldError>{fieldState.error?.message ? String(fieldState.error.message) : null}</FieldError>
@@ -83,6 +85,7 @@ type ColorPickerInputProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   invalid?: boolean;
+  errorId?: string;
   clearable?: boolean;
 };
 
@@ -92,8 +95,10 @@ function ColorPickerInput({
   onChange,
   disabled,
   invalid,
+  errorId,
   clearable,
 }: ColorPickerInputProps) {
+  const t = useTranslations("global.forms.colorPicker");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const nativeInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +146,7 @@ function ColorPickerInput({
           disabled={disabled}
           onClick={() => setOpen((o) => !o)}
           className="flex shrink-0 items-center gap-1.5"
-          aria-label="Selecionar cor"
+          aria-label={t("select")}
         >
           {isValidHex ? (
             <span
@@ -157,6 +162,8 @@ function ColorPickerInput({
         <input
           id={id}
           type="text"
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? errorId : undefined}
           value={value}
           onChange={handleTextChange}
           onFocus={() => setOpen(true)}
@@ -193,7 +200,8 @@ function ColorPickerInput({
             disabled={disabled}
             onClick={() => nativeInputRef.current?.click()}
             className="rounded p-0.5 hover:bg-muted"
-            title="Abrir seletor de cor do sistema"
+            title={t("openSystemPicker")}
+            aria-label={t("openSystemPicker")}
           >
             <PaletteIcon className="size-3.5 text-muted-foreground" />
           </button>

@@ -27,6 +27,8 @@
     "back": "Back"
   },
   "editor": {
+    "noVersionToView": "This pathway has no version to view yet.",
+    "readOnlyHint": "You have read-only access to this pathway. Only clinic admins can edit and publish it.",
     "loadError": "Could not load the editor.",
     "save": "Save draft",
     "saveSuccess": "Draft saved.",

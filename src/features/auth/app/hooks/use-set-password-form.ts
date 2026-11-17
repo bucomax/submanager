@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { translatedZodResolver } from "@/features/clients/app/utils/translated-zod-resolver";
+import { translatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { resetPasswordWithToken } from "../services/password.service";
 import type { SetPasswordFormValues } from "../types/auth";
 import { setPasswordFormSchema } from "../utils/schemas";

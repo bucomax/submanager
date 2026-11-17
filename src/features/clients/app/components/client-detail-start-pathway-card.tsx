@@ -57,8 +57,8 @@ export function ClientDetailStartPathwayCard({
       await createPatientPathway({ clientId, pathwayId });
       toast.success(t("startPathway.success"));
       onStarted();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("startPathway.error"));
+    } catch {
+      /* erro: toast global no apiClient */
     } finally {
       setSubmitting(false);
     }

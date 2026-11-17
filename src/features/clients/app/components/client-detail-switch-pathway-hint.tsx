@@ -29,8 +29,8 @@ export function ClientDetailSwitchPathwayHint({
       toast.success(t("switchPathway.completeSuccess"));
       setOpen(false);
       onCompleted();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("switchPathway.completeError"));
+    } catch {
+      /* erro: toast global no apiClient */
     } finally {
       setCompleting(false);
     }

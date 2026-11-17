@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { useAdminInvite } from "@/features/settings/app/hooks/use-admin-invite";
 import {
   inviteUserFormSchema,
@@ -35,8 +35,9 @@ export function useInviteUserForm(options?: UseInviteUserFormOptions) {
     [t],
   );
 
+  const resolver = useTranslatedZodResolver<InviteUserFormValues>(inviteUserFormSchema);
   const form = useForm<InviteUserFormValues>({
-    resolver: zodResolver(inviteUserFormSchema),
+    resolver,
     defaultValues: {
       email: "",
       name: "",
