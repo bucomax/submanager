@@ -1,3 +1,4 @@
+import { clearQueryCache } from "@/shared/lib/query/query-client";
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
 import type { TenantListItem } from "@/shared/types/tenant";
@@ -31,5 +32,7 @@ export async function setActiveTenant(tenantId: string): Promise<ContextPayload>
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }
+  // Dados em cache pertencem ao tenant anterior.
+  clearQueryCache();
   return res.data.data;
 }
