@@ -2,9 +2,10 @@ import { formatZodIssues } from "@/lib/api/zod-error";
 import {
   buildUploadObjectKey,
   isGcsConfigured,
-  presignPutObject,
+  presignUploadUrl,
   publicUrlForKey,
 } from "@/infrastructure/storage/gcs-storage";
+import { rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { requireActivePatientPortalClient } from "@/lib/auth/patient-portal-request";
@@ -22,6 +23,10 @@ export async function POST(request: Request) {
   const portalCtx = await requireActivePatientPortalClient(request, apiT);
   if (!portalCtx.ok) return portalCtx.response;
 
+  const { tenantId, clientId } = portalCtx.data.portal;
+  const limited = await rateLimit("filePresign", `presign-patient:${tenantId}:${clientId}`);
+  if (limited) return limited;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -34,17 +39,17 @@ export async function POST(request: Request) {
     return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
   }
 
-  const { tenantId, clientId } = portalCtx.data.portal;
   const key = buildUploadObjectKey({
     tenantId,
     originalFileName: parsed.data.fileName,
     clientId,
   });
-  const uploadUrl = await presignPutObject(key, parsed.data.mimeType);
+  const { uploadUrl, uploadHeaders } = await presignUploadUrl(key, parsed.data.mimeType);
 
   return jsonSuccess({
     key,
     uploadUrl,
+    uploadHeaders,
     mimeType: parsed.data.mimeType,
     publicUrl: publicUrlForKey(key),
     expiresInSeconds: UPLOAD_URL_TTL_SECONDS,

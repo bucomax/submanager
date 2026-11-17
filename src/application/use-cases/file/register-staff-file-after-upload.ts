@@ -35,6 +35,7 @@ export type RegisterStaffFileAfterUploadResult =
       };
     }
   | { ok: false; code: "INVALID_KEY" | "MIME_MISMATCH" | "FILE_TOO_LARGE"; declaredMime?: string }
+  | { ok: false; code: "STORAGE_UNAVAILABLE" }
   | { ok: false; code: "CONFLICT" | "DATABASE_SCHEMA_PENDING" | "INTERNAL" };
 
 export async function runRegisterStaffFileAfterUpload(params: {
@@ -49,9 +50,12 @@ export async function runRegisterStaffFileAfterUpload(params: {
   }
 
   try {
-    // O tamanho declarado pelo cliente não é confiável: usa o do objeto no bucket (fail-open sem GCS).
+    // O tamanho declarado pelo cliente não é confiável: usa o do objeto no bucket (fail-closed: sem leitura do tamanho não registra).
     const actualSizeBytes = await getGcsObjectSize(data.key);
-    if (actualSizeBytes !== null && actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
+    if (actualSizeBytes === null) {
+      return { ok: false, code: "STORAGE_UNAVAILABLE" };
+    }
+    if (actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
       await deleteObjectFromBucket(data.key).catch((err) =>
         console.error("[registerStaffFileAfterUpload] oversize object cleanup failed:", err),
       );
@@ -89,7 +93,7 @@ export async function runRegisterStaffFileAfterUpload(params: {
       r2Key: data.key,
       fileName: data.fileName,
       mimeType: data.mimeType,
-      sizeBytes: actualSizeBytes ?? data.sizeBytes,
+      sizeBytes: actualSizeBytes,
       clientId: data.clientId ?? null,
       sha256Hash,
     });

@@ -12,6 +12,8 @@ type PresignResponseData = {
   key: string;
   uploadUrl: string;
   mimeType: string;
+  /** Headers extras exigidos no PUT (vazio quando o range de tamanho não é exigido). */
+  uploadHeaders?: Record<string, string>;
 };
 
 /**
@@ -72,12 +74,12 @@ export async function uploadProfileAvatarToStorage(file: File): Promise<string> 
     if (!presignRes.data.success) {
       throw new Error(presignRes.data.error.message);
     }
-    const { key, uploadUrl } = presignRes.data.data;
+    const { key, uploadUrl, uploadHeaders } = presignRes.data.data;
 
     const putRes = await fetch(uploadUrl, {
       method: "PUT",
       body: file,
-      headers: { "Content-Type": mimeType },
+      headers: { "Content-Type": mimeType, ...(uploadHeaders ?? {}) },
     });
     if (!putRes.ok) {
       throw new Error(`Upload failed (${putRes.status})`);

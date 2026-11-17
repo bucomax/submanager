@@ -8,6 +8,8 @@ type PresignResponseData = {
   key: string;
   uploadUrl: string;
   mimeType: string;
+  /** Headers exigidos pelo PUT assinado (ex.: `x-goog-content-length-range`); vazio por padrão. */
+  uploadHeaders?: Record<string, string>;
 };
 
 type RegisterFileDto = {
@@ -42,12 +44,18 @@ export async function uploadTenantLibraryFile(
     if (!presignRes.data.success) {
       throw new Error(presignRes.data.error.message);
     }
-    const { key, uploadUrl } = presignRes.data.data;
+    const { key, uploadUrl, uploadHeaders } = presignRes.data.data;
 
     bump(2);
-    await putFileWithUploadProgress(uploadUrl, file, mimeType, (raw) => {
-      bump(2 + raw * 0.78);
-    });
+    await putFileWithUploadProgress(
+      uploadUrl,
+      file,
+      mimeType,
+      (raw) => {
+        bump(2 + raw * 0.78);
+      },
+      uploadHeaders,
+    );
     bump(82);
 
     const regRes = await apiClient.post<ApiEnvelope<{ file: RegisterFileDto }>>("/api/v1/files", {

@@ -3,11 +3,17 @@ import type {
   PatientPortalLinkTokenMagicLinkRow,
 } from "@/application/ports/patient-portal-link-token-repository.port";
 import { prisma } from "@/infrastructure/database/prisma";
+import { createHash } from "node:crypto";
+
+/** Token de 256 bits aleatórios: sha256 sem sal basta (não há dicionário a atacar). */
+export function hashPortalLinkToken(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
+}
 
 export class PatientPortalLinkTokenPrismaRepository implements IPatientPortalLinkTokenRepository {
   async findByTokenForMagicLinkExchange(token: string): Promise<PatientPortalLinkTokenMagicLinkRow | null> {
     const row = await prisma.patientPortalLinkToken.findUnique({
-      where: { token },
+      where: { token: hashPortalLinkToken(token) },
       include: {
         client: {
           select: {
@@ -48,7 +54,8 @@ export class PatientPortalLinkTokenPrismaRepository implements IPatientPortalLin
     const row = await prisma.patientPortalLinkToken.create({
       data: {
         clientId: params.clientId,
-        token: params.token,
+        // Só o hash (sha256 hex) é persistido; o token cru existe apenas no link enviado.
+        token: hashPortalLinkToken(params.token),
         expiresAt: params.expiresAt,
         singleUse: params.singleUse,
       },

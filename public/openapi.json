@@ -1026,7 +1026,8 @@
           }
         },
         "responses": {
-          "200": { "description": "uploadUrl + key + expiresInSeconds (900)" },
+          "200": { "description": "uploadUrl + key + expiresInSeconds (900) + uploadHeaders (headers que o PUT deve enviar; vazio salvo UPLOAD_ENFORCE_CONTENT_LENGTH_RANGE=1)" },
+          "429": { "description": "Limite de solicitações (header Retry-After)" },
           "503": { "description": "Armazenamento (GCS) não configurado" },
           "401": { "description": "Não autenticado" }
         }
@@ -2407,7 +2408,8 @@
           "404": { "description": "Paciente inexistente ou removido" },
           "409": { "description": "Arquivo já registrado" },
           "413": { "description": "Objeto no bucket excede o tamanho máximo (removido)" },
-          "422": { "description": "Validação" }
+          "422": { "description": "Validação" },
+          "503": { "description": "Storage indisponível para conferir o objeto (registro recusado)" }
         }
       }
     },
@@ -2442,6 +2444,7 @@
           "200": { "description": "`key`, `uploadUrl`, `mimeType`, `expiresInSeconds` (900)" },
           "401": { "description": "Sem sessão do portal" },
           "404": { "description": "Paciente inexistente ou removido" },
+          "429": { "description": "Limite de solicitações (header Retry-After)" },
           "503": { "description": "Storage não configurado" }
         }
       }

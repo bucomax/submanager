@@ -156,6 +156,9 @@ export class ClientPrismaRepository implements IClientRepository {
   async findForPortalLogin(tenantId: string, parsed: ParsedPortalLogin): Promise<PortalClientForLogin | null> {
     return prisma.client.findFirst({
       where: buildWherePortalLogin(tenantId, parsed),
+      // documentId não é único (responsável com vários menores): sem ordem fixa, o OTP pedido
+      // para um paciente poderia ser verificado contra outro.
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: portalLoginSelect,
     });
   }

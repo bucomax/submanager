@@ -67,6 +67,9 @@ export async function POST(request: Request) {
     if (result.code === "FILE_TOO_LARGE") {
       return jsonError("PAYLOAD_TOO_LARGE", apiT("errors.fileTooLarge"), 413);
     }
+    if (result.code === "STORAGE_UNAVAILABLE") {
+      return jsonError("SERVICE_UNAVAILABLE", apiT("errors.storageNotConfigured"), 503);
+    }
     if (result.code === "CONFLICT") {
       return jsonError("CONFLICT", apiT("errors.fileAlreadyRegistered"), 409);
     }

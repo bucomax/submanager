@@ -39,6 +39,7 @@ export type RegisterPatientPortalFileResult =
       };
     }
   | { ok: false; code: "INVALID_KEY" | "MIME_MISMATCH" | "FILE_TOO_LARGE"; declaredMime?: string }
+  | { ok: false; code: "STORAGE_UNAVAILABLE" }
   | { ok: false; code: "CONFLICT" | "INTERNAL" };
 
 export async function runRegisterPatientPortalFile(params: {
@@ -54,9 +55,12 @@ export async function runRegisterPatientPortalFile(params: {
     return { ok: false, code: "INVALID_KEY" };
   }
 
-  // O tamanho declarado pelo cliente não é confiável: usa o do objeto no bucket (fail-open sem GCS).
+  // O tamanho declarado pelo cliente não é confiável: usa o do objeto no bucket (fail-closed: sem leitura do tamanho não registra).
   const actualSizeBytes = await getGcsObjectSize(data.key);
-  if (actualSizeBytes !== null && actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
+  if (actualSizeBytes === null) {
+    return { ok: false, code: "STORAGE_UNAVAILABLE" };
+  }
+  if (actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
     await deleteObjectFromBucket(data.key).catch((err) =>
       console.error("[registerPatientPortalFile] oversize object cleanup failed:", err),
     );
@@ -86,7 +90,7 @@ export async function runRegisterPatientPortalFile(params: {
         r2Key: data.key,
         fileName: data.fileName,
         mimeType: data.mimeType,
-        sizeBytes: actualSizeBytes ?? data.sizeBytes,
+        sizeBytes: actualSizeBytes,
         sha256Hash,
       });
     } catch (error) {

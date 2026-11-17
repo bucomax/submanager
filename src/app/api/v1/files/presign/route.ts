@@ -2,9 +2,10 @@ import { formatZodIssues } from "@/lib/api/zod-error";
 import {
   buildUploadObjectKey,
   isGcsConfigured,
-  presignPutObject,
+  presignUploadUrl,
   publicUrlForKey,
 } from "@/infrastructure/storage/gcs-storage";
+import { rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
@@ -33,6 +34,9 @@ export async function POST(request: Request) {
   const forbidden = await assertActiveTenantMembership(auth.session!, tenantId, request, apiT);
   if (forbidden) return forbidden;
 
+  const limited = await rateLimit("filePresign", `presign:${tenantId}:${auth.session!.user.id}`);
+  if (limited) return limited;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -60,11 +64,12 @@ export async function POST(request: Request) {
     clientId: parsed.data.clientId,
     category: parsed.data.purpose === "avatar" ? "avatars" : undefined,
   });
-  const uploadUrl = await presignPutObject(key, parsed.data.mimeType);
+  const { uploadUrl, uploadHeaders } = await presignUploadUrl(key, parsed.data.mimeType);
 
   return jsonSuccess({
     key,
     uploadUrl,
+    uploadHeaders,
     mimeType: parsed.data.mimeType,
     publicUrl: publicUrlForKey(key),
     expiresInSeconds: UPLOAD_URL_TTL_SECONDS,

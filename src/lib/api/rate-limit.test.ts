@@ -45,3 +45,38 @@ describe("hashRateLimitKey", () => {
     expect(hashRateLimitKey("tenant-1:12345678900")).toBe(hashed);
   });
 });
+
+describe("rateLimit (Redis path)", () => {
+  it("should use a single atomic eval and return the standard error envelope when blocked", async () => {
+    vi.resetModules();
+    const evalMock = vi.fn().mockResolvedValue([6, 42]);
+    vi.doMock("@/infrastructure/queue/redis-connection", () => ({
+      getRedisConnection: () => ({ eval: evalMock, incr: vi.fn(), expire: vi.fn() }),
+    }));
+    const { rateLimit: rl } = await import("./rate-limit");
+
+    const res = await rl("auth", "redis-id");
+
+    expect(evalMock).toHaveBeenCalledTimes(1);
+    expect(evalMock.mock.calls[0][2]).toBe("rl:auth:redis-id");
+    expect(res?.status).toBe(429);
+    expect(res?.headers.get("Retry-After")).toBe("42");
+    const body = await res?.json();
+    expect(body).toMatchObject({
+      success: false,
+      error: { code: "RATE_LIMITED" },
+      meta: { timestamp: expect.any(String) },
+    });
+    vi.doUnmock("@/infrastructure/queue/redis-connection");
+  });
+
+  it("should allow when count is within the limit", async () => {
+    vi.resetModules();
+    vi.doMock("@/infrastructure/queue/redis-connection", () => ({
+      getRedisConnection: () => ({ eval: vi.fn().mockResolvedValue([1, 60]) }),
+    }));
+    const { rateLimit: rl } = await import("./rate-limit");
+    expect(await rl("auth", "ok-id")).toBeNull();
+    vi.doUnmock("@/infrastructure/queue/redis-connection");
+  });
+});

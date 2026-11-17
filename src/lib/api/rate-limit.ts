@@ -1,6 +1,7 @@
 import { getRedisConnection } from "@/infrastructure/queue/redis-connection";
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
+import { jsonError } from "@/lib/api-response";
 
 type RateLimitConfig = {
   max: number;
@@ -17,6 +18,8 @@ const PRESETS = {
   patientPortalPublicIdentity: { max: 10, windowSec: 15 * 60 } satisfies RateLimitConfig,
   /** Verificação de OTP por tenant + documento (hash). */
   patientPortalOtpVerify: { max: 10, windowSec: 15 * 60 } satisfies RateLimitConfig,
+  /** Geração de URL assinada de upload (por usuário/paciente). */
+  filePresign: { max: 30, windowSec: 60 } satisfies RateLimitConfig,
   api: { max: 120, windowSec: 60 } satisfies RateLimitConfig,
   sse: { max: 3, windowSec: 10 } satisfies RateLimitConfig,
 } as const;
@@ -54,21 +57,27 @@ function memoryIncrement(key: string, windowSec: number): { count: number; ttlSe
 }
 
 function tooManyRequests(max: number, retryAfterSec: number): Response {
-  return Response.json(
-    {
-      success: false,
-      error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." },
-    },
-    {
-      status: 429,
-      headers: {
-        "Retry-After": String(retryAfterSec),
-        "X-RateLimit-Limit": String(max),
-        "X-RateLimit-Remaining": "0",
-      },
-    },
-  );
+  const res = jsonError("RATE_LIMITED", "Too many requests. Try again later.", 429);
+  res.headers.set("Retry-After", String(retryAfterSec));
+  res.headers.set("X-RateLimit-Limit", String(max));
+  res.headers.set("X-RateLimit-Remaining", "0");
+  return res;
 }
+
+/**
+ * INCR + EXPIRE atômicos (um round-trip, sem janela de crash entre os dois comandos).
+ * Também recupera chave sem TTL (legado de INCR/EXPIRE não atômico): reaplica o EXPIRE.
+ * Retorna `[contagem, ttlSegundos]`.
+ */
+const REDIS_INCR_WITH_TTL_SCRIPT = `
+local count = redis.call('INCR', KEYS[1])
+local ttl = redis.call('TTL', KEYS[1])
+if count == 1 or ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return {count, ttl}
+`;
 
 async function getClientIp(): Promise<string> {
   const h = await headers();
@@ -78,7 +87,7 @@ async function getClientIp(): Promise<string> {
 }
 
 /**
- * Sliding-window rate limiter backed by Redis INCR + EXPIRE.
+ * Rate limiter de janela fixa (fixed window): Redis com INCR + EXPIRE atômicos (Lua).
  * Fallback em memória (por processo) quando Redis ausente/com erro.
  * Returns null if allowed, or a 429 Response if limit exceeded.
  */
@@ -105,12 +114,13 @@ export async function rateLimit(
   const redis = getRedisConnection();
   if (redis) {
     try {
-      const current = await redis.incr(key);
-      if (current === 1) {
-        await redis.expire(key, config.windowSec);
-      }
+      const [current, ttl] = (await redis.eval(
+        REDIS_INCR_WITH_TTL_SCRIPT,
+        1,
+        key,
+        String(config.windowSec),
+      )) as [number, number];
       if (current > config.max) {
-        const ttl = await redis.ttl(key);
         return tooManyRequests(config.max, ttl > 0 ? ttl : config.windowSec);
       }
       return null;

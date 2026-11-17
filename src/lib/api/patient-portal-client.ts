@@ -304,6 +304,8 @@ type PresignPutResponse = {
   key: string;
   uploadUrl: string;
   mimeType: string;
+  /** Headers que o PUT assinado exige (ex.: `x-goog-content-length-range`); vazio por padrão. */
+  uploadHeaders?: Record<string, string>;
 };
 
 export type PatientPortalUploadProgress = (percent: number) => void;
@@ -345,12 +347,18 @@ export async function uploadPatientPortalFile(
         : "Falha ao preparar envio.";
     throw new Error(msg);
   }
-  const { key, uploadUrl } = presignBody.data;
+  const { key, uploadUrl, uploadHeaders } = presignBody.data;
 
   bump(2);
-  await putFileWithUploadProgress(uploadUrl, file, mimeType, (raw) => {
-    bump(2 + raw * 0.78);
-  });
+  await putFileWithUploadProgress(
+    uploadUrl,
+    file,
+    mimeType,
+    (raw) => {
+      bump(2 + raw * 0.78);
+    },
+    uploadHeaders,
+  );
   bump(82);
 
   const regRes = await fetch(

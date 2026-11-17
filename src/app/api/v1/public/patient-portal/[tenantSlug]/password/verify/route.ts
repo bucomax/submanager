@@ -63,10 +63,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
     if (result.reason === "client_not_found") {
       return jsonError("UNAUTHORIZED", apiT("errors.patientPortalPasswordInvalid"), 401);
     }
-    const auditPayload =
-      result.reason === "password_not_set"
-        ? ({ reason: "password_not_set" } as const)
-        : ({ reason: "invalid_password" } as const);
+    const auditPayload = { reason: result.reason } as const;
     if (result.client) {
       void auditEventPrismaRepository
         .recordCanonical({

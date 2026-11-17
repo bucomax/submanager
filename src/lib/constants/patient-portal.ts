@@ -19,3 +19,9 @@ export const PATIENT_PORTAL_OTP_MAX_ATTEMPTS = 5;
 /** Limite de novos códigos OTP por paciente em janela (anti-abuso). */
 export const PATIENT_PORTAL_OTP_REQUEST_WINDOW_MS = 60 * 60 * 1000;
 export const PATIENT_PORTAL_OTP_MAX_REQUESTS_PER_WINDOW = 5;
+
+/** Login por senha: falhas consecutivas até bloquear o paciente (persistido no banco). */
+export const PATIENT_PORTAL_PASSWORD_MAX_FAILED_ATTEMPTS = 5;
+
+/** Login por senha: duração do bloqueio após atingir o limite de falhas (ms). */
+export const PATIENT_PORTAL_PASSWORD_LOCKOUT_MS = 15 * 60 * 1000;

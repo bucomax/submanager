@@ -60,9 +60,8 @@ export async function POST(request: Request, ctx: RouteCtx) {
     client,
   });
 
-  if (result.kind === "rate_limited") {
-    return jsonError("TOO_MANY_REQUESTS", apiT("errors.patientPortalOtpTooManyRequests"), 429);
-  }
+  // `rate_limited` só ocorre quando o paciente existe: responder 429 vazaria a existência do CPF.
+  // Mantém a resposta opaca (o código simplesmente não é enviado).
   if (result.kind === "service_unavailable") {
     return jsonError("SERVICE_UNAVAILABLE", apiT("errors.patientPortalMisconfigured"), 503);
   }

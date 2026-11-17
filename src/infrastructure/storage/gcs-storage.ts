@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "crypto";
 import { Storage } from "@google-cloud/storage";
 
-import { UPLOAD_URL_TTL_SECONDS } from "@/lib/constants/file-upload";
+import { MAX_UPLOAD_SIZE_BYTES, UPLOAD_URL_TTL_SECONDS } from "@/lib/constants/file-upload";
 import { getExpectedGcsProjectId } from "@/lib/constants/gcs";
 
 type GcpServiceAccountJson = {
@@ -239,6 +239,35 @@ export async function presignPutObject(
       : {}),
   });
   return url;
+}
+
+/**
+ * `UPLOAD_ENFORCE_CONTENT_LENGTH_RANGE=1` assina `x-goog-content-length-range` (0..MAX_UPLOAD_SIZE_BYTES) em
+ * toda URL de upload gerada por `presignUploadUrl`. Default desligado: o CORS do bucket precisa listar o header
+ * em `responseHeader` antes de ligar, senão o PUT do browser falha no preflight.
+ */
+export function isContentLengthRangeEnforced(): boolean {
+  return process.env.UPLOAD_ENFORCE_CONTENT_LENGTH_RANGE?.trim() === "1";
+}
+
+/**
+ * Presign de PUT para as rotas de upload de usuário. Retorna também os headers EXTRAS que o cliente deve
+ * enviar no PUT (além de `Content-Type`); vazio quando o range não é exigido.
+ */
+export async function presignUploadUrl(
+  key: string,
+  mimeType: string,
+): Promise<{ uploadUrl: string; uploadHeaders: Record<string, string> }> {
+  if (!isContentLengthRangeEnforced()) {
+    return { uploadUrl: await presignPutObject(key, mimeType), uploadHeaders: {} };
+  }
+  const uploadUrl = await presignPutObject(key, mimeType, { maxSizeBytes: MAX_UPLOAD_SIZE_BYTES });
+  return {
+    uploadUrl,
+    uploadHeaders: {
+      [GCS_CONTENT_LENGTH_RANGE_HEADER]: contentLengthRangeHeaderValue(MAX_UPLOAD_SIZE_BYTES),
+    },
+  };
 }
 
 /**
