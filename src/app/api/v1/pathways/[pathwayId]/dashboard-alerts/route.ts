@@ -6,6 +6,7 @@ import { buildKanbanClientWhereForSession } from "@/application/use-cases/shared
 import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
 import { dashboardPathwayOpmeQuerySchema } from "@/lib/validators/kanban";
 import { loadDashboardPathwayAlerts } from "@/application/use-cases/pathway/load-dashboard-pathway-alerts";
+import { after } from "next/server";
 import { z } from "zod";
 import type { RouteCtx } from "@/types/api/route-context";
 
@@ -49,11 +50,20 @@ export async function GET(request: Request, ctx: RouteCtx) {
   const slaThrottleKey = `sla-check:${pathwayId}:${version.id}`;
   const canRun = await tryAcquire(slaThrottleKey, 60);
   if (canRun) {
-    void checkAndEmitSlaNotifications({
-      tenantId: tenantCtx.tenantId,
-      pathwayId,
-      versionId: version.id,
-    });
+    after(() =>
+      checkAndEmitSlaNotifications({
+        tenantId: tenantCtx.tenantId,
+        pathwayId,
+        versionId: version.id,
+      }).catch((err: unknown) => {
+        console.error("[sla-check] emit failed", {
+          tenantId: tenantCtx.tenantId,
+          pathwayId,
+          versionId: version.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }),
+    );
   }
 
   const clientWhere = await buildKanbanClientWhereForSession(

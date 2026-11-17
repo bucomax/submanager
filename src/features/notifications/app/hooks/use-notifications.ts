@@ -17,6 +17,13 @@ const SSE_RECONNECT_MS = 5_000;
 const POLL_INTERVAL_MS = 30_000;
 const MAX_SSE_FAILURES = 3;
 
+/** Falhas aqui não devem interromper a UI (sino é secundário), mas não podem sumir em silêncio. */
+function warnNotificationFailure(scope: string, err: unknown): void {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(`[notifications] ${scope} failed:`, err);
+  }
+}
+
 export function useNotifications() {
   const t = useTranslations("notifications.bell");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -52,9 +59,13 @@ export function useNotifications() {
             });
             alertUserOfNotification(newest);
           }
-        } catch { /* silent */ }
+        } catch (err) {
+          warnNotificationFailure("fetch newest notification", err);
+        }
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      warnNotificationFailure("fetch unread count", err);
+    }
   }, []);
 
   const startPolling = useCallback(() => {
@@ -89,7 +100,9 @@ export function useNotifications() {
         setUnreadCount(data.count);
         prevUnreadRef.current = data.count;
         sseFailuresRef.current = 0;
-      } catch { /* ignore */ }
+      } catch (err) {
+        warnNotificationFailure("parse unread-count event", err);
+      }
     });
 
     es.addEventListener("notification", (e) => {
@@ -99,7 +112,9 @@ export function useNotifications() {
         setItems((prev) => [notification, ...prev]);
         sseFailuresRef.current = 0;
         alertUserOfNotification(notification);
-      } catch { /* ignore */ }
+      } catch (err) {
+        warnNotificationFailure("parse notification event", err);
+      }
     });
 
     es.onerror = () => {
@@ -144,7 +159,9 @@ export function useNotifications() {
         setItems(result.data);
       }
       setNextCursor(result.nextCursor);
-    } catch { /* silent */ } finally {
+    } catch (err) {
+      warnNotificationFailure("load notifications", err);
+    } finally {
       setLoading(false);
     }
   }, []);

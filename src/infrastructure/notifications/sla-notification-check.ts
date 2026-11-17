@@ -129,3 +129,57 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
     }
   }
 }
+
+export type SlaSweepSummary = {
+  pathways: number;
+  failed: number;
+  /** true se o orçamento de tempo acabou antes de varrer todas as jornadas. */
+  truncated: boolean;
+};
+
+const MAX_PATHWAYS_PER_SWEEP = 2000;
+
+/**
+ * Varre a versão publicada mais recente de cada jornada de tenants ativos (sequencial, com orçamento de tempo).
+ * Usado pelo cron: o check deixa de depender de alguém abrir o dashboard.
+ */
+export async function runSlaCheckForActiveTenants(options: {
+  budgetMs: number;
+}): Promise<SlaSweepSummary> {
+  const deadline = Date.now() + options.budgetMs;
+
+  const versions = await prisma.pathwayVersion.findMany({
+    where: { published: true, pathway: { tenant: { isActive: true } } },
+    orderBy: [{ pathwayId: "asc" }, { version: "desc" }],
+    select: { id: true, pathwayId: true, pathway: { select: { tenantId: true } } },
+    take: MAX_PATHWAYS_PER_SWEEP,
+  });
+
+  const latestByPathway = new Map<string, (typeof versions)[number]>();
+  for (const v of versions) {
+    if (!latestByPathway.has(v.pathwayId)) latestByPathway.set(v.pathwayId, v);
+  }
+
+  let processed = 0;
+  let failed = 0;
+  let truncated = false;
+  for (const v of latestByPathway.values()) {
+    if (Date.now() >= deadline) {
+      truncated = true;
+      break;
+    }
+    try {
+      await checkAndEmitSlaNotifications({
+        tenantId: v.pathway.tenantId,
+        pathwayId: v.pathwayId,
+        versionId: v.id,
+      });
+      processed += 1;
+    } catch (err) {
+      failed += 1;
+      console.error("[sla-sweep] pathway check failed:", v.pathwayId, err);
+    }
+  }
+
+  return { pathways: processed, failed, truncated };
+}

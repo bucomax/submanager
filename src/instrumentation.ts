@@ -28,6 +28,7 @@ export async function register() {
 
   // BullMQ worker is long-running; Vercel serverless não mantém processo dedicado.
   // Use Redis na API (filas) e rode o worker em outro host, ou DISABLE_NOTIFICATION_WORKER=true.
+  // Emitters só enfileiram na Vercel com QUEUE_EXTERNAL_WORKER=1 (ver `isQueueConsumerAvailable`).
   if (
     process.env.VERCEL === "1" ||
     process.env.DISABLE_NOTIFICATION_WORKER === "true"

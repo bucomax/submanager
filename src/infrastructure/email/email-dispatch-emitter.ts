@@ -1,6 +1,6 @@
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
 import type { EmailDispatchJobPayload } from "@/infrastructure/queue/email-dispatch-job-types";
-import { isRedisEnabled, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
+import { isQueueConsumerAvailable, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
 
 /**
  * Enfileira envio de e-mail (BullMQ) ou processa inline se Redis indisponível.
@@ -23,7 +23,7 @@ export async function enqueueEmailDispatch(
     return;
   }
 
-  if (isRedisEnabled()) {
+  if (isQueueConsumerAvailable()) {
     try {
       const { getEmailDispatchQueue } = await import("@/infrastructure/queue/email-dispatch-queue");
       const queue = getEmailDispatchQueue();

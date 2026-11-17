@@ -2,7 +2,7 @@ import type { NotificationType, Prisma } from "@prisma/client";
 import type { EmitNotificationInput, INotificationEmitter } from "@/application/ports/notification-emitter.port";
 import type { NotificationJobPayload } from "@/infrastructure/queue/notification-job-types";
 import { prisma } from "@/infrastructure/database/prisma";
-import { isRedisEnabled, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
+import { isQueueConsumerAvailable, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
 import {
   filterUserIdsWhoCanViewClient,
   getClientIdFromPlainMetadata,
@@ -106,7 +106,7 @@ export const notificationEmitter: INotificationEmitter = {
     }
     if (userIds.length === 0) return;
 
-    if (isRedisEnabled()) {
+    if (isQueueConsumerAvailable()) {
       try {
         const enqueued = await tryEnqueueNotification(input, userIds);
         if (enqueued) {

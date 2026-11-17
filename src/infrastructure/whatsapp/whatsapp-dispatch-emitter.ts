@@ -1,6 +1,6 @@
 import type { WhatsAppDispatchInput } from "@/application/ports/whatsapp-dispatcher.port";
 import type { WhatsAppDispatchJobPayload } from "@/infrastructure/queue/whatsapp-dispatch-job-types";
-import { isRedisEnabled, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
+import { isQueueConsumerAvailable, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
 import { prisma } from "@/infrastructure/database/prisma";
 
 /**
@@ -27,7 +27,7 @@ export async function enqueueWhatsAppDispatch(
   };
 
   // Try BullMQ first
-  if (isRedisEnabled()) {
+  if (isQueueConsumerAvailable()) {
     try {
       const { getWhatsAppDispatchQueue } = await import(
         "@/infrastructure/queue/whatsapp-dispatch-queue"

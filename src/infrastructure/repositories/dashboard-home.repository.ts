@@ -1,5 +1,13 @@
-import type { IDashboardHomeRepository } from "@/application/ports/dashboard-home-repository.port";
+import type { DayCount, IDashboardHomeRepository } from "@/application/ports/dashboard-home-repository.port";
 import { prisma } from "@/infrastructure/database/prisma";
+import { DASHBOARD_CHART_TIMEZONE } from "@/lib/utils/dashboard-chart-calendar";
+
+type DayCountRow = { day: string; count: bigint };
+
+/** Colunas `timestamp` (sem tz) guardam UTC; agrupa por dia civil no fuso do dashboard, no banco. */
+function mapDayCounts(rows: DayCountRow[]): DayCount[] {
+  return rows.map((r) => ({ day: r.day, count: Number(r.count) }));
+}
 
 export class DashboardHomePrismaRepository implements IDashboardHomeRepository {
   async fetchPathwayOptions(tenantId: string) {
@@ -53,34 +61,44 @@ export class DashboardHomePrismaRepository implements IDashboardHomeRepository {
     });
   }
 
-  async findTransitionsSince(tenantId: string, since: Date) {
-    return prisma.stageTransition.findMany({
-      where: {
-        createdAt: { gte: since },
-        patientPathway: { tenantId },
-      },
-      select: { patientPathwayId: true, createdAt: true },
-    });
+  async countTransitionsByDay(tenantId: string, since: Date) {
+    const rows = await prisma.$queryRaw<DayCountRow[]>`
+      SELECT to_char((st."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${DASHBOARD_CHART_TIMEZONE}, 'YYYY-MM-DD') AS day,
+             COUNT(*) AS count
+      FROM "StageTransition" st
+      JOIN "PatientPathway" pp ON pp."id" = st."patientPathwayId"
+      WHERE pp."tenantId" = ${tenantId} AND st."createdAt" >= ${since}
+      GROUP BY 1`;
+    return mapDayCounts(rows);
   }
 
-  async findCompletionTimestampsSince(tenantId: string, since: Date) {
-    return prisma.patientPathway.findMany({
-      where: {
-        tenantId,
-        completedAt: { gte: since },
-      },
-      select: { completedAt: true },
-    });
+  async countPathwaysWithTransitionSince(tenantId: string, since: Date) {
+    const rows = await prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(DISTINCT st."patientPathwayId") AS count
+      FROM "StageTransition" st
+      JOIN "PatientPathway" pp ON pp."id" = st."patientPathwayId"
+      WHERE pp."tenantId" = ${tenantId} AND st."createdAt" >= ${since}`;
+    return Number(rows[0]?.count ?? 0);
   }
 
-  async findStartTimestampsSince(tenantId: string, since: Date) {
-    return prisma.patientPathway.findMany({
-      where: {
-        tenantId,
-        createdAt: { gte: since },
-      },
-      select: { createdAt: true },
-    });
+  async countCompletionsByDay(tenantId: string, since: Date) {
+    const rows = await prisma.$queryRaw<DayCountRow[]>`
+      SELECT to_char((pp."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${DASHBOARD_CHART_TIMEZONE}, 'YYYY-MM-DD') AS day,
+             COUNT(*) AS count
+      FROM "PatientPathway" pp
+      WHERE pp."tenantId" = ${tenantId} AND pp."completedAt" >= ${since}
+      GROUP BY 1`;
+    return mapDayCounts(rows);
+  }
+
+  async countStartsByDay(tenantId: string, since: Date) {
+    const rows = await prisma.$queryRaw<DayCountRow[]>`
+      SELECT to_char((pp."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${DASHBOARD_CHART_TIMEZONE}, 'YYYY-MM-DD') AS day,
+             COUNT(*) AS count
+      FROM "PatientPathway" pp
+      WHERE pp."tenantId" = ${tenantId} AND pp."createdAt" >= ${since}
+      GROUP BY 1`;
+    return mapDayCounts(rows);
   }
 }
 

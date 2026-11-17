@@ -54,6 +54,18 @@ export function isRedisEnabled(): boolean {
   return !!process.env.REDIS_URL?.trim();
 }
 
+/**
+ * Há consumidor para as filas BullMQ neste deploy?
+ * Na Vercel o worker não sobe (`instrumentation.ts`), então enfileirar deixaria jobs presos:
+ * só considera disponível se houver worker externo declarado (`QUEUE_EXTERNAL_WORKER=1`).
+ * Emitters devem usar isto (e não `isRedisEnabled`) para decidir entre fila e execução inline.
+ */
+export function isQueueConsumerAvailable(): boolean {
+  if (!isRedisEnabled()) return false;
+  if (process.env.VERCEL === "1") return process.env.QUEUE_EXTERNAL_WORKER === "1";
+  return true;
+}
+
 function createConnection(): IORedis {
   const url = process.env.REDIS_URL!.trim();
   const conn = new IORedis(url, {

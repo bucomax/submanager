@@ -1,4 +1,4 @@
-import type { IDashboardHomeRepository } from "@/application/ports/dashboard-home-repository.port";
+import type { DayCount, IDashboardHomeRepository } from "@/application/ports/dashboard-home-repository.port";
 import {
   calendarDayKeyInTimeZone,
   DASHBOARD_CHART_TIMEZONE,
@@ -47,24 +47,30 @@ export async function getDashboardHomeMetrics(
 
   const repo = dashboardHome;
 
+  // Conversion rate: unique pathways with transitions in last 7 calendar days / active
+  const dayKeys7 = lastNCalendarDaysInTimeZone(now, CHART_DAYS, DASHBOARD_CHART_TIMEZONE);
+  const last7DaysStart = startOfSaoPauloCalendarDay(dayKeys7[0]!);
+
   const [
     rawPathways,
     pathwaysActive,
     transitionsToday,
     awaitingAction,
     pathwaysCompletedToday,
-    transitionsHistory,
-    completionTimestamps,
-    startTimestamps,
+    transitionsByDay,
+    completionsByDayRows,
+    startsByDayRows,
+    pathwaysTouchedLast7Days,
   ] = await Promise.all([
     repo.fetchPathwayOptions(tenantId),
     repo.countActivePathways(tenantId),
     repo.countTransitionsSince(tenantId, startTodaySp),
     repo.countAwaitingAction(tenantId, staleThreshold),
     repo.countCompletedSince(tenantId, startTodaySp),
-    repo.findTransitionsSince(tenantId, historyFrom),
-    repo.findCompletionTimestampsSince(tenantId, historyFrom),
-    repo.findStartTimestampsSince(tenantId, historyFrom),
+    repo.countTransitionsByDay(tenantId, historyFrom),
+    repo.countCompletionsByDay(tenantId, historyFrom),
+    repo.countStartsByDay(tenantId, historyFrom),
+    repo.countPathwaysWithTransitionSince(tenantId, last7DaysStart),
   ]);
 
   const pathwayOptions: DashboardPathwayOption[] = rawPathways.map((p) => ({
@@ -73,41 +79,13 @@ export async function getDashboardHomeMetrics(
     publishedVersion: p.versions[0] ?? null,
   }));
 
-  // Conversion rate: unique pathways with transitions in last 7 days / active
-  const dayKeys7 = lastNCalendarDaysInTimeZone(now, CHART_DAYS, DASHBOARD_CHART_TIMEZONE);
-  const calendarKeys7 = new Set(dayKeys7);
-
-  const touchedLast7Days = new Set(
-    transitionsHistory
-      .filter((row) =>
-        calendarKeys7.has(calendarDayKeyInTimeZone(row.createdAt, DASHBOARD_CHART_TIMEZONE)),
-      )
-      .map((row) => row.patientPathwayId),
-  ).size;
-
   const conversionRate =
-    pathwaysActive > 0 ? Math.round((touchedLast7Days / pathwaysActive) * 100) : 0;
+    pathwaysActive > 0 ? Math.round((pathwaysTouchedLast7Days / pathwaysActive) * 100) : 0;
 
-  // Bucket transitions by calendar day
-  const transitionCountsByDay = new Map<string, number>();
-  for (const row of transitionsHistory) {
-    const k = calendarDayKeyInTimeZone(row.createdAt, DASHBOARD_CHART_TIMEZONE);
-    transitionCountsByDay.set(k, (transitionCountsByDay.get(k) ?? 0) + 1);
-  }
-
-  const completionsByDay = new Map<string, number>();
-  for (const row of completionTimestamps) {
-    const at = row.completedAt;
-    if (!at) continue;
-    const k = calendarDayKeyInTimeZone(at, DASHBOARD_CHART_TIMEZONE);
-    completionsByDay.set(k, (completionsByDay.get(k) ?? 0) + 1);
-  }
-
-  const startsByDay = new Map<string, number>();
-  for (const row of startTimestamps) {
-    const k = calendarDayKeyInTimeZone(row.createdAt, DASHBOARD_CHART_TIMEZONE);
-    startsByDay.set(k, (startsByDay.get(k) ?? 0) + 1);
-  }
+  const toDayMap = (rows: DayCount[]) => new Map(rows.map((r) => [r.day, r.count]));
+  const transitionCountsByDay = toDayMap(transitionsByDay);
+  const completionsByDay = toDayMap(completionsByDayRows);
+  const startsByDay = toDayMap(startsByDayRows);
 
   return {
     pathwayOptions,

@@ -8,17 +8,10 @@ export type DashboardPathwayOptionRow = {
   versions: { id: string; version: number }[];
 };
 
-export type StageTransitionHistoryRow = {
-  patientPathwayId: string;
-  createdAt: Date;
-};
-
-export type CompletionTimestampRow = {
-  completedAt: Date | null;
-};
-
-export type StartTimestampRow = {
-  createdAt: Date;
+/** Contagem por dia civil (`YYYY-MM-DD` no fuso do dashboard), agregada no banco. */
+export type DayCount = {
+  day: string;
+  count: number;
 };
 
 export interface IDashboardHomeRepository {
@@ -27,7 +20,9 @@ export interface IDashboardHomeRepository {
   countTransitionsSince(tenantId: string, since: Date): Promise<number>;
   countAwaitingAction(tenantId: string, staleThreshold: Date): Promise<number>;
   countCompletedSince(tenantId: string, since: Date): Promise<number>;
-  findTransitionsSince(tenantId: string, since: Date): Promise<StageTransitionHistoryRow[]>;
-  findCompletionTimestampsSince(tenantId: string, since: Date): Promise<CompletionTimestampRow[]>;
-  findStartTimestampsSince(tenantId: string, since: Date): Promise<StartTimestampRow[]>;
+  countTransitionsByDay(tenantId: string, since: Date): Promise<DayCount[]>;
+  /** Pathways distintos com ao menos uma transição desde `since`. */
+  countPathwaysWithTransitionSince(tenantId: string, since: Date): Promise<number>;
+  countCompletionsByDay(tenantId: string, since: Date): Promise<DayCount[]>;
+  countStartsByDay(tenantId: string, since: Date): Promise<DayCount[]>;
 }

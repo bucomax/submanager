@@ -117,7 +117,10 @@ export const authOptions: NextAuthOptions = {
               where: { id: userId },
               data: { activeTenantId },
             })
-            .catch(() => undefined);
+            .catch((err) => {
+              // Best-effort: a sessão segue com o tenant resolvido; a próxima leitura tenta persistir de novo.
+              console.warn("[auth] failed to persist auto-resolved activeTenantId:", userId, err);
+            });
         }
       }
 

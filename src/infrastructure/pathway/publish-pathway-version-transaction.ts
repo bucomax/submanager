@@ -100,26 +100,31 @@ export async function runPublishPathwayVersionTransaction(
     await tx.pathwayStageChecklistItem.createMany({ data: checklistRows });
   }
 
-  for (const stage of stages) {
+  const requestedFileIds = [...new Set(stages.flatMap((stage) => stage.documentFileAssetIds))];
+  const validFiles =
+    requestedFileIds.length > 0
+      ? await tx.fileAsset.findMany({
+          where: { id: { in: requestedFileIds }, tenantId },
+          select: { id: true },
+        })
+      : [];
+  const validFileIds = new Set(validFiles.map((f) => f.id));
+
+  const stageIdsToReset = stages
+    .map((stage) => stageIdByKey.get(stage.stageKey))
+    .filter((id): id is string => Boolean(id));
+  if (stageIdsToReset.length > 0) {
+    await tx.stageDocument.deleteMany({ where: { pathwayStageId: { in: stageIdsToReset } } });
+  }
+
+  const documentRows = stages.flatMap((stage) => {
     const pathwayStageId = stageIdByKey.get(stage.stageKey);
-    if (!pathwayStageId) continue;
-    await tx.stageDocument.deleteMany({ where: { pathwayStageId } });
-    let docOrder = 0;
-    for (const fileAssetId of stage.documentFileAssetIds) {
-      const fileOk = await tx.fileAsset.findFirst({
-        where: { id: fileAssetId, tenantId },
-        select: { id: true },
-      });
-      if (!fileOk) continue;
-      await tx.stageDocument.create({
-        data: {
-          pathwayStageId,
-          fileAssetId,
-          sortOrder: docOrder,
-        },
-      });
-      docOrder += 1;
-    }
+    if (!pathwayStageId) return [];
+    const orderedValidIds = [...new Set(stage.documentFileAssetIds)].filter((id) => validFileIds.has(id));
+    return orderedValidIds.map((fileAssetId, sortOrder) => ({ pathwayStageId, fileAssetId, sortOrder }));
+  });
+  if (documentRows.length > 0) {
+    await tx.stageDocument.createMany({ data: documentRows });
   }
 
   if (oldPublished) {
