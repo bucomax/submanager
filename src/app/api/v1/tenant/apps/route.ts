@@ -6,7 +6,6 @@ import {
   requireSessionOr401,
 } from "@/lib/auth/guards";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
-import { mapAppToDto } from "@/application/use-cases/admin/apps/map-app-dto";
 import type { AppCatalogCardDto } from "@/types/api/apps-v1";
 import type { AppCategory } from "@prisma/client";
 

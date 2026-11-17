@@ -1,4 +1,3 @@
-import { getClientsListPageWithoutCache } from "@/infrastructure/cache/cached-clients-list";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonIfPrismaSchemaMismatch } from "@/lib/api/prisma-schema-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";

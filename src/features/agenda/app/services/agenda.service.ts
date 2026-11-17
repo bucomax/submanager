@@ -4,7 +4,6 @@ import type {
   AgendaEventDto,
   AgendaListResponseData,
   CreateAgendaEventRequestBody,
-  UpdateAgendaEventRequestBody,
 } from "@/types/api/agenda-v1";
 
 export async function listAgendaEvents(from: string, to: string): Promise<AgendaEventDto[]> {
@@ -31,27 +30,3 @@ export async function createAgendaEvent(input: CreateAgendaEventRequestBody): Pr
   return res.data.data;
 }
 
-export async function updateAgendaEvent(
-  id: string,
-  input: UpdateAgendaEventRequestBody,
-): Promise<AgendaEventDto> {
-  const res = await apiClient.patch<ApiEnvelope<AgendaEventDto>>(
-    `/api/v1/tenant/agenda/${id}`,
-    input,
-    { skipErrorToast: true },
-  );
-  if (!res.data.success) {
-    throw new Error(res.data.error.message);
-  }
-  return res.data.data;
-}
-
-export async function deleteAgendaEvent(id: string): Promise<void> {
-  const res = await apiClient.delete<ApiEnvelope<{ id: string }>>(
-    `/api/v1/tenant/agenda/${id}`,
-    { skipErrorToast: true },
-  );
-  if (!res.data.success) {
-    throw new Error(res.data.error.message);
-  }
-}

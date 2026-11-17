@@ -1,7 +1,4 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/infrastructure/database/prisma";
-import { CACHE_REVALIDATE_SEC } from "@/infrastructure/cache/cache-config";
-import { tenantClientsListTag } from "@/infrastructure/cache/cache-tags";
 import type { TenantMembershipClientScope } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { mergeClientWhereWithVisibility } from "@/application/use-cases/shared/load-client-visibility-scope";
 import {
@@ -59,44 +56,3 @@ export async function getClientsListPageWithoutCache(args: CachedClientsListArgs
   };
 }
 
-/**
- * Listagem com `unstable_cache` (não usada em `GET /api/v1/clients` na Vercel — ver rota).
- * Mantida para testes locais ou reativação futura com cuidado com serialização pós-cache.
- *
- * O filtro `status` (SLA em memória) **não** passa por aqui — continua sem cache no route.
- */
-export async function getCachedClientsListPage(args: CachedClientsListArgs): Promise<{
-  items: ClientListRow[];
-  total: number;
-}> {
-  const { tenantId, viewerUserId, globalRole, scope, limit, page, q, pathwayId, stageId } = args;
-
-  const cacheKey = [
-    "clients-list-v1",
-    tenantId,
-    viewerUserId,
-    globalRole,
-    scope.role,
-    String(scope.restrictedToAssignedOnly),
-    scope.linkedOpmeSupplierId ?? "none",
-    String(limit),
-    String(page),
-    q ?? "",
-    pathwayId ?? "",
-    stageId ?? "",
-  ];
-
-  const raw = await unstable_cache(
-    async () => loadClientsListPageFromDb(args),
-    cacheKey,
-    {
-      revalidate: CACHE_REVALIDATE_SEC.clientsList,
-      tags: [tenantClientsListTag(tenantId)],
-    },
-  )();
-
-  return {
-    items: reviveClientListRows(raw.items),
-    total: raw.total,
-  };
-}

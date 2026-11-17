@@ -4,6 +4,3 @@ export function patientPortalFileIsDownloadableByPatient(status: PatientPortalFi
   return status === "NOT_APPLICABLE" || status === "APPROVED";
 }
 
-export function patientPortalFileVisibleInPatientList(status: PatientPortalFileReviewStatusValue): boolean {
-  return status !== "REJECTED";
-}

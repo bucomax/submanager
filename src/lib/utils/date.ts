@@ -19,19 +19,6 @@ export function formatDateTime(iso: string, locale = "pt-BR"): string {
   }).format(date);
 }
 
-export function formatDateShort(iso: string, locale = "pt-BR"): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
 export function formatDateTimeShort(iso: string, locale = "pt-BR"): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {

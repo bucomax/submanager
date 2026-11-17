@@ -99,33 +99,6 @@ function ctaButton(href: string, label: string): string {
 `.trim();
 }
 
-/** Confirmação de e-mail (cadastro público, se existir). */
-export function getConfirmEmailHtml(params: { name: string | null; confirmUrl: string }): string {
-  const name = params.name || "Usuário";
-  const content = `
-    <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: ${BRAND.text}; line-height: 1.3;">
-      Confirme seu e-mail
-    </h1>
-    <p style="margin: 0 0 16px; font-size: 15px; color: ${BRAND.text}; line-height: 1.6;">
-      Olá, ${name}!
-    </p>
-    <p style="margin: 0 0 8px; font-size: 15px; color: ${BRAND.text}; line-height: 1.6;">
-      Clique no botão abaixo para confirmar seu endereço de e-mail e ativar sua conta.
-    </p>
-    ${ctaButton(params.confirmUrl, "Confirmar e-mail")}
-    <p style="margin: 16px 0 0; font-size: 13px; color: ${BRAND.textMuted}; line-height: 1.5;">
-      Ou copie e cole no navegador:
-    </p>
-    <p style="margin: 4px 0 0; font-size: 12px; color: ${BRAND.textMuted}; word-break: break-all;">
-      <a href="${params.confirmUrl}" style="color: ${BRAND.link}; text-decoration: underline;">${params.confirmUrl}</a>
-    </p>
-    <p style="margin: 24px 0 0; padding-top: 20px; border-top: 1px solid ${BRAND.border}; font-size: 12px; color: ${BRAND.textMuted};">
-      Este link expira em 24 horas. Se você não criou esta conta, ignore este e-mail.
-    </p>
-  `;
-  return baseLayout(content, `Confirme seu e-mail — SubManager`);
-}
-
 /** Recuperação de senha. */
 export function getResetPasswordHtml(params: { name: string | null; resetUrl: string }): string {
   const name = params.name || "Usuário";

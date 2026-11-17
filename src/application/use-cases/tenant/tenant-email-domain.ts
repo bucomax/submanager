@@ -8,26 +8,12 @@ import {
   resendDeleteDomain,
   resendGetDomain,
   resendVerifyDomain,
-  type ResendDomain,
 } from "@/infrastructure/email/resend-domain.client";
 import type {
   EmailDomainDnsRow,
   TenantEmailDomainDto,
 } from "@/types/api/email-domain-v1";
 import type { PatchTenantEmailDomainBody, PostSetupTenantEmailDomainBody } from "@/lib/validators/email-domain";
-
-function mapRecordsToRows(records: ResendDomain["records"] | undefined | null): EmailDomainDnsRow[] {
-  if (!records?.length) return [];
-  return records.map((r) => ({
-    type: r.type,
-    name: r.name,
-    value: r.value,
-    status: r.status,
-    ttl: r.ttl,
-    priority: r.priority,
-    record: r.record,
-  }));
-}
 
 function toPublicStatus(
   row: NonNullable<Awaited<ReturnType<typeof tenantPrismaRepository.findTenantEmailDomainInternal>>>,

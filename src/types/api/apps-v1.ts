@@ -137,12 +137,6 @@ export type AppConfigField = {
 // Query params
 // ---------------------------------------------------------------------------
 
-export type ListAppsQueryParams = {
-  category?: AppCategory;
-  search?: string;
-  featured?: boolean;
-};
-
 // ---------------------------------------------------------------------------
 // Requests
 // ---------------------------------------------------------------------------
@@ -179,10 +173,6 @@ export type PublishAppRequestBody = {
 
 export type ActivateAppRequestBody = {
   config?: Record<string, unknown>;
-};
-
-export type UpdateAppConfigRequestBody = {
-  config: Record<string, unknown>;
 };
 
 export type ReorderScreenshotsRequestBody = {

@@ -54,6 +54,3 @@ export function getRefreshToken(): string | null {
   return useAuthTokenStore.getState().refreshToken;
 }
 
-export function clearAuthTokens(): void {
-  setAuthTokens(null, null);
-}

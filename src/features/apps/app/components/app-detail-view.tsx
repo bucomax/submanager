@@ -174,6 +174,7 @@ export function AppDetailView({ appId }: Props) {
                 className="shrink-0 overflow-hidden rounded-lg border bg-muted transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setLightboxIndex(idx)}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do storage */}
                 <img
                   src={ss.imageUrl}
                   alt={ss.caption?.["pt-BR"] ?? ss.caption?.["en"] ?? ""}
@@ -222,6 +223,7 @@ export function AppDetailView({ appId }: Props) {
                     )}
 
                     {/* Image */}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do storage */}
                     <img
                       src={ss.imageUrl}
                       alt={caption ?? ""}

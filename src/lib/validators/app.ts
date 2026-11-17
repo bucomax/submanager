@@ -155,10 +155,6 @@ export const activateAppBodySchema = z.object({
 // Update app config (tenant_admin)
 // ---------------------------------------------------------------------------
 
-export const updateAppConfigBodySchema = z.object({
-  config: z.record(z.string(), z.unknown()),
-});
-
 // ---------------------------------------------------------------------------
 // Reorder screenshots
 // ---------------------------------------------------------------------------
@@ -171,11 +167,3 @@ export const reorderScreenshotsBodySchema = z.object({
 // Query params
 // ---------------------------------------------------------------------------
 
-export const listAppsQuerySchema = z.object({
-  category: appCategoryEnum.optional(),
-  search: z.string().max(128).optional(),
-  featured: z
-    .string()
-    .transform((v) => v === "true")
-    .optional(),
-});

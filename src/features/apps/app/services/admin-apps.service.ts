@@ -18,15 +18,6 @@ export async function getAdminApps(): Promise<AppDto[]> {
   return res.data.data.apps;
 }
 
-/** Detalhe de um app (admin). */
-export async function getAdminAppDetail(appId: string): Promise<AppDto> {
-  const res = await apiClient.get<ApiEnvelope<AdminAppDetailResponseData>>(
-    `/api/v1/admin/apps/${appId}`,
-  );
-  if (!res.data.success) throw new Error(res.data.error.message);
-  return res.data.data.app;
-}
-
 /** Criar novo app (admin). */
 export async function createApp(data: CreateAppRequestBody): Promise<AppDto> {
   const res = await apiClient.post<ApiEnvelope<AdminAppDetailResponseData>>(

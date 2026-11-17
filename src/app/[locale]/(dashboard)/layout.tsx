@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { NotificationBell } from "@/features/notifications/app/components/notification-bell";
 import { NotificationPermissionBanner } from "@/features/notifications/app/components/notification-permission-banner";
 import { AppShell } from "@/shared/components/layout/app-shell";
-import { getSession } from "@/lib/auth/session";
+import { getSession, isSessionExpired } from "@/lib/auth/session";
 
 /**
  * Rotas autenticadas sob `/dashboard/*`: shell compartilhado (shared), nao feature.
@@ -12,8 +12,7 @@ import { getSession } from "@/lib/auth/session";
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
 
-  const isExpired =
-    session?.expires && new Date(session.expires).getTime() < Date.now();
+  const isExpired = isSessionExpired(session?.expires);
 
   if (!session?.user?.id || isExpired) {
     const cookieStore = await cookies();

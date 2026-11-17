@@ -158,7 +158,7 @@ export async function resendVerifyDomain(
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     });
     const json = (await parseJsonOrThrow(res)) as { data?: ResendDomain; error?: ResendErrorBody | null };
-    let domain = unwrapDomain(json);
+    const domain = unwrapDomain(json);
     if (!res.ok || (json as { error?: ResendErrorBody | null }).error) {
       const err = (json as { error?: ResendErrorBody | null }).error;
       return { ok: false, error: mapError(res.status, err ?? { message: "Falha na verificação" }) };

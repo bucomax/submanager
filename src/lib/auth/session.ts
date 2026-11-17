@@ -5,3 +5,9 @@ import { authOptions } from "./auth-options";
 export function getSession() {
   return getServerSession(authOptions);
 }
+
+/** `expires` da sessão NextAuth já passou (ISO string). */
+export function isSessionExpired(expires: string | undefined, now: number = Date.now()): boolean {
+  if (!expires) return false;
+  return new Date(expires).getTime() < now;
+}
