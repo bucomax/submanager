@@ -44,6 +44,19 @@ export async function POST(request: Request, ctx: RouteCtx) {
       const h = outcome.preflightHttp;
       return jsonError(h.errorCode, h.message, h.status, h.details);
     }
+    if ("publishConflict" in outcome) {
+      const c = outcome.publishConflict;
+      if (c.code === "ALREADY_PUBLISHED") {
+        return jsonError("ALREADY_PUBLISHED", apiT("errors.pathwayVersionAlreadyPublished"), 409);
+      }
+      if (c.code === "REMOVED_STAGES_WITH_PATIENTS") {
+        const names = (c.stages ?? []).map((st) => st.name).join(", ");
+        return jsonError("CONFLICT", apiT("errors.stagesHavePatients", { stages: names }), 409, {
+          stages: c.stages,
+        });
+      }
+      return jsonError("CONFLICT", apiT("errors.pathwayVersionStageKeyConflict"), 409);
+    }
     if (outcome.code === "PATHWAY_NOT_FOUND") {
       return jsonError("NOT_FOUND", apiT("errors.pathwayNotFound"), 404);
     }

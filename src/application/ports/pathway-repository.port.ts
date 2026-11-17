@@ -64,8 +64,6 @@ export interface IPathwayRepository {
 
   findPathwayVersionForPublish(pathwayId: string, versionId: string): Promise<unknown | null>;
 
-  findOldPublishedVersionForPublish(pathwayId: string, excludeVersionId: string): Promise<unknown | null>;
-
   runPublishTransaction(fn: (tx: unknown) => Promise<void>): Promise<void>;
 
   findPathwayVersionWithStagesForPublish(versionId: string): Promise<unknown | null>;

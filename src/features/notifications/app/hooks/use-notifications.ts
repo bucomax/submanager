@@ -101,10 +101,25 @@ export function useNotifications() {
         const data = JSON.parse(e.data) as { count: number };
         setUnreadCount(data.count);
         prevUnreadRef.current = data.count;
-        sseFailuresRef.current = 0;
+        // Não zera `sseFailuresRef` aqui: o servidor envia este evento a cada (re)conexão,
+        // mesmo quando o stream cai logo em seguida.
       } catch (err) {
         warnNotificationFailure("parse unread-count event", err);
       }
+    });
+
+    // Servidor sem tempo real (ex.: Vercel/modo inline): troca para polling imediatamente.
+    es.addEventListener("mode", (e) => {
+      try {
+        const data = JSON.parse(e.data) as { mode?: string };
+        if (data.mode !== "polling") return;
+      } catch (err) {
+        warnNotificationFailure("parse mode event", err);
+        return;
+      }
+      es.close();
+      eventSourceRef.current = null;
+      startPolling();
     });
 
     es.addEventListener("notification", (e) => {

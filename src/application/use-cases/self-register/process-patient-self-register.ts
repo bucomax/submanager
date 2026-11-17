@@ -2,8 +2,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
-import { AuditEventType } from "@prisma/client";
-import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
+import type { Prisma } from "@prisma/client";
+import { AuditEventType, recordAuditEvent } from "@/infrastructure/audit/record-audit-event";
 import {
   findPatientSelfRegisterInviteForPreview,
   runPatientSelfRegisterSerializableTransaction,
@@ -98,15 +98,52 @@ export async function loadPatientSelfRegisterInvitePreview(
   };
 }
 
+type SelfRegisterAuditInput = {
+  tenantId: string;
+  clientId: string;
+  inviteId: string;
+  mode: "create" | "update";
+};
+
+/** Auditoria e consentimentos entram na mesma transação do cadastro (sem consentimento sem registro). */
+async function recordSelfRegisterAudit(
+  tx: Prisma.TransactionClient,
+  { tenantId, clientId, inviteId, mode }: SelfRegisterAuditInput,
+): Promise<void> {
+  const base = { tenantId, clientId, patientPathwayId: null, actorUserId: null };
+  await recordAuditEvent(tx, {
+    ...base,
+    type: AuditEventType.SELF_REGISTER_COMPLETED,
+    payload: { inviteId, mode },
+  });
+  await recordAuditEvent(tx, {
+    ...base,
+    type: AuditEventType.PATIENT_PORTAL_PASSWORD_SET,
+    payload: { clientId },
+  });
+  await recordAuditEvent(tx, {
+    ...base,
+    type: AuditEventType.PATIENT_CONSENT_GIVEN,
+    payload: { consentType: "terms", version: PUBLIC_SELF_REGISTER_TERMS_VERSION },
+  });
+  await recordAuditEvent(tx, {
+    ...base,
+    type: AuditEventType.PATIENT_CONSENT_GIVEN,
+    payload: { consentType: "lgpd", version: PUBLIC_SELF_REGISTER_PRIVACY_VERSION },
+  });
+}
+
 export type CompletePatientSelfRegisterErrorCode = "INVALID_TOKEN" | "SERIALIZABLE_CONFLICT";
 
 /**
- * POST público: cria/atualiza `Client`, marca convite usado, auditoria e e-mails de boas-vindas (fire-and-forget).
+ * POST público: cria/atualiza `Client`, marca convite usado, auditoria/consentimentos (na transação) e e-mails de boas-vindas (`afterCommit`).
  */
 export async function runCompletePatientSelfRegister(
   request: Request,
   data: ProcessPatientSelfRegisterBody,
-): Promise<{ ok: true } | { ok: false; code: CompletePatientSelfRegisterErrorCode }> {
+): Promise<
+  { ok: true; afterCommit: () => Promise<void> } | { ok: false; code: CompletePatientSelfRegisterErrorCode }
+> {
   const { token, password, ...clientFields } = data;
   const patientEmail = clientFields.email?.trim() ?? "";
   const portalPasswordHash = await bcrypt.hash(password, 12);
@@ -186,6 +223,13 @@ export async function runCompletePatientSelfRegister(
             data: { usedAt: now },
           });
 
+          await recordSelfRegisterAudit(tx, {
+            tenantId: inv.tenantId,
+            clientId: updated.id,
+            inviteId: inv.id,
+            mode: "update",
+          });
+
           return {
             clientId: updated.id,
             patientName: updated.name,
@@ -234,6 +278,13 @@ export async function runCompletePatientSelfRegister(
           data: { usedAt: now },
         });
 
+        await recordSelfRegisterAudit(tx, {
+          tenantId: inv.tenantId,
+          clientId: client.id,
+          inviteId: inv.id,
+          mode: "create",
+        });
+
         return {
           clientId: client.id,
           patientName: client.name,
@@ -255,39 +306,6 @@ export async function runCompletePatientSelfRegister(
     clinicName = result.clinicName;
     tenantId = result.tenantId;
     tenantSlug = result.tenantSlug;
-
-    await auditEventPrismaRepository.recordCanonical({
-      tenantId: result.tenantId,
-      clientId: result.clientId,
-      patientPathwayId: null,
-      actorUserId: null,
-      eventType: AuditEventType.SELF_REGISTER_COMPLETED,
-      payload: { inviteId: result.inviteId, mode: result.mode },
-    });
-    await auditEventPrismaRepository.recordCanonical({
-      tenantId: result.tenantId,
-      clientId: result.clientId,
-      patientPathwayId: null,
-      actorUserId: null,
-      eventType: AuditEventType.PATIENT_PORTAL_PASSWORD_SET,
-      payload: { clientId: result.clientId },
-    });
-    await auditEventPrismaRepository.recordCanonical({
-      tenantId: result.tenantId,
-      clientId: result.clientId,
-      patientPathwayId: null,
-      actorUserId: null,
-      eventType: AuditEventType.PATIENT_CONSENT_GIVEN,
-      payload: { consentType: "terms", version: PUBLIC_SELF_REGISTER_TERMS_VERSION },
-    });
-    await auditEventPrismaRepository.recordCanonical({
-      tenantId: result.tenantId,
-      clientId: result.clientId,
-      patientPathwayId: null,
-      actorUserId: null,
-      eventType: AuditEventType.PATIENT_CONSENT_GIVEN,
-      payload: { consentType: "lgpd", version: PUBLIC_SELF_REGISTER_PRIVACY_VERSION },
-    });
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError && err.code === "P2034") {
       return { ok: false, code: "SERIALIZABLE_CONFLICT" };
@@ -295,22 +313,25 @@ export async function runCompletePatientSelfRegister(
     throw err;
   }
 
-  notifyStaffPatientSelfRegistered({
-    tenantId,
-    clientId,
-    patientName,
-    clinicName,
-  }).catch((e) => console.error("[patient-self-register] notify failed:", e));
-
-  if (patientEmail) {
-    notifyPatientSelfRegisterWelcome({
+  /** E-mails pós-commit; a rota agenda com `after()` (sobrevive em serverless). */
+  const afterCommit = async () => {
+    await notifyStaffPatientSelfRegistered({
       tenantId,
-      patientEmail,
+      clientId,
       patientName,
       clinicName,
-      tenantSlug,
-    }).catch((e) => console.error("[patient-self-register] welcome email failed:", e));
-  }
+    }).catch((e) => console.error("[patient-self-register] notify failed:", e));
 
-  return { ok: true };
+    if (patientEmail) {
+      await notifyPatientSelfRegisterWelcome({
+        tenantId,
+        patientEmail,
+        patientName,
+        clinicName,
+        tenantSlug,
+      }).catch((e) => console.error("[patient-self-register] welcome email failed:", e));
+    }
+  };
+
+  return { ok: true, afterCommit };
 }

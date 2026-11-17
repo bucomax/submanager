@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 import { getApiT } from "@/lib/api/i18n";
 import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -70,6 +72,9 @@ export async function POST(request: Request) {
       409,
     );
   }
+
+  // E-mails de boas-vindas e aviso à equipe: após a resposta, sem se perder no serverless.
+  after(outcome.afterCommit);
 
   return jsonSuccess({
     message: apiT("success.patientSelfRegistered"),

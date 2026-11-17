@@ -1,5 +1,7 @@
 import { createHmac } from "node:crypto";
 
+import { after } from "next/server";
+
 import { whatsappWebhookPayloadSchema } from "@/lib/validators/whatsapp-webhook";
 import type { WhatsappWebhookPayload } from "@/types/api/whatsapp-webhook-v1";
 import { processWhatsappWebhookPayload } from "@/application/use-cases/whatsapp/process-whatsapp-webhook-payload";
@@ -86,8 +88,11 @@ export async function POST(request: Request) {
     return new Response("OK", { status: 200 });
   }
 
-  processWhatsappWebhookPayload(payload).catch((err) =>
-    console.error("[whatsapp-webhook] processing error:", err),
+  // `after()` mantém a função viva em serverless até o processamento terminar (fire-and-forget solto é perdido).
+  after(() =>
+    processWhatsappWebhookPayload(payload).catch((err) =>
+      console.error("[whatsapp-webhook] processing error:", err),
+    ),
   );
 
   return new Response("OK", { status: 200 });

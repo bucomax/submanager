@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { getCachedPatientPathwaysList } from "@/infrastructure/cache/cached-patient-pathways-list";
 import { getApiT } from "@/lib/api/i18n";
@@ -87,6 +89,8 @@ export async function POST(request: Request) {
         return jsonError("CONFLICT", apiT("errors.noPublishedVersionWithStages"), 409);
     }
   }
+
+  after(outcome.afterCommit);
 
   return jsonSuccess(outcome.data, { status: 201 });
 }

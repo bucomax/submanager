@@ -1,7 +1,10 @@
 import type { Prisma } from "@prisma/client";
 
 import { revalidateTenantPathwaysAndClientsLists } from "@/infrastructure/cache/revalidate-tenant-lists";
-import { runPublishPathwayVersionTransaction } from "@/infrastructure/pathway/publish-pathway-version-transaction";
+import {
+  type PublishTransactionResult,
+  runPublishPathwayVersionTransaction,
+} from "@/infrastructure/pathway/publish-pathway-version-transaction";
 import {
   firstPreflightHttpError,
   runPathwayPublishPreflight,
@@ -42,6 +45,7 @@ export async function runPublishPathwayVersionFlow(params: {
 }): Promise<
   | { ok: true; data: PublishPathwayVersionSuccess }
   | { ok: false; code: PublishPathwayVersionFlowErrorCode }
+  | { ok: false; publishConflict: Extract<PublishTransactionResult, { ok: false }> }
   | { ok: false; preflightHttp: NonNullable<ReturnType<typeof firstPreflightHttpError>> }
 > {
   const { tenantId, pathwayId, versionId, apiT } = params;
@@ -71,28 +75,18 @@ export async function runPublishPathwayVersionFlow(params: {
 
   const stages = deriveStagesFromGraph(versionRow.graphJson);
 
-  const oldPublished = await pathwayPrismaRepository.findOldPublishedVersionForPublish(
-    pathwayId,
-    versionId,
-  );
-
-  const oldStagesByKey = new Map(
-    (oldPublished as { stages?: Array<{ id: string; stageKey: string }> } | null)?.stages?.map((s) => [
-      s.stageKey,
-      s,
-    ]) ?? [],
-  );
-
+  let txResult: PublishTransactionResult = { ok: true };
   await pathwayPrismaRepository.runPublishTransaction(async (tx) => {
-    await runPublishPathwayVersionTransaction(tx as Prisma.TransactionClient, {
+    txResult = await runPublishPathwayVersionTransaction(tx as Prisma.TransactionClient, {
       tenantId,
       pathwayId,
       versionId,
       stages,
-      oldStagesByKey,
-      oldPublished,
     });
   });
+  if (!txResult.ok) {
+    return { ok: false, publishConflict: txResult };
+  }
 
   const published = await pathwayPrismaRepository.findPathwayVersionWithStagesForPublish(versionId);
 

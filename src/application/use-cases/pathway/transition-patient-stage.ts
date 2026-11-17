@@ -124,6 +124,16 @@ async function findReplay(
   return { ok: true, data: { patientPathway: toView(replay) }, afterCommit: NOOP };
 }
 
+/** Retry concorrente com o mesmo `correlationId`: após conflito, devolve o replay se a transição já foi gravada. */
+async function replayOr(
+  patientPathwayId: string,
+  parsed: StageTransitionInput,
+  fallback: TransitionPatientStageResult,
+): Promise<TransitionPatientStageResult> {
+  if (!parsed.correlationId) return fallback;
+  return (await findReplay(patientPathwayId, parsed.toStageId, parsed.correlationId)) ?? fallback;
+}
+
 type TxOutcome =
   | { outcome: "blocked"; pending: { id: string; label: string }[] }
   | { outcome: "conflict" }
@@ -181,13 +191,13 @@ export async function runTransitionPatientStage(params: {
   }
 
   if (toStage.id === pp.currentStageId) {
-    return { ok: false, code: "ALREADY_IN_TARGET_STAGE" };
+    return replayOr(pp.id, parsed, { ok: false, code: "ALREADY_IN_TARGET_STAGE" });
   }
 
   // Exclusão mútua best-effort (fail-open sem Redis); a consistência real vem do update condicional na tx.
   const lock = await acquireLock(`lock:transition:${patientPathwayId}`, 10);
   if (!lock) {
-    return { ok: false, code: "LOCK_CONFLICT" };
+    return replayOr(pp.id, parsed, { ok: false, code: "LOCK_CONFLICT" });
   }
 
   let txResult: TxOutcome;
@@ -204,9 +214,9 @@ export async function runTransitionPatientStage(params: {
     case "blocked":
       return { ok: false, code: "CHECKLIST_BLOCKED", pendingItems: txResult.pending };
     case "conflict":
-      return { ok: false, code: "STAGE_CONFLICT" };
+      return replayOr(pp.id, parsed, { ok: false, code: "STAGE_CONFLICT" });
     case "already_in_target":
-      return { ok: false, code: "ALREADY_IN_TARGET_STAGE" };
+      return replayOr(pp.id, parsed, { ok: false, code: "ALREADY_IN_TARGET_STAGE" });
     case "completed":
       return { ok: false, code: "PATHWAY_ALREADY_COMPLETED" };
     case "ok":
@@ -323,8 +333,8 @@ async function applyTransition(
       toStageId: toStage.id,
       fromStageName: fresh.currentStage?.name ?? null,
       toStageName: toStage.name,
+      // LGPD: texto livre do override fica só em StageTransition.ruleOverrideReason.
       forcedOverride,
-      ...(overrideReason ? { ruleOverrideReason: overrideReason } : {}),
     },
   });
 

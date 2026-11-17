@@ -4,9 +4,9 @@ import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases
 import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emitter";
 import { notificationEmitter } from "./notification-emitter";
 import { computeSlaHealthStatus } from "@/domain/pathway/sla-health";
+import { buildSlaDedupeKey } from "./sla-dedupe-key";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 type SlaCheckInput = {
   tenantId: string;
@@ -16,7 +16,7 @@ type SlaCheckInput = {
 
 /**
  * Checks all patients in a pathway version for SLA warning/critical status
- * and emits deduplicated notifications (max once per 24h per patient+stage+type).
+ * and emits deduplicated notifications (once per level per stage entry: patientPathway+stage+enteredStageAt+level).
  */
 export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promise<void> {
   const now = new Date();
@@ -33,6 +33,8 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
       tenantId: input.tenantId,
       pathwayId: input.pathwayId,
       pathwayVersionId: input.versionId,
+      completedAt: null,
+      client: { deletedAt: null },
     },
     select: {
       id: true,
@@ -65,16 +67,24 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
     const notifType: NotificationType = status === "danger" ? "sla_critical" : "sla_warning";
     const daysInStage = Math.floor((now.getTime() - pp.enteredStageAt.getTime()) / MS_PER_DAY);
 
-    const cutoff = new Date(now.getTime() - DEDUP_WINDOW_MS);
+    const dedupeKey = buildSlaDedupeKey({
+      patientPathwayId: pp.id,
+      stageId: pp.currentStage.id,
+      enteredStageAt: pp.enteredStageAt,
+      level: status === "danger" ? "critical" : "warning",
+    });
     const existing = await prisma.notification.findFirst({
       where: {
         tenantId: input.tenantId,
         type: notifType,
-        createdAt: { gte: cutoff },
-        metadata: {
-          path: ["patientPathwayId"],
-          equals: pp.id,
-        },
+        OR: [
+          { metadata: { path: ["slaDedupeKey"], equals: dedupeKey } },
+          // Notificações legadas (sem chave): já alertou desde que entrou na etapa.
+          {
+            createdAt: { gte: pp.enteredStageAt },
+            metadata: { path: ["patientPathwayId"], equals: pp.id },
+          },
+        ],
       },
       select: { id: true },
     });
@@ -88,19 +98,20 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
     });
 
     const label = status === "danger" ? "Alerta crítico" : "Atenção";
-    notificationEmitter.emit({
+    await notificationEmitter.emit({
       tenantId: input.tenantId,
       type: notifType,
       title: `${label}: ${pp.client.name}`,
       body: `${daysInStage} dias na etapa "${pp.currentStage.name}".`,
       targetUserIds,
-      correlationId: `${pp.id}:${pp.currentStage.id}`,
+      correlationId: dedupeKey,
       metadata: {
         clientId: pp.clientId,
         patientPathwayId: pp.id,
         stageId: pp.currentStage.id,
         stageName: pp.currentStage.name,
         daysInStage,
+        slaDedupeKey: dedupeKey,
       },
     }).catch((err) => console.error("[notification] sla emit failed:", err));
 
@@ -109,7 +120,7 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
         status === "danger"
           ? (pp.currentStage.alertCriticalDays ?? daysInStage)
           : (pp.currentStage.alertWarningDays ?? daysInStage);
-      enqueueEmailDispatch(
+      await enqueueEmailDispatch(
         {
           kind: "sla_alert",
           tenantId: input.tenantId,
@@ -124,7 +135,7 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
             clinicName,
           },
         },
-        { jobId: `email|sla|${input.tenantId}|${pp.id}|${pp.currentStage.id}`.replace(/:/g, "_") },
+        { jobId: `email|${input.tenantId}|${dedupeKey}`.replace(/:/g, "_") },
       ).catch((err) => console.error("[email] sla alert enqueue failed:", err));
     }
   }

@@ -1736,7 +1736,7 @@
           "401": { "description": "Não autenticado" },
           "403": { "description": "Sem permissão (requer tenant_admin ou super_admin)" },
           "404": { "description": "Jornada ou versão não encontrada" },
-          "409": { "description": "Ex.: etapa removida com pacientes na versão publicada" },
+          "409": { "description": "ALREADY_PUBLISHED (versão já publicada) ou CONFLICT (etapa removida com pacientes; stageKey com histórico em conflito)" },
           "422": { "description": "Grafo sem nodes ou responsáveis inválidos" }
         }
       }
@@ -2013,7 +2013,7 @@
         "security": [{ "cookieAuth": [] }],
         "responses": {
           "200": {
-            "description": "Stream SSE. Eventos: `unread-count` (data: { count }), `notification` (data: NotificationDto)"
+            "description": "Stream SSE. Eventos: `unread-count` (data: { count }), `notification` (data: NotificationDto), `mode` (data: { mode: \"polling\" }) — sem tempo real disponível (ex.: Vercel sem worker), envia `mode` e encerra; o cliente passa a fazer polling"
           },
           "401": { "description": "Não autenticado" },
           "429": { "description": "Rate limit de reconexão (3 por 10s por usuário)" }

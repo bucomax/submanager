@@ -1,12 +1,27 @@
 import type { Prisma } from "@prisma/client";
 
+import { diffChecklistItems } from "@/infrastructure/pathway/checklist-diff";
 import type { deriveStagesFromGraph } from "@/domain/pathway/graph-normalizer";
 
 export type DerivedPathwayStage = ReturnType<typeof deriveStagesFromGraph>[number];
 
+export type PublishTransactionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: "ALREADY_PUBLISHED" | "REMOVED_STAGES_WITH_PATIENTS" | "STAGE_KEY_CONFLICT";
+      stages?: { stageKey: string; name: string; patientCount: number }[];
+    };
+
+const STAGE_HISTORY_COUNT = { currentPatients: true, transitionsTo: true, transitionsFrom: true } as const;
+
 /**
  * Corpo persistido da publicação de uma versão de pathway (stages, checklist, docs, migração de pacientes).
  * Deve ser executado dentro de `prisma.$transaction`.
+ *
+ * - Serializa publicações do mesmo pathway via advisory lock.
+ * - Etapas removidas permanecem na versão anterior (preserva StageTransition/ChannelDispatch).
+ * - Checklist é reconciliado por diff (preserva progresso dos pacientes).
  */
 export async function runPublishPathwayVersionTransaction(
   tx: Prisma.TransactionClient,
@@ -15,16 +30,64 @@ export async function runPublishPathwayVersionTransaction(
     pathwayId: string;
     versionId: string;
     stages: DerivedPathwayStage[];
-    /** Etapas da versão publicada anterior (mesmo `stageKey` pode ser reaproveitado). */
-    oldStagesByKey: Map<string, { id: string; stageKey: string }>;
-    /** Versão publicada anterior (pacientes ativos serão migrados para `versionId`). */
-    oldPublished: { id: string } | null;
   },
-): Promise<void> {
-  const { tenantId, pathwayId, versionId, stages, oldStagesByKey, oldPublished } = input;
+): Promise<PublishTransactionResult> {
+  const { tenantId, pathwayId, versionId, stages } = input;
   const newStageKeys = new Set(stages.map((s) => s.stageKey));
 
-  await tx.pathwayStage.deleteMany({ where: { pathwayVersionId: versionId } });
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pathwayId}))`;
+
+  const target = await tx.pathwayVersion.findFirst({
+    where: { id: versionId, pathwayId },
+    select: { published: true },
+  });
+  if (target?.published) return { ok: false, code: "ALREADY_PUBLISHED" };
+
+  const oldPublished = await tx.pathwayVersion.findFirst({
+    where: { pathwayId, published: true, NOT: { id: versionId } },
+    include: { stages: { include: { _count: { select: STAGE_HISTORY_COUNT } } } },
+  });
+  const oldStages = oldPublished?.stages ?? [];
+  const oldStagesByKey = new Map(oldStages.map((s) => [s.stageKey, s]));
+
+  const removedWithPatients = oldStages.filter(
+    (s) => !newStageKeys.has(s.stageKey) && s._count.currentPatients > 0,
+  );
+  if (removedWithPatients.length > 0) {
+    return {
+      ok: false,
+      code: "REMOVED_STAGES_WITH_PATIENTS",
+      stages: removedWithPatients.map((s) => ({
+        stageKey: s.stageKey,
+        name: s.name,
+        patientCount: s._count.currentPatients,
+      })),
+    };
+  }
+
+  // Etapas já presentes na versão alvo (ex.: republicação de versão antiga).
+  const ownStages = await tx.pathwayStage.findMany({
+    where: { pathwayVersionId: versionId },
+    include: { _count: { select: STAGE_HISTORY_COUNT } },
+  });
+  const reusableOwn = new Map<string, string>();
+  for (const own of ownStages) {
+    const hasHistory =
+      own._count.currentPatients + own._count.transitionsTo + own._count.transitionsFrom > 0;
+    const keyClashesWithOld = oldStagesByKey.has(own.stageKey);
+    if (newStageKeys.has(own.stageKey) && !keyClashesWithOld) {
+      reusableOwn.set(own.stageKey, own.id);
+    } else if (!hasHistory) {
+      await tx.pathwayStage.delete({ where: { id: own.id } });
+    } else if (newStageKeys.has(own.stageKey) || !oldPublished || keyClashesWithOld) {
+      return { ok: false, code: "STAGE_KEY_CONFLICT" };
+    } else {
+      await tx.pathwayStage.update({
+        where: { id: own.id },
+        data: { pathwayVersionId: oldPublished.id },
+      });
+    }
+  }
 
   await tx.pathwayVersion.updateMany({
     where: { pathwayId, NOT: { id: versionId } },
@@ -36,48 +99,26 @@ export async function runPublishPathwayVersionTransaction(
   });
 
   for (const stage of stages) {
-    const existing = oldStagesByKey.get(stage.stageKey);
-    if (existing) {
+    const existingId = oldStagesByKey.get(stage.stageKey)?.id ?? reusableOwn.get(stage.stageKey);
+    const data = {
+      name: stage.name,
+      sortOrder: stage.sortOrder,
+      patientMessage: stage.patientMessage,
+      alertWarningDays: stage.alertWarningDays,
+      alertCriticalDays: stage.alertCriticalDays,
+      defaultAssigneeUserId: stage.defaultAssigneeUserId,
+      defaultAssigneeUserIds: stage.defaultAssigneeUserIds,
+    };
+    if (existingId) {
       await tx.pathwayStage.update({
-        where: { id: existing.id },
-        data: {
-          pathwayVersionId: versionId,
-          name: stage.name,
-          sortOrder: stage.sortOrder,
-          patientMessage: stage.patientMessage,
-          alertWarningDays: stage.alertWarningDays,
-          alertCriticalDays: stage.alertCriticalDays,
-          defaultAssigneeUserId: stage.defaultAssigneeUserId,
-          defaultAssigneeUserIds: stage.defaultAssigneeUserIds,
-        },
+        where: { id: existingId },
+        data: { ...data, pathwayVersionId: versionId },
       });
-      await tx.pathwayStageChecklistItem.deleteMany({ where: { pathwayStageId: existing.id } });
     } else {
       await tx.pathwayStage.create({
-        data: {
-          pathwayVersionId: versionId,
-          stageKey: stage.stageKey,
-          name: stage.name,
-          sortOrder: stage.sortOrder,
-          patientMessage: stage.patientMessage,
-          alertWarningDays: stage.alertWarningDays,
-          alertCriticalDays: stage.alertCriticalDays,
-          defaultAssigneeUserId: stage.defaultAssigneeUserId,
-          defaultAssigneeUserIds: stage.defaultAssigneeUserIds,
-        },
+        data: { ...data, pathwayVersionId: versionId, stageKey: stage.stageKey },
       });
     }
-  }
-
-  const removedStageIds = [...oldStagesByKey.entries()]
-    .filter(([key]) => !newStageKeys.has(key))
-    .map(([, s]) => s.id);
-
-  if (removedStageIds.length > 0) {
-    await tx.stageTransition.deleteMany({
-      where: { OR: [{ fromStageId: { in: removedStageIds } }, { toStageId: { in: removedStageIds } }] },
-    });
-    await tx.pathwayStage.deleteMany({ where: { id: { in: removedStageIds } } });
   }
 
   const allStages = await tx.pathwayStage.findMany({
@@ -86,18 +127,25 @@ export async function runPublishPathwayVersionTransaction(
   });
   const stageIdByKey = new Map(allStages.map((s) => [s.stageKey, s.id]));
 
-  const checklistRows = stages.flatMap((stage) => {
+  for (const stage of stages) {
     const pathwayStageId = stageIdByKey.get(stage.stageKey);
-    if (!pathwayStageId) return [];
-    return stage.checklistItems.map((item) => ({
-      pathwayStageId,
-      label: item.label,
-      sortOrder: item.sortOrder,
-      requiredForTransition: item.requiredForTransition,
-    }));
-  });
-  if (checklistRows.length > 0) {
-    await tx.pathwayStageChecklistItem.createMany({ data: checklistRows });
+    if (!pathwayStageId) continue;
+    const existingItems = await tx.pathwayStageChecklistItem.findMany({
+      where: { pathwayStageId },
+      select: { id: true, label: true, sortOrder: true },
+    });
+    const diff = diffChecklistItems(existingItems, stage.checklistItems);
+    for (const { id, ...itemData } of diff.update) {
+      await tx.pathwayStageChecklistItem.update({ where: { id }, data: itemData });
+    }
+    if (diff.create.length > 0) {
+      await tx.pathwayStageChecklistItem.createMany({
+        data: diff.create.map((item) => ({ pathwayStageId, ...item })),
+      });
+    }
+    if (diff.deleteIds.length > 0) {
+      await tx.pathwayStageChecklistItem.deleteMany({ where: { id: { in: diff.deleteIds } } });
+    }
   }
 
   const requestedFileIds = [...new Set(stages.flatMap((stage) => stage.documentFileAssetIds))];
@@ -133,4 +181,6 @@ export async function runPublishPathwayVersionTransaction(
       data: { pathwayVersionId: versionId },
     });
   }
+
+  return { ok: true };
 }

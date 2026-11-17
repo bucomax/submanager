@@ -1,5 +1,7 @@
 {
   "errors": {
+    "pathwayVersionStageKeyConflict": "Cannot republish this version: legacy stages with history share the same stage key.",
+    "pathwayVersionAlreadyPublished": "This version is already published.",
     "appNotFound": "App not found.",
     "cannotSetPasswordForActiveUser": "You can only set the password for pending invitations. For users with an active password, use the e-mail reset flow.",
     "internalError": "Something went wrong. Please try again shortly.",

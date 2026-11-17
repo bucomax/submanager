@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 import type { Prisma } from "@prisma/client";
-import { AuditEventType } from "@prisma/client";
 import { revalidateTenantClientsList } from "@/infrastructure/cache/revalidate-tenant-lists";
-import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
+import { recordAuditEvent, AuditEventType } from "@/infrastructure/audit/record-audit-event";
 import { pathwayPrismaRepository } from "@/infrastructure/repositories/pathway.repository";
 import { patientPathwayPrismaRepository } from "@/infrastructure/repositories/patient-pathway.repository";
 import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
@@ -57,7 +56,7 @@ export async function runCreatePatientPathway(params: {
   clientId: string;
   pathwayId: string;
 }): Promise<
-  { ok: true; data: CreatePatientPathwaySuccess } | { ok: false; code: CreatePatientPathwayErrorCode }
+  { ok: true; data: CreatePatientPathwaySuccess; afterCommit: () => Promise<void> } | { ok: false; code: CreatePatientPathwayErrorCode }
 > {
   const { tenantId, actorUserId, session, clientId, pathwayId } = params;
 
@@ -69,6 +68,7 @@ export async function runCreatePatientPathway(params: {
     return { ok: false, code: "CLIENT_NOT_FOUND" };
   }
 
+  // Checagem rápida fora da tx; a garantia real (lock + re-check) está dentro da transação.
   const activePathway = await patientPathwayPrismaRepository.findFirstActivePatientPathwayByClientId(
     clientId,
   );
@@ -95,6 +95,13 @@ export async function runCreatePatientPathway(params: {
 
   const txResult = await patientPathwayPrismaRepository.runInTransaction(async (txRaw) => {
     const tx = txRaw as Prisma.TransactionClient;
+    // Serializa criações concorrentes para o mesmo paciente (duplo clique / retry).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`patient-pathway:${clientId}`}))`;
+    const activeInTx = await tx.patientPathway.findFirst({
+      where: { clientId, completedAt: null },
+      select: { id: true },
+    });
+    if (activeInTx) return null;
     const now = new Date();
     const currentStageAssigneeUserId = await resolvePatientPathwayStageAssigneeUserId(
       tx,
@@ -141,61 +148,68 @@ export async function runCreatePatientPathway(params: {
       select: { id: true },
     });
 
+    await recordAuditEvent(tx, {
+      tenantId,
+      clientId,
+      patientPathwayId: pp.id,
+      actorUserId,
+      type: AuditEventType.PATIENT_PATHWAY_STARTED,
+      payload: { patientPathwayId: pp.id, pathwayId },
+    });
+
     return { pp, transitionId: createdTransition.id, documents };
   });
+  if (!txResult) {
+    return { ok: false, code: "ACTIVE_PATHWAY_EXISTS" };
+  }
 
   const result = txResult.pp;
   const { transitionId, documents } = txResult;
 
-  const newPatientTargets = await resolvePathwayNotificationTargetUserIds({
-    tenantId,
-    type: "new_patient",
-    currentStageAssigneeUserId: result.currentStageAssigneeUserId,
-  });
-
-  notificationEmitter.emit({
-    tenantId,
-    type: "new_patient",
-    title: `Novo paciente: ${result.client.name}`,
-    body: `Jornada "${result.pathway.name}" iniciada na etapa ${result.currentStage.name}.`,
-    targetUserIds: newPatientTargets,
-    correlationId: result.id,
-    metadata: {
-      clientId: result.clientId,
-      patientPathwayId: result.id,
-      pathwayName: result.pathway.name,
-      stageName: result.currentStage.name,
-    },
-  }).catch((err) => console.error("[notification] new_patient emit failed:", err));
-
-  if (documents.length > 0 && result.client.phone) {
-    enqueueWhatsAppDispatch({
-      tenantId,
-      stageTransitionId: transitionId,
-      clientId: result.clientId,
-      recipientPhone: result.client.phone,
-      stageName: result.currentStage.name,
-      documents: documents.map((d) => ({
-        fileName: d.file.fileName,
-        r2Key: d.file.r2Key,
-        mimeType: d.file.mimeType,
-      })),
-    }).catch((err) => console.error("[whatsapp] dispatch enqueue failed:", err));
-  }
-
   revalidateTenantClientsList(tenantId);
 
-  await auditEventPrismaRepository.recordCanonical({
-    tenantId,
-    clientId: result.clientId,
-    patientPathwayId: result.id,
-    actorUserId,
-    eventType: AuditEventType.PATIENT_PATHWAY_STARTED,
-    payload: { patientPathwayId: result.id, pathwayId },
-  });
+  /** Notificação + WhatsApp pós-commit; a rota agenda com `after()` (sobrevive em serverless). */
+  const afterCommit = async () => {
+    const newPatientTargets = await resolvePathwayNotificationTargetUserIds({
+      tenantId,
+      type: "new_patient",
+      currentStageAssigneeUserId: result.currentStageAssigneeUserId,
+    });
+
+    await notificationEmitter.emit({
+      tenantId,
+      type: "new_patient",
+      title: `Novo paciente: ${result.client.name}`,
+      body: `Jornada "${result.pathway.name}" iniciada na etapa ${result.currentStage.name}.`,
+      targetUserIds: newPatientTargets,
+      correlationId: result.id,
+      metadata: {
+        clientId: result.clientId,
+        patientPathwayId: result.id,
+        pathwayName: result.pathway.name,
+        stageName: result.currentStage.name,
+      },
+    }).catch((err) => console.error("[notification] new_patient emit failed:", err));
+
+    if (documents.length > 0 && result.client.phone) {
+      await enqueueWhatsAppDispatch({
+        tenantId,
+        stageTransitionId: transitionId,
+        clientId: result.clientId,
+        recipientPhone: result.client.phone,
+        stageName: result.currentStage.name,
+        documents: documents.map((d) => ({
+          fileName: d.file.fileName,
+          r2Key: d.file.r2Key,
+          mimeType: d.file.mimeType,
+        })),
+      }).catch((err) => console.error("[whatsapp] dispatch enqueue failed:", err));
+    }
+  };
 
   return {
     ok: true,
+    afterCommit,
     data: {
       patientPathway: {
         id: result.id,

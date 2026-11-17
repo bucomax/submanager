@@ -13,6 +13,7 @@ import {
   releaseSseSlot,
   tripRedisCircuit,
 } from "@/infrastructure/notifications/sse-connection-slot";
+import { isQueueConsumerAvailable } from "@/infrastructure/queue/redis-connection";
 import type IORedis from "ioredis";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,18 @@ export async function GET(request: Request) {
       { success: false, error: { code: "SSE_UNAVAILABLE", message: "Real-time stream requires Redis." } },
       { status: 501 },
     );
+  }
+
+  // Sem worker que publique no pub/sub (modo inline/Vercel) o stream nunca receberia eventos:
+  // avisa o cliente para usar polling e encerra, em vez de segurar a função.
+  if (!isQueueConsumerAvailable()) {
+    const count = await countUnreadNotificationsWithClientScope(session, tenantId, userId);
+    const body =
+      `event: unread-count\ndata: ${JSON.stringify({ count })}\n\n` +
+      `event: mode\ndata: ${JSON.stringify({ mode: "polling" })}\n\n`;
+    return new Response(body, {
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform" },
+    });
   }
 
   const slot = await acquireSseSlot(userId);

@@ -240,19 +240,6 @@ export class PathwayPrismaRepository implements IPathwayRepository {
     });
   }
 
-  async findOldPublishedVersionForPublish(pathwayId: string, excludeVersionId: string) {
-    return prisma.pathwayVersion.findFirst({
-      where: { pathwayId, published: true, NOT: { id: excludeVersionId } },
-      include: {
-        stages: {
-          include: {
-            _count: { select: { currentPatients: true, transitionsTo: true } },
-          },
-        },
-      },
-    });
-  }
-
   async runPublishTransaction(fn: (tx: unknown) => Promise<void>) {
     return prisma.$transaction(fn as (tx: Prisma.TransactionClient) => Promise<void>);
   }
