@@ -20,7 +20,7 @@ const webhookBodySchema = z.object({
   /** Tenant ID the event belongs to */
   tenantId: z.string().min(1),
   /** Event payload (app-specific) */
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
   /** ISO timestamp of the event */
   timestamp: z.string().optional(),
 });

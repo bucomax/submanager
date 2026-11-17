@@ -61,13 +61,13 @@ const wizardSchema = z
     internalRoute: z.string().max(256).optional().or(z.literal("")),
     requiresConfig: z.boolean(),
     isFeatured: z.boolean(),
-    sortOrder: z.coerce.number().int().min(0).max(9999),
+    sortOrder: z.coerce.number<number>().int().min(0).max(9999),
 
     // Step 2 — pricing
     pricingModel: z.enum(["free", "flat", "per_seat", "usage_based"]),
-    priceInCents: z.coerce.number().int().min(0).optional(),
+    priceInCents: z.coerce.number<number>().int().min(0).optional(),
     billingInterval: z.enum(["monthly", "yearly"]),
-    trialDays: z.coerce.number().int().min(0).max(365),
+    trialDays: z.coerce.number<number>().int().min(0).max(365),
   })
   .refine(
     (d) => !(d.renderMode === "iframe" && !d.iframeBaseUrl),

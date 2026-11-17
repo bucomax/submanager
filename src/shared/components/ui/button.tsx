@@ -42,6 +42,17 @@ const buttonVariants = cva(
   }
 )
 
+/** Remove props exclusivas do Base UI (render, style por estado etc.) antes de repassar ao `<button>` nativo. */
+function toNativeButtonProps(
+  props: Omit<ButtonPrimitive.Props, "className" | "type">,
+): React.ComponentProps<"button"> {
+  const { render, focusableWhenDisabled, nativeButton, style, ...nativeProps } = props
+  void render
+  void focusableWhenDisabled
+  void nativeButton
+  return { ...nativeProps, style: typeof style === "function" ? undefined : style }
+}
+
 function Button({
   className,
   variant = "default",
@@ -56,7 +67,7 @@ function Button({
         type={type}
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
-        {...props}
+        {...toNativeButtonProps(props)}
       />
     );
   }

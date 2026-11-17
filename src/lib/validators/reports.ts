@@ -5,7 +5,7 @@ export const reportsSummaryQuerySchema = z.object({
     .enum(["7", "30", "90", "365"])
     .transform((value) => Number(value))
     .optional()
-    .default("30"),
+    .default(30),
   pathwayId: z.string().trim().min(1).max(191).optional(),
   opmeSupplierId: z.string().trim().min(1).max(191).optional(),
   page: z.coerce.number().int().min(1).optional().default(1),

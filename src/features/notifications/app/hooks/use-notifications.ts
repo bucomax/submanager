@@ -39,6 +39,8 @@ export function useNotifications() {
   const usingPollingRef = useRef(false);
 
   const prevUnreadRef = useRef(-1);
+  /** Última versão de `connectSSE` (reconexão agendada a partir do próprio callback). */
+  const connectSSERef = useRef<() => void>(() => {});
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -129,12 +131,16 @@ export function useNotifications() {
 
       reconnectTimerRef.current = setTimeout(() => {
         reconnectTimerRef.current = null;
-        connectSSE();
+        connectSSERef.current();
       }, SSE_RECONNECT_MS);
     };
 
     eventSourceRef.current = es;
   }, [startPolling]);
+
+  useEffect(() => {
+    connectSSERef.current = connectSSE;
+  }, [connectSSE]);
 
   useEffect(() => {
     connectSSE();

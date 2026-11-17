@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 @import "sonner/dist/styles.css";
 
+/* Symlinks de tooling (.cursor/agents -> ~/.claude) ficam fora do scan de classes. */
+@source not "../../.cursor";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

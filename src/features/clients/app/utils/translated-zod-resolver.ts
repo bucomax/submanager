@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { FieldErrors, FieldValues, Resolver } from "react-hook-form";
-import type { ZodTypeAny } from "zod";
+import type { FieldErrors, FieldValues, Resolver, ResolverOptions } from "react-hook-form";
+import type { ZodType } from "zod";
 
 import { translateZodApiMessage } from "@/lib/api/zod-i18n";
 
@@ -43,12 +43,12 @@ function translateFieldErrors<T extends FieldValues>(
 
 /** Resolver RHF que traduz mensagens `@api/...` com `useTranslations('api')`. */
 export function translatedZodResolver<T extends FieldValues>(
-  schema: ZodTypeAny,
+  schema: ZodType<FieldValues, FieldValues>,
   tApi: (key: string) => string,
 ): Resolver<T> {
   const base = zodResolver(schema);
   return (async (values, config, options) => {
-    const result = await base(values, config, options);
+    const result = await base(values, config, options as ResolverOptions<FieldValues>);
     if (result.errors && Object.keys(result.errors).length > 0) {
       return {
         ...result,

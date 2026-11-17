@@ -35,7 +35,7 @@ const patchPhone = z.preprocess(
     return digitsOnlyPhone(String(v));
   },
   z.union([z.undefined(), phoneDigitsSchema]),
-);
+).optional();
 
 function trimOpt(max: number) {
   return z.preprocess(
@@ -489,7 +489,7 @@ function nullableTrimmed(max: number) {
       return s === "" ? null : s;
     },
     z.union([z.undefined(), z.null(), z.string().max(max)]),
-  );
+  ).optional();
 }
 
 const patchClientBodyBaseSchema = z.object({
@@ -503,7 +503,7 @@ const patchClientBodyBaseSchema = z.object({
       return s === "" ? null : s;
     },
     z.union([z.undefined(), z.null(), z.string().email().max(320)]),
-  ),
+  ).optional(),
   caseDescription: z.string().max(20_000).nullable().optional(),
   documentId: z.union([z.null(), z.string()]).optional(),
   assignedToUserId: z.string().cuid().nullable().optional(),

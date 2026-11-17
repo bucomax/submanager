@@ -168,10 +168,8 @@ export function ClientDetailView({ clientId }: ClientDetailViewProps) {
     return pp.pathwayVersion.stages.find((s) => s.id === toStageId)?.documents ?? [];
   }, [pp, toStageId]);
 
-  const incompleteRequiredChecklist = useMemo(
-    () =>
-      (pp?.currentStage?.checklistItems ?? []).filter((item) => item.requiredForTransition && !item.completed),
-    [pp?.currentStage?.checklistItems],
+  const incompleteRequiredChecklist = (pp?.currentStage?.checklistItems ?? []).filter(
+    (item) => item.requiredForTransition && !item.completed,
   );
 
   const trimmedDraftNotes = draftCaseDescription.trim();
