@@ -37,7 +37,7 @@ Antes de modelar entidades novas, conferir se já existe equivalente na §8 ou s
   - `assertTenantAdminOrSuper()` — tenant_admin ou super_admin
 - Rotas `/admin/*`: apenas `globalRole === super_admin`.
 - Operações clínicas exigem papel adequado no tenant ativo.
-- Visibilidade de clientes: `TenantMembershipClientScope` restringe `tenant_user` a clientes atribuídos/vinculados — filtro em `src/lib/auth/client-visibility.ts`.
+- Visibilidade de clientes: `TenantMembershipClientScope` restringe `tenant_user` a clientes atribuídos/vinculados — filtro em `src/application/use-cases/shared/load-client-visibility-scope.ts`.
 
 ## LGPD / Dados sensíveis
 

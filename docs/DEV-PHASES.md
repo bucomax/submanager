@@ -13,7 +13,7 @@ Ordem geral histórica: **backend** (APIs, dados, e-mail, storage) → **fronten
 | B0 | ✅ | Bootstrap Next.js, pastas, Docker Postgres, `.env.example` |
 | B1 | ✅ | Prisma auth + multi-tenant + migrations + seed |
 | B2 | ✅ | NextAuth Credentials + JWT + `/login` |
-| B3 | ✅ | Middleware (`/dashboard`) |
+| B3 | ✅ | Proxy (`src/proxy.ts`, antigo middleware) protege `/dashboard` |
 | B4 | ✅ | Prisma singleton + `api-response` |
 | B5 | ✅ | `/api/v1/health`, `/me`, Scalar + OpenAPI |
 | B6 | ✅ | Tenant ativo, `GET /tenants`, admin cria tenant, switcher + card super_admin em settings |
@@ -88,7 +88,7 @@ Perfil em settings (conta legada `/dashboard/account` redireciona), wizard pacie
 |------|----------|--------|
 | I1 | WhatsApp (dispatch real) | ⬜ congelado |
 | I2 | IA + webhooks | ⬜ congelado |
-| I3 | Filas / retries **operacionais** (dispatch, exports pesados, jobs clínicos) | 🟨 **parcial:** BullMQ + Redis já usados para **notificações in-app**; restante conforme produto |
+| I3 | Filas / retries **operacionais** (dispatch, exports pesados, jobs clínicos) | 🟨 **parcial:** BullMQ + Redis para **notificações in-app, e-mail e WhatsApp**. Na Vercel não há worker: emissores executam inline, salvo `QUEUE_EXTERNAL_WORKER=1` (worker em outro host). SLA via cron `GET /api/cron/sla-check` (`CRON_SECRET`). Restante conforme produto |
 
 **Nota:** O que está implementado (B12) não substitui I1/I2; documentação de contratos e stubs permanece até reabertura do escopo.
 

@@ -15,7 +15,7 @@ SaaS multi-tenant de orquestração de jornadas clínicas (cirurgia bucomaxilofa
 - **Auth:** NextAuth v4 (JWT strategy, CredentialsProvider)
 - **UI:** Tailwind CSS 4, shadcn/ui, @xyflow/react (editor de fluxos), react-hook-form + Zod
 - **HTTP Client:** Axios via `apiClient` (`src/lib/api/http-client.ts`)
-- **State:** Zustand (client), React Query (server state)
+- **State:** Zustand (client); server state via services + hooks da feature (sem React Query)
 - **i18n:** next-intl (pt-BR / en)
 - **E-mail:** Resend API (plataforma) e/ou **SMTP por tenant** (Gmail, Microsoft 365, etc.; prioridade no remetente)
 - **Infra local:** Docker Compose (PostgreSQL 16 + Redis 7)
@@ -59,7 +59,7 @@ packages/prisma → schema, migrations, seed
 - `super_admin` pode atuar cross-tenant com regra explícita e auditoria (§5.5 da arquitetura).
 - `TenantMembership.restrictedToAssignedOnly` — `tenant_user` só vê pacientes atribuídos a si.
 - `TenantMembership.linkedOpmeSupplierId` — `tenant_user` só vê pacientes daquele fornecedor OPME.
-- Lógica de visibilidade em `src/lib/auth/client-visibility.ts`.
+- Lógica de visibilidade em `src/application/use-cases/shared/load-client-visibility-scope.ts` (jornada do paciente: `is-patient-pathway-visible.ts`). Paciente fora do escopo → 404.
 
 ## RBAC
 
@@ -184,7 +184,8 @@ npm run stress:all       # Load + security battery
 
 - **E2E:** Playwright (`e2e/`, `playwright.config.ts`) — `npm run test:e2e`
 - **Load/Security:** Scripts autocannon em `scripts/load-and-security/` — `npm run stress:all`
-- **Unit tests:** prioridade futura — ainda não configurados.
+- **Unit:** Vitest (`src/**/*.test.ts`) — `npm run test:unit`. Fakes in-memory via `vi.mock` dos repositórios.
+- **CI:** `.github/workflows/ci.yml` (prisma validate, tsc, lint, vitest) em PR e push na `main`.
 
 ## Regras de conduta
 
