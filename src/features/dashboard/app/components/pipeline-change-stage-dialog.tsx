@@ -1,10 +1,6 @@
 "use client";
 
 import { usePipelineChangeStageDialog } from "@/features/dashboard/app/hooks/use-pipeline-change-stage-dialog";
-import {
-  completePatientPathway,
-  TransitionBlockedByChecklistError,
-} from "@/features/pathways/app/services/patient-pathways.service";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
@@ -41,15 +37,15 @@ export function PipelineChangeStageDialog({
   const [note, setNote] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [confirmingComplete, setConfirmingComplete] = useState(false);
-  const [completing, setCompleting] = useState(false);
   const {
     loading,
     submitting,
     error,
     detail,
     nextOptions,
-    reset,
+    completing,
     submitChange,
+    completeTreatment,
   } = usePipelineChangeStageDialog(patientPathwayId, open);
 
   const incompleteRequired = useMemo(() => {
@@ -62,8 +58,6 @@ export function PipelineChangeStageDialog({
     setNote("");
     setOverrideReason("");
     setConfirmingComplete(false);
-    setCompleting(false);
-    reset();
   }
 
   async function handleSubmit() {
@@ -81,39 +75,25 @@ export function PipelineChangeStageDialog({
       toast.error(t("modals.changeStage.overrideReasonMin"));
       return;
     }
-    try {
-      await submitChange({
-        toStageId,
-        note: note.trim() || undefined,
-        ...(needsForce ? { force: true, overrideReason: trimmedOverride } : {}),
-      });
-      toast.success(t("modals.changeStage.success"));
-      resetLocal();
-      onOpenChange(false);
-      await onSuccess();
-    } catch (e) {
-      if (e instanceof TransitionBlockedByChecklistError) {
-        toast.error(e.message);
-        return;
-      }
-      /* erro: toast global no apiClient */
-    }
+    const done = await submitChange({
+      toStageId,
+      note: note.trim() || undefined,
+      ...(needsForce ? { force: true, overrideReason: trimmedOverride } : {}),
+    });
+    if (!done) return;
+    toast.success(t("modals.changeStage.success"));
+    resetLocal();
+    onOpenChange(false);
+    await onSuccess();
   }
 
   async function handleCompleteTreatment() {
     if (!patientPathwayId) return;
-    setCompleting(true);
-    try {
-      await completePatientPathway(patientPathwayId);
-      toast.success(t("modals.changeStage.completeSuccess"));
-      resetLocal();
-      onOpenChange(false);
-      await onSuccess();
-    } catch {
-      /* erro: toast global no apiClient */
-    } finally {
-      setCompleting(false);
-    }
+    if (!(await completeTreatment())) return;
+    toast.success(t("modals.changeStage.completeSuccess"));
+    resetLocal();
+    onOpenChange(false);
+    await onSuccess();
   }
 
   function handleOpenChange(next: boolean) {
@@ -133,7 +113,7 @@ export function PipelineChangeStageDialog({
           showCloseButton={!busy}
           title={
             <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="size-5 text-success" />
               {t("modals.changeStage.completeConfirmTitle")}
             </span>
           }
@@ -186,7 +166,7 @@ export function PipelineChangeStageDialog({
               type="button"
               variant="outline"
               size="sm"
-              className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 hover:border-emerald-400 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:border-emerald-600 sm:mr-auto"
+              className="text-success border-success/30 hover:bg-success-soft hover:border-success sm:mr-auto"
               disabled={busy || loading || !detail}
               onClick={() => setConfirmingComplete(true)}
             >

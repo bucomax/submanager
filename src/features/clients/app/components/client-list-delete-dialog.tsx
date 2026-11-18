@@ -1,6 +1,6 @@
 "use client";
 
-import { softDeleteClient } from "@/features/clients/app/services/clients.service";
+import { useDeleteClient } from "@/features/clients/app/hooks/use-delete-client";
 import { toast } from "@/lib/toast";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -9,14 +9,13 @@ import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { Input } from "@/shared/components/ui/input";
 import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type ClientListDeleteDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientId: string | null;
   clientName: string;
-  onDeleted: () => void;
 };
 
 export function ClientListDeleteDialog({
@@ -24,22 +23,21 @@ export function ClientListDeleteDialog({
   onOpenChange,
   clientId,
   clientName,
-  onDeleted,
 }: ClientListDeleteDialogProps) {
   const t = useTranslations("clients.list.deleteDialog");
+  const { deleting, deleteClient } = useDeleteClient();
+
   const [confirmText, setConfirmText] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
+  // Zera o texto de confirmação ao fechar (ajuste de estado no render, sem efeito).
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (!open) setConfirmText("");
+  }
 
   const expectedWord = t("confirmWord");
   const matches =
     confirmText.trim().toLowerCase() === expectedWord.trim().toLowerCase();
-
-  useEffect(() => {
-    if (!open) {
-      setConfirmText("");
-      setDeleting(false);
-    }
-  }, [open]);
 
   function handleDialogOpenChange(next: boolean) {
     if (deleting && !next) return;
@@ -48,16 +46,12 @@ export function ClientListDeleteDialog({
 
   async function handleConfirm() {
     if (!clientId || !matches || deleting) return;
-    setDeleting(true);
     try {
-      await softDeleteClient(clientId);
+      await deleteClient(clientId);
       toast.success(t("successToast"));
       onOpenChange(false);
-      onDeleted();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("genericError"));
-    } finally {
-      setDeleting(false);
     }
   }
 

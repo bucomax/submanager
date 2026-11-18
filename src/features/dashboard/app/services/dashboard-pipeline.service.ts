@@ -9,10 +9,12 @@ import type {
   KanbanPatientPathway,
 } from "@/features/dashboard/app/types";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
 export async function getDashboardSummary(
   pathwayId: string,
   params?: { opmeSupplierId?: string },
+  options?: RequestOptions,
 ): Promise<{
   totals: DashboardSummaryTotals;
 }> {
@@ -21,6 +23,7 @@ export async function getDashboardSummary(
       ApiEnvelope<{ pathwayId: string; version: { id: string; version: number }; totals: DashboardSummaryTotals }>
     >(`/api/v1/pathways/${pathwayId}/dashboard-summary`, {
       params: { opmeSupplierId: params?.opmeSupplierId || undefined },
+      signal: options?.signal,
     });
     if (!res.data.success) {
       throw new Error(res.data.error.message);
@@ -34,6 +37,7 @@ export async function getDashboardSummary(
 export async function getDashboardAlerts(
   pathwayId: string,
   params?: { limit?: number; opmeSupplierId?: string },
+  options?: RequestOptions,
 ): Promise<DashboardAlertRow[]> {
   try {
     const limit = params?.limit ?? 20;
@@ -41,6 +45,7 @@ export async function getDashboardAlerts(
       ApiEnvelope<{ pathwayId: string; data: DashboardAlertRow[]; pagination: ApiPagination }>
     >(`/api/v1/pathways/${pathwayId}/dashboard-alerts`, {
       params: { limit, opmeSupplierId: params?.opmeSupplierId || undefined },
+      signal: options?.signal,
     });
     if (!res.data.success) {
       throw new Error(res.data.error.message);
@@ -54,6 +59,7 @@ export async function getDashboardAlerts(
 export async function getKanban(
   pathwayId: string,
   params: { search?: string; status?: SlaHealthStatus; limit?: number; opmeSupplierId?: string },
+  options?: RequestOptions,
 ): Promise<{ columns: KanbanColumn[] }> {
   try {
     const res = await apiClient.get<ApiEnvelope<{ columns: KanbanColumn[] }>>(
@@ -65,6 +71,7 @@ export async function getKanban(
           limit: params.limit,
           opmeSupplierId: params.opmeSupplierId || undefined,
         },
+        signal: options?.signal,
       },
     );
     if (!res.data.success) {
@@ -80,6 +87,7 @@ export async function getKanbanColumnPatients(
   pathwayId: string,
   stageId: string,
   params: { search?: string; limit?: number; page: number; opmeSupplierId?: string },
+  options?: RequestOptions,
 ): Promise<{ data: KanbanPatientPathway[]; pagination: ApiPagination }> {
   try {
     const res = await apiClient.get<
@@ -91,6 +99,7 @@ export async function getKanbanColumnPatients(
         page: params.page,
         opmeSupplierId: params.opmeSupplierId || undefined,
       },
+      signal: options?.signal,
     });
     if (!res.data.success) {
       throw new Error(res.data.error.message);

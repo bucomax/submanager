@@ -11,10 +11,12 @@ import type {
   PathwayOption,
   PublishedStageRowDto,
 } from "@/features/clients/app/types/api";
-import type { ApiPagination } from "@/lib/api/pagination";
+import { clientKeys } from "@/features/clients/app/hooks/query-keys";
+import { getErrorMessage } from "@/lib/utils/error-message";
 import { DEBOUNCE_MS, useDebouncedState } from "@/shared/hooks/use-debounce";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 
 const PAGE_SIZE = 50;
 const NO_STAGES: PublishedStageRowDto[] = [];
@@ -38,139 +40,61 @@ export function useClientsList() {
   const [pageState, setPageState] = useState({ filtersKey, page: 1 });
   const page = pageState.filtersKey === filtersKey ? pageState.page : 1;
 
-  const [pathways, setPathways] = useState<PathwayOption[] | null>(null);
-  const [pathwaysError, setPathwaysError] = useState<string | null>(null);
+  const pathwaysQuery = useQuery({
+    queryKey: clientKeys.pathways,
+    queryFn: ({ signal }) => listPathwaysForTenant({ signal }),
+  });
+  const pathways: PathwayOption[] | null = pathwaysQuery.data ?? (pathwaysQuery.isError ? [] : null);
+  const pathwaysError = pathwaysQuery.isError
+    ? getErrorMessage(pathwaysQuery.error, t("pathwaysLoadError"))
+    : null;
 
-  /** Etapas publicadas do fluxo selecionado, guardadas com o fluxo que as originou. */
-  const [loadedStages, setLoadedStages] = useState<{
-    pathwayId: string;
-    rows: PublishedStageRowDto[];
-    error: string | null;
-  } | null>(null);
-
-  const [rows, setRows] = useState<ClientListItemDto[] | null>(null);
-  const [pagination, setPagination] = useState<ApiPagination | null>(null);
-  const [statusFilterCapped, setStatusFilterCapped] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await listPathwaysForTenant();
-        if (!cancelled) {
-          setPathways(data);
-          setPathwaysError(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setPathwaysError(e instanceof Error ? e.message : t("pathwaysLoadError"));
-          setPathways([]);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
-
-  useEffect(() => {
-    if (pathwayFilter === "all") return;
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await listPublishedStagesForPathway(pathwayFilter);
-        if (!cancelled) {
-          setLoadedStages({ pathwayId: pathwayFilter, rows: data, error: null });
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setLoadedStages({
-            pathwayId: pathwayFilter,
-            rows: [],
-            error: e instanceof Error ? e.message : t("stagesLoadError"),
-          });
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pathwayFilter, t]);
-
-  const stagesForFilter =
-    pathwayFilter !== "all" && loadedStages?.pathwayId === pathwayFilter ? loadedStages : null;
+  const stagesQuery = useQuery({
+    queryKey: clientKeys.publishedStages(pathwayFilter),
+    queryFn: ({ signal }) => listPublishedStagesForPathway(pathwayFilter, { signal }),
+    enabled: pathwayFilter !== "all",
+  });
   const stages: PublishedStageRowDto[] | null =
-    pathwayFilter === "all" ? NO_STAGES : (stagesForFilter?.rows ?? null);
-  const stagesError = stagesForFilter?.error ?? null;
+    pathwayFilter === "all" ? NO_STAGES : (stagesQuery.data ?? (stagesQuery.isError ? [] : null));
+  const stagesError = stagesQuery.isError
+    ? getErrorMessage(stagesQuery.error, t("stagesLoadError"))
+    : null;
 
-  const fetchListPage = useCallback(
-    async (opts?: { fresh?: boolean }) => {
-      return listClients({
-        limit: PAGE_SIZE,
-        page,
-        q: debouncedQ || undefined,
-        pathwayId: pathwayFilter === "all" ? undefined : pathwayFilter,
-        stageId: stageFilter === "all" ? undefined : stageFilter,
-        status: statusFilter === "all" ? undefined : (statusFilter as ClientListStatusFilter),
-        fresh: opts?.fresh === true,
-      });
-    },
-    [debouncedQ, page, pathwayFilter, stageFilter, statusFilter],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const payload = await fetchListPage(undefined);
-        if (!cancelled) {
-          setRows(payload.data);
-          setPagination(payload.pagination);
-          setStatusFilterCapped(payload.statusFilterCapped);
-          setListError(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setListError(e instanceof Error ? e.message : t("loadError"));
-          setRows([]);
-          setPagination(null);
-          setStatusFilterCapped(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchListPage, t]);
+  const listQuery = useQuery({
+    queryKey: clientKeys.list({
+      page,
+      q: debouncedQ,
+      pathwayId: pathwayFilter,
+      stageId: stageFilter,
+      status: statusFilter,
+    }),
+    queryFn: ({ signal }) =>
+      listClients(
+        {
+          limit: PAGE_SIZE,
+          page,
+          q: debouncedQ || undefined,
+          pathwayId: pathwayFilter === "all" ? undefined : pathwayFilter,
+          stageId: stageFilter === "all" ? undefined : stageFilter,
+          status: statusFilter === "all" ? undefined : (statusFilter as ClientListStatusFilter),
+        },
+        { signal },
+      ),
+    placeholderData: keepPreviousData,
+  });
+  const rows: ClientListItemDto[] | null = listQuery.data?.data ?? (listQuery.isError ? [] : null);
+  const pagination = listQuery.data?.pagination ?? null;
+  const statusFilterCapped = listQuery.data?.statusFilterCapped ?? false;
+  const listError = listQuery.isError ? getErrorMessage(listQuery.error, t("loadError")) : null;
 
   const setPathwayFilterAndResetStage = useCallback((value: string) => {
     setPathwayFilter(value);
     setStageFilter("all");
   }, []);
 
-  const reloadList = useCallback(() => {
-    void (async () => {
-      try {
-        const payload = await fetchListPage({ fresh: true });
-        setRows(payload.data);
-        setPagination(payload.pagination);
-        setStatusFilterCapped(payload.statusFilterCapped);
-        setListError(null);
-      } catch (e) {
-        setListError(e instanceof Error ? e.message : t("loadError"));
-        setRows([]);
-        setPagination(null);
-        setStatusFilterCapped(false);
-      }
-    })();
-  }, [fetchListPage, t]);
-
   const retry = useCallback(() => {
-    void reloadList();
-  }, [reloadList]);
+    void listQuery.refetch();
+  }, [listQuery]);
 
   const limit = pagination?.limit ?? PAGE_SIZE;
   const totalItems = pagination?.totalItems ?? 0;
@@ -215,7 +139,6 @@ export function useClientsList() {
     statusFilter,
     setStatusFilter,
     retry,
-    reloadList,
     goPrev,
     goNext,
     loading: listLoading,

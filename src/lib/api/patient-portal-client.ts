@@ -10,6 +10,7 @@ import type {
   PatientPortalProfilePatchResponseData,
   PatientPortalTimelineResponseData,
 } from "@/types/api/patient-portal-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
 /** Cookie do portal ausente ou expirado — UI deve orientar o paciente a usar o link mágico. */
 export class PatientPortalUnauthorizedError extends Error {
@@ -179,8 +180,14 @@ export async function updatePatientPortalPassword(
   }
 }
 
-export async function fetchPatientPortalOverview(tenantSlug: string): Promise<PatientPortalOverviewResponse> {
-  const res = await fetch("/api/v1/patient/overview", withPortalTenant(tenantSlug));
+export async function fetchPatientPortalOverview(
+  tenantSlug: string,
+  options?: RequestOptions,
+): Promise<PatientPortalOverviewResponse> {
+  const res = await fetch(
+    "/api/v1/patient/overview",
+    withPortalTenant(tenantSlug, { signal: options?.signal }),
+  );
   const body = (await parseJson(res)) as
     | SuccessEnvelope<PatientPortalOverviewResponse>
     | ErrorEnvelope
@@ -202,9 +209,13 @@ export async function fetchPatientPortalDetail(
   tenantSlug: string,
   page = 1,
   limit = 20,
+  options?: RequestOptions,
 ): Promise<PatientPortalDetailResponseData> {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
-  const res = await fetch(`/api/v1/patient/detail?${qs}`, withPortalTenant(tenantSlug));
+  const res = await fetch(
+    `/api/v1/patient/detail?${qs}`,
+    withPortalTenant(tenantSlug, { signal: options?.signal }),
+  );
   const body = (await parseJson(res)) as SuccessEnvelope<PatientPortalDetailResponseData> | ErrorEnvelope | null;
   if (res.status === 401) {
     throw new PatientPortalUnauthorizedError();
@@ -253,12 +264,15 @@ export async function fetchPatientPortalTimeline(
   tenantSlug: string,
   page = 1,
   limit = 20,
+  options?: RequestOptions,
 ): Promise<PatientPortalTimelineResponseData> {
   const qs = new URLSearchParams({
     page: String(page),
     limit: String(limit),
   });
-  const res = await fetch(`/api/v1/patient/timeline?${qs}`, withPortalTenant(tenantSlug));
+  const res = await fetch(`/api/v1/patient/timeline?${qs}`,
+    withPortalTenant(tenantSlug, { signal: options?.signal }),
+  );
   const body = (await parseJson(res)) as
     | SuccessEnvelope<PatientPortalTimelineResponseData>
     | ErrorEnvelope
@@ -280,9 +294,12 @@ export async function fetchPatientPortalFiles(
   tenantSlug: string,
   page = 1,
   limit = 20,
+  options?: RequestOptions,
 ): Promise<PatientPortalFilesListResponseData> {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
-  const res = await fetch(`/api/v1/patient/files?${qs}`, withPortalTenant(tenantSlug));
+  const res = await fetch(`/api/v1/patient/files?${qs}`,
+    withPortalTenant(tenantSlug, { signal: options?.signal }),
+  );
   const body = (await parseJson(res)) as
     | SuccessEnvelope<PatientPortalFilesListResponseData>
     | ErrorEnvelope

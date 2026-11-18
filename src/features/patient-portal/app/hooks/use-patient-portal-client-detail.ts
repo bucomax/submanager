@@ -1,56 +1,33 @@
 "use client";
 
+import { patientPortalKeys } from "@/features/patient-portal/app/hooks/query-keys";
 import {
   fetchPatientPortalDetail,
   PatientPortalUnauthorizedError,
 } from "@/lib/api/patient-portal-client";
-import type { PatientPortalDetailResponseData } from "@/types/api/patient-portal-v1";
+import { getErrorMessage } from "@/lib/utils/error-message";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
 
 const TRANSITIONS_LIMIT = 20;
 
 export function usePatientPortalClientDetail(tenantSlug: string) {
   const t = useTranslations("clients.detail");
-  const [data, setData] = useState<PatientPortalDetailResponseData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [needsLink, setNeedsLink] = useState(false);
+  const query = useQuery({
+    queryKey: patientPortalKeys.detail(tenantSlug),
+    queryFn: ({ signal }) =>
+      fetchPatientPortalDetail(tenantSlug, 1, TRANSITIONS_LIMIT, { signal }),
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setNeedsLink(false);
-    try {
-      const row = await fetchPatientPortalDetail(tenantSlug, 1, TRANSITIONS_LIMIT);
-      setData(row);
-    } catch (e) {
-      if (e instanceof PatientPortalUnauthorizedError) {
-        setData(null);
-        setNeedsLink(true);
-        return;
-      }
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantSlug, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const reload = useCallback(() => {
-    void load();
-  }, [load]);
+  /** Cookie do portal ausente/expirado: a UI deve mostrar o login, não um erro. */
+  const needsLink = query.error instanceof PatientPortalUnauthorizedError;
 
   return {
-    data,
-    error,
-    loading,
+    data: query.isError ? null : (query.data ?? null),
+    error: query.isError && !needsLink ? getErrorMessage(query.error, t("loadError")) : null,
+    loading: query.isFetching,
     needsLink,
-    reload,
+    reload: () => void query.refetch(),
     transitionsLimit: TRANSITIONS_LIMIT,
   };
 }

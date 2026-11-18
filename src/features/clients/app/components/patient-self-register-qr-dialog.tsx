@@ -1,6 +1,6 @@
 "use client";
 
-import { createPatientSelfRegisterInvite } from "@/features/clients/app/services/clients.service";
+import { useSelfRegisterInviteDialog } from "@/features/clients/app/hooks/use-self-register-invite-dialog";
 import { formatDateTimeShort } from "@/lib/utils/date";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -10,7 +10,6 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { toast } from "@/lib/toast";
 import { Copy, MessageCircle, QrCode, Share2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import QRCode from "react-qr-code";
@@ -33,47 +32,19 @@ export function PatientSelfRegisterQrDialog({
   const t = useTranslations("clients.selfRegister");
   const tList = useTranslations("clients.list");
   const locale = useLocale();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [registerUrl, setRegisterUrl] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const {
+    open,
+    openDialog: handleOpen,
+    onOpenChange,
+    loading,
+    failed,
+    url: registerUrl,
+    expiresAt,
+  } = useSelfRegisterInviteDialog(clientId);
+  const error = failed ? t("loadError") : null;
 
   const canNativeShare =
     typeof navigator !== "undefined" && typeof navigator.share === "function";
-
-  const loadInvite = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setRegisterUrl(null);
-    setExpiresAt(null);
-    try {
-      const data = await createPatientSelfRegisterInvite(
-        clientId ? { clientId } : undefined,
-      );
-      setRegisterUrl(data.registerUrl);
-      setExpiresAt(data.expiresAt);
-    } catch {
-      setError(t("loadError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, t]);
-
-  const onOpenChange = useCallback((next: boolean) => {
-    setOpen(next);
-    if (!next) {
-      setLoading(false);
-      setError(null);
-      setRegisterUrl(null);
-      setExpiresAt(null);
-    }
-  }, []);
-
-  function handleOpen() {
-    setOpen(true);
-    void loadInvite();
-  }
 
   const expiryLabel =
     expiresAt != null
@@ -148,7 +119,7 @@ export function PatientSelfRegisterQrDialog({
           ) : null}
           {!loading && registerUrl ? (
             <div className="flex flex-col items-center gap-4">
-              <div className="rounded-xl border bg-white p-3 dark:bg-zinc-950">
+              <div className="rounded-xl border bg-white p-3">
                 <QRCode value={registerUrl} size={200} level="M" />
               </div>
               {expiryLabel ? (

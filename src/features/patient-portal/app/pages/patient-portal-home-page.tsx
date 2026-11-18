@@ -10,6 +10,7 @@ import {
 } from "@/features/clients/app/components/client-detail-journey-panels";
 import { ClientDetailProfileCard } from "@/features/clients/app/components/client-detail-profile-card";
 import { usePatientPortalClientDetail } from "@/features/patient-portal/app/hooks/use-patient-portal-client-detail";
+import { useLogoutPatientPortal } from "@/features/patient-portal/app/hooks/use-patient-portal-session";
 import { usePatientPortalTimeline } from "@/features/patient-portal/app/hooks/use-patient-portal-timeline";
 import { usePatientPortalTenantSlug } from "@/features/patient-portal/app/context/patient-portal-tenant-context";
 import { PatientPortalLoginPage } from "@/features/patient-portal/app/pages/patient-portal-login-page";
@@ -17,7 +18,6 @@ import { PatientPortalFilesSection } from "@/features/patient-portal/app/compone
 import { PatientPortalTimelineSection } from "@/features/patient-portal/app/components/patient-portal-timeline-section";
 import { PatientPortalFullScreenLoading } from "@/features/patient-portal/app/components/patient-portal-full-screen-loading";
 import { PatientPortalPasswordDialog } from "@/features/patient-portal/app/components/patient-portal-password-dialog";
-import { logoutPatientPortal } from "@/lib/api/patient-portal-client";
 import { formatDateTime } from "@/lib/utils/date";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -31,19 +31,15 @@ export function PatientPortalHomePage() {
   const t = useTranslations("patientPortal");
   const td = useTranslations("clients.detail");
   const { data, error, loading, needsLink, reload } = usePatientPortalClientDetail(tenantSlug);
-  const [timelineRefresh, setTimelineRefresh] = useState(0);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const {
     timeline,
     loading: timelineLoading,
     error: timelineError,
     goToPage: loadTimelinePage,
-  } = usePatientPortalTimeline(tenantSlug, data?.client.id ?? null, timelineRefresh);
+  } = usePatientPortalTimeline(tenantSlug, data?.client.id ?? null);
 
-  async function onLogout() {
-    await logoutPatientPortal();
-    reload();
-  }
+  const { logout } = useLogoutPatientPortal();
 
   /** Primeira carga da sessão: tela de loading unificada (evita flash do formulário de login). */
   if (!data && !error && loading) {
@@ -75,10 +71,6 @@ export function PatientPortalHomePage() {
         onOpenChange={setPasswordDialogOpen}
         tenantSlug={tenantSlug}
         hasPortalPassword={hasPortalPassword}
-        onSuccess={() => {
-          reload();
-          setTimelineRefresh((n) => n + 1);
-        }}
       />
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -96,7 +88,7 @@ export function PatientPortalHomePage() {
             <KeyRound className="size-3.5" aria-hidden />
             {t("home.passwordAction")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => void onLogout()}>
+          <Button type="button" variant="outline" size="sm" onClick={() => void logout()}>
             {t("home.logout")}
           </Button>
         </div>
@@ -108,10 +100,6 @@ export function PatientPortalHomePage() {
           client={client}
           variant="patient"
           tenantSlug={tenantSlug}
-          onSaved={() => {
-            reload();
-            setTimelineRefresh((n) => n + 1);
-          }}
         />
 
         {!pp ? (

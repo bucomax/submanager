@@ -1,47 +1,52 @@
 "use client";
 
-import { useCallback, useState } from "react";
-
+import { useInvalidateClientData } from "@/features/clients/app/hooks/use-invalidate-client-data";
 import {
   togglePatientChecklistItem,
   transitionPatientStage,
 } from "@/features/pathways/app/services/patient-pathways.service";
+import { useMutation } from "@tanstack/react-query";
+
+type TransitionInput = { toStageId: string; note?: string; force?: boolean; overrideReason?: string };
+
+type TransitionVariables = { patientPathwayId: string; input: TransitionInput };
+type ToggleChecklistVariables = {
+  patientPathwayId: string;
+  checklistItemId: string;
+  completed: boolean;
+};
 
 export function useClientPathwayActions() {
-  const [transitioning, setTransitioning] = useState(false);
-  const [updatingChecklistItemId, setUpdatingChecklistItemId] = useState<string | null>(null);
+  const invalidateClientData = useInvalidateClientData();
 
-  const transitionClientStage = useCallback(
-    async (
-      patientPathwayId: string,
-      input: { toStageId: string; note?: string; force?: boolean; overrideReason?: string },
-    ) => {
-      setTransitioning(true);
-      try {
-        await transitionPatientStage(patientPathwayId, input);
-      } finally {
-        setTransitioning(false);
-      }
+  const transition = useMutation({
+    mutationFn: ({ patientPathwayId, input }: TransitionVariables) =>
+      transitionPatientStage(patientPathwayId, input),
+    onSuccess: () => {
+      void invalidateClientData();
     },
-    [],
-  );
+  });
 
-  const toggleChecklistItem = useCallback(
-    async (patientPathwayId: string, checklistItemId: string, completed: boolean) => {
-      setUpdatingChecklistItemId(checklistItemId);
-      try {
-        await togglePatientChecklistItem(patientPathwayId, checklistItemId, { completed });
-      } finally {
-        setUpdatingChecklistItemId(null);
-      }
+  const checklist = useMutation({
+    mutationFn: ({ patientPathwayId, checklistItemId, completed }: ToggleChecklistVariables) =>
+      togglePatientChecklistItem(patientPathwayId, checklistItemId, { completed }),
+    onSuccess: () => {
+      void invalidateClientData();
     },
-    [],
-  );
+  });
 
   return {
-    transitioning,
-    updatingChecklistItemId,
-    transitionClientStage,
-    toggleChecklistItem,
+    transitioning: transition.isPending,
+    updatingChecklistItemId: checklist.isPending ? checklist.variables.checklistItemId : null,
+    transitionClientStage: async (patientPathwayId: string, input: TransitionInput) => {
+      await transition.mutateAsync({ patientPathwayId, input });
+    },
+    toggleChecklistItem: async (
+      patientPathwayId: string,
+      checklistItemId: string,
+      completed: boolean,
+    ) => {
+      await checklist.mutateAsync({ patientPathwayId, checklistItemId, completed });
+    },
   };
 }

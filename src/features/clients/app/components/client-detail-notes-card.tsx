@@ -45,11 +45,7 @@ export function ClientDetailNotesCard({ clientId }: ClientDetailNotesCardProps) 
       await createNote(clientId, content);
       setDraft("");
       toast.success(t("saved"));
-      if (page !== 1) {
-        setPage(1);
-      } else {
-        reload();
-      }
+      if (page !== 1) setPage(1);
     } catch {
       /* erro: toast global no apiClient */
     }

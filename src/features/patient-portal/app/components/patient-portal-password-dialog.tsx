@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  updatePatientPortalPassword,
-  PatientPortalUnauthorizedError,
-} from "@/lib/api/patient-portal-client";
+  isPatientPortalSessionExpired,
+  usePatientPortalPassword,
+} from "@/features/patient-portal/app/hooks/use-patient-portal-password";
 import { isPortalSelfRegisterPasswordComplete } from "@/lib/validators/patient-portal-auth";
 import { toast } from "@/lib/toast";
 import { PasswordStrengthIndicator } from "@/shared/components/forms/password-strength-indicator";
@@ -27,7 +27,6 @@ type PatientPortalPasswordDialogProps = {
   onOpenChange: (open: boolean) => void;
   tenantSlug: string;
   hasPortalPassword: boolean;
-  onSuccess: () => void;
 };
 
 export function PatientPortalPasswordDialog({
@@ -35,13 +34,12 @@ export function PatientPortalPasswordDialog({
   onOpenChange,
   tenantSlug,
   hasPortalPassword,
-  onSuccess,
 }: PatientPortalPasswordDialogProps) {
   const t = useTranslations("patientPortal.passwordDialog");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, updatePassword } = usePatientPortalPassword(tenantSlug);
 
   const ready = useMemo(() => {
     const strong = isPortalSelfRegisterPasswordComplete(newPassword, confirmNewPassword);
@@ -59,9 +57,8 @@ export function PatientPortalPasswordDialog({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!ready) return;
-    setSubmitting(true);
     try {
-      await updatePatientPortalPassword(tenantSlug, {
+      await updatePassword({
         newPassword,
         confirmNewPassword,
         ...(hasPortalPassword ? { currentPassword } : {}),
@@ -69,15 +66,12 @@ export function PatientPortalPasswordDialog({
       toast.success(t("success"));
       resetFields();
       onOpenChange(false);
-      onSuccess();
     } catch (err) {
-      if (err instanceof PatientPortalUnauthorizedError) {
+      if (isPatientPortalSessionExpired(err)) {
         toast.error(t("sessionExpired"));
         return;
       }
       toast.error(err instanceof Error ? err.message : t("error"));
-    } finally {
-      setSubmitting(false);
     }
   }
 

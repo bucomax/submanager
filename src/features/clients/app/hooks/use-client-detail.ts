@@ -1,48 +1,26 @@
 "use client";
 
+import { clientKeys } from "@/features/clients/app/hooks/query-keys";
 import { getClientDetail } from "@/features/clients/app/services/clients.service";
-import type { ClientDetailResponseData } from "@/types/api/clients-v1";
+import { getErrorMessage } from "@/lib/utils/error-message";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
 
 const TRANSITIONS_LIMIT = 20;
 
 export function useClientDetail(clientId: string) {
   const t = useTranslations("clients.detail");
-  const [data, setData] = useState<ClientDetailResponseData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const row = await getClientDetail(clientId, {
-        page: 1,
-        limit: TRANSITIONS_LIMIT,
-      });
-      setData(row);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const reload = useCallback(() => {
-    void load();
-  }, [load]);
+  const query = useQuery({
+    queryKey: clientKeys.detail(clientId),
+    queryFn: ({ signal }) =>
+      getClientDetail(clientId, { page: 1, limit: TRANSITIONS_LIMIT }, { signal }),
+  });
 
   return {
-    data,
-    error,
-    loading,
-    reload,
+    data: query.isError ? null : (query.data ?? null),
+    error: query.isError ? getErrorMessage(query.error, t("loadError")) : null,
+    loading: query.isFetching,
+    reload: () => void query.refetch(),
     transitionsLimit: TRANSITIONS_LIMIT,
   };
 }

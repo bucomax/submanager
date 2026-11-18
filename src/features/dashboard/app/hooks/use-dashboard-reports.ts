@@ -1,107 +1,87 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
-
+import { dashboardKeys } from "@/features/dashboard/app/hooks/query-keys";
+import { useOpmeOptions } from "@/features/dashboard/app/hooks/use-opme-options";
 import { getReportsSummary } from "@/features/dashboard/app/services/reports.service";
-import { buildReportsCsv } from "@/features/dashboard/app/utils/export-reports-csv";
 import type { DashboardReportFilterOption } from "@/features/dashboard/app/types";
-import type { ReportsSummaryResponseData } from "@/features/dashboard/app/types/api";
+import { buildReportsCsv } from "@/features/dashboard/app/utils/export-reports-csv";
 import { listPathways } from "@/features/pathways/app/services/pathways.service";
-import {
-  listOpmeSuppliers,
-} from "@/features/settings/app/services/tenant-settings.service";
+import { getErrorMessage } from "@/lib/utils/error-message";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 
 const DEFAULT_PERIOD_DAYS = 30;
 const DEFAULT_LIMIT = 10;
+const MAX_EXPORT_ROWS = 1000;
+const NO_OPTIONS: DashboardReportFilterOption[] = [];
+
+function downloadCsv(csv: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dashboard-reports-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export function useDashboardReports() {
   const t = useTranslations("dashboard.reports");
   const [periodDays, setPeriodDays] = useState(DEFAULT_PERIOD_DAYS);
   const [pathwayId, setPathwayId] = useState("");
   const [opmeSupplierId, setOpmeSupplierId] = useState("");
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState<ReportsSummaryResponseData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [pathwayOptions, setPathwayOptions] = useState<DashboardReportFilterOption[]>([]);
-  const [opmeOptions, setOpmeOptions] = useState<DashboardReportFilterOption[]>([]);
 
-  const loadOptions = useCallback(async () => {
-    try {
-      const [pathways, suppliers] = await Promise.all([
-        listPathways(),
-        listOpmeSuppliers({ limit: 100, includeInactive: true }),
-      ]);
-      setPathwayOptions(pathways.map((pathway) => ({ value: pathway.id, label: pathway.name })));
-      setOpmeOptions(suppliers.data.map((supplier) => ({ value: supplier.id, label: supplier.name })));
-    } catch {
-      // Os filtros continuam funcionais sem listas; o erro principal aparece no carregamento do relatório.
-    }
-  }, []);
+  /** A página fica atrelada aos filtros que a originaram: trocar filtro volta à página 1 sem efeito. */
+  const filtersKey = `${periodDays}|${pathwayId}|${opmeSupplierId}`;
+  const [pageState, setPageState] = useState({ filtersKey, page: 1 });
+  const page = pageState.filtersKey === filtersKey ? pageState.page : 1;
+  const setPage = (next: number | ((current: number) => number)) =>
+    setPageState({ filtersKey, page: typeof next === "function" ? next(page) : next });
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getReportsSummary({
-        periodDays,
-        pathwayId: pathwayId || undefined,
-        opmeSupplierId: opmeSupplierId || undefined,
-        page,
-        limit: DEFAULT_LIMIT,
-      });
-      setData(response);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [opmeSupplierId, page, pathwayId, periodDays, t]);
+  // Os filtros continuam funcionais sem listas; o erro principal aparece no carregamento do relatório.
+  const pathwaysQuery = useQuery({
+    queryKey: dashboardKeys.reportPathwayOptions,
+    queryFn: async ({ signal }): Promise<DashboardReportFilterOption[]> => {
+      const pathways = await listPathways({ signal });
+      return pathways.map((pathway) => ({ value: pathway.id, label: pathway.name }));
+    },
+  });
+  const opmeOptions = useOpmeOptions();
 
-  useEffect(() => {
-    void loadOptions();
-  }, [loadOptions]);
+  const filters = { periodDays, pathwayId, opmeSupplierId };
+  const reportQuery = useQuery({
+    queryKey: dashboardKeys.reports({ ...filters, page }),
+    queryFn: ({ signal }) =>
+      getReportsSummary(
+        {
+          periodDays,
+          pathwayId: pathwayId || undefined,
+          opmeSupplierId: opmeSupplierId || undefined,
+          page,
+          limit: DEFAULT_LIMIT,
+        },
+        { signal },
+      ),
+    placeholderData: keepPreviousData,
+  });
+  const data = reportQuery.isError ? null : (reportQuery.data ?? null);
 
-  useEffect(() => {
-    setPage(1);
-  }, [periodDays, pathwayId, opmeSupplierId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const exportCsv = useCallback(async () => {
-    setExporting(true);
-    try {
-      const exportLimit = data?.criticalPatients.pagination.totalItems
-        ? Math.min(data.criticalPatients.pagination.totalItems, 1000)
-        : DEFAULT_LIMIT;
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const totalItems = data?.criticalPatients.pagination.totalItems;
       const exportData = await getReportsSummary({
         periodDays,
         pathwayId: pathwayId || undefined,
         opmeSupplierId: opmeSupplierId || undefined,
         page: 1,
-        limit: exportLimit,
+        limit: totalItems ? Math.min(totalItems, MAX_EXPORT_ROWS) : DEFAULT_LIMIT,
       });
-      const csv = buildReportsCsv(exportData);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const dateSuffix = new Date().toISOString().slice(0, 10);
-
-      link.href = url;
-      link.download = `dashboard-reports-${dateSuffix}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
-    }
-  }, [data?.criticalPatients.pagination.totalItems, opmeSupplierId, pathwayId, periodDays]);
+      downloadCsv(buildReportsCsv(exportData));
+    },
+  });
 
   const periodOptions = useMemo<DashboardReportFilterOption[]>(
     () => [
@@ -123,12 +103,12 @@ export function useDashboardReports() {
     page,
     setPage,
     data,
-    loading,
-    error,
-    exporting,
-    reload,
-    exportCsv,
-    pathwayOptions,
+    loading: reportQuery.isFetching,
+    error: reportQuery.isError ? getErrorMessage(reportQuery.error, t("loadError")) : null,
+    exporting: exportMutation.isPending,
+    reload: () => void reportQuery.refetch(),
+    exportCsv: () => exportMutation.mutateAsync(),
+    pathwayOptions: pathwaysQuery.data ?? NO_OPTIONS,
     opmeOptions,
     periodOptions,
   };

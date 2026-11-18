@@ -1,7 +1,7 @@
 "use client";
 
 import { useClientPathwayOptions } from "@/features/clients/app/hooks/use-client-pathway-options";
-import { createPatientPathway } from "@/features/clients/app/services/clients.service";
+import { useStartPatientPathway } from "@/features/clients/app/hooks/use-start-patient-pathway";
 import { ClientDetailCardTitle } from "@/features/clients/app/components/client-detail-card-title";
 import { toast } from "@/lib/toast";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
@@ -17,7 +17,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Info, Loader2, MapPinned, PlayCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /** Valor sentinela do Select (sempre controlado — evita alternar uncontrolled/controlled). */
 const PATHWAY_SELECT_NONE = "__none__";
@@ -25,42 +25,37 @@ const PATHWAY_SELECT_NONE = "__none__";
 type ClientDetailStartPathwayCardProps = {
   clientId: string;
   hasCompletedHistory: boolean;
-  onStarted: () => void;
 };
 
 export function ClientDetailStartPathwayCard({
   clientId,
   hasCompletedHistory,
-  onStarted,
 }: ClientDetailStartPathwayCardProps) {
   const t = useTranslations("clients.detail");
   const tw = useTranslations("clients.wizard");
-  const [pathwayId, setPathwayId] = useState<string>(PATHWAY_SELECT_NONE);
-  const [submitting, setSubmitting] = useState(false);
+  const [pickedPathwayId, setPathwayId] = useState<string>(PATHWAY_SELECT_NONE);
+  const { submitting, startPathway } = useStartPatientPathway();
   const { eligiblePathways, loading, error, reload } = useClientPathwayOptions({
     enabled: true,
     fallbackErrorMessage: tw("errorGeneric"),
   });
 
-  useEffect(() => {
-    if (loading || eligiblePathways.length !== 1) return;
-    setPathwayId((prev) => (prev === PATHWAY_SELECT_NONE ? eligiblePathways[0]!.id : prev));
-  }, [loading, eligiblePathways]);
+  /** Com um único fluxo elegível, ele é pré-selecionado enquanto o usuário não escolher outro. */
+  const pathwayId =
+    pickedPathwayId === PATHWAY_SELECT_NONE && !loading && eligiblePathways.length === 1
+      ? eligiblePathways[0]!.id
+      : pickedPathwayId;
 
   async function handleStart() {
     if (!pathwayId || pathwayId === PATHWAY_SELECT_NONE) {
       toast.error(t("startPathway.pickPathway"));
       return;
     }
-    setSubmitting(true);
     try {
-      await createPatientPathway({ clientId, pathwayId });
+      await startPathway(clientId, pathwayId);
       toast.success(t("startPathway.success"));
-      onStarted();
     } catch {
       /* erro: toast global no apiClient */
-    } finally {
-      setSubmitting(false);
     }
   }
 

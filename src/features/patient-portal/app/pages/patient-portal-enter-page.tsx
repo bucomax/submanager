@@ -2,11 +2,11 @@
 
 import { usePatientPortalTenantSlug } from "@/features/patient-portal/app/context/patient-portal-tenant-context";
 import { PatientPortalFullScreenLoading } from "@/features/patient-portal/app/components/patient-portal-full-screen-loading";
-import { exchangePatientPortalToken } from "@/lib/api/patient-portal-client";
+import { useExchangePatientPortalToken } from "@/features/patient-portal/app/hooks/use-exchange-patient-portal-token";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 function PatientPortalEnterPageInner() {
@@ -15,22 +15,9 @@ function PatientPortalEnterPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    void exchangePatientPortalToken(tenantSlug, token)
-      .then(() => {
-        if (!cancelled) router.replace(`/${tenantSlug}/patient`);
-      })
-      .catch(() => {
-        if (!cancelled) setError(t("enter.error"));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, router, t, tenantSlug]);
+  const { failed } = useExchangePatientPortalToken(tenantSlug, token, () =>
+    router.replace(`/${tenantSlug}/patient`),
+  );
 
   if (!token) {
     return (
@@ -40,10 +27,10 @@ function PatientPortalEnterPageInner() {
     );
   }
 
-  if (error) {
+  if (failed) {
     return (
       <Alert variant="destructive" className="max-w-md">
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription>{t("enter.error")}</AlertDescription>
       </Alert>
     );
   }

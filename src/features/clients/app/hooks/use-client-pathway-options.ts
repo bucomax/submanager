@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-
+import { clientKeys } from "@/features/clients/app/hooks/query-keys";
 import { listPathwaysForTenant } from "@/features/clients/app/services/clients.service";
+import { getErrorMessage } from "@/lib/utils/error-message";
 import type { PathwayOption } from "@/features/clients/app/types/api";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+
+const NO_PATHWAYS: PathwayOption[] = [];
 
 type UseClientPathwayOptionsParams = {
   enabled: boolean;
@@ -14,40 +18,23 @@ export function useClientPathwayOptions({
   enabled,
   fallbackErrorMessage,
 }: UseClientPathwayOptionsParams) {
-  const [pathways, setPathways] = useState<PathwayOption[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: clientKeys.pathways,
+    queryFn: ({ signal }) => listPathwaysForTenant({ signal }),
+    enabled,
+  });
 
-  const reload = useCallback(async () => {
-    if (!enabled) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const list = await listPathwaysForTenant();
-      setPathways(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : fallbackErrorMessage);
-      setPathways([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled, fallbackErrorMessage]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    void reload();
-  }, [enabled, reload]);
-
+  const pathways = query.data ?? (query.isError ? NO_PATHWAYS : null);
   const eligiblePathways = useMemo(
-    () => (pathways ?? []).filter((pathway) => pathway.publishedVersion != null),
+    () => (pathways ?? NO_PATHWAYS).filter((pathway) => pathway.publishedVersion != null),
     [pathways],
   );
 
   return {
     pathways,
     eligiblePathways,
-    loading,
-    error,
-    reload,
+    loading: query.isFetching,
+    error: query.isError ? getErrorMessage(query.error, fallbackErrorMessage) : null,
+    reload: () => void query.refetch(),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { completePatientPathway } from "@/features/pathways/app/services/patient-pathways.service";
+import { useCompletePatientPathway } from "@/features/clients/app/hooks/use-complete-patient-pathway";
 import { toast } from "@/lib/toast";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
@@ -11,28 +11,22 @@ import { useState } from "react";
 
 type ClientDetailSwitchPathwayHintProps = {
   patientPathwayId: string;
-  onCompleted: () => void;
 };
 
 export function ClientDetailSwitchPathwayHint({
   patientPathwayId,
-  onCompleted,
 }: ClientDetailSwitchPathwayHintProps) {
   const t = useTranslations("clients.detail");
   const [open, setOpen] = useState(false);
-  const [completing, setCompleting] = useState(false);
+  const { completing, completePathway } = useCompletePatientPathway();
 
   async function handleConfirm() {
-    setCompleting(true);
     try {
-      await completePatientPathway(patientPathwayId);
+      await completePathway(patientPathwayId);
       toast.success(t("switchPathway.completeSuccess"));
       setOpen(false);
-      onCompleted();
     } catch {
       /* erro: toast global no apiClient */
-    } finally {
-      setCompleting(false);
     }
   }
 

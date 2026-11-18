@@ -23,6 +23,7 @@ import type {
 } from "@/types/api/clients-v1";
 import type { PostClientPortalLinkResponse } from "@/types/api/patient-portal-v1";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type {
   ClientFilesListQueryParams,
   ClientFilesListResponseData,
@@ -34,13 +35,14 @@ import type {
 export async function getClientDetail(
   clientId: string,
   params?: ClientDetailQueryParams,
+  options?: RequestOptions,
 ): Promise<ClientDetailResponseData> {
   const search = new URLSearchParams();
   if (params?.page != null) search.set("page", String(params.page));
   if (params?.limit != null) search.set("limit", String(params.limit));
   const qs = search.toString();
   const url = qs ? `/api/v1/clients/${clientId}?${qs}` : `/api/v1/clients/${clientId}`;
-  const res = await apiClient.get<ApiEnvelope<ClientDetailResponseData>>(url);
+  const res = await apiClient.get<ApiEnvelope<ClientDetailResponseData>>(url, { signal: options?.signal });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }
@@ -50,6 +52,7 @@ export async function getClientDetail(
 export async function getClientTimeline(
   clientId: string,
   params?: ClientTimelineQueryParams,
+  options?: RequestOptions,
 ): Promise<ClientTimelineResponseData> {
   const search = new URLSearchParams();
   if (params?.page != null) search.set("page", String(params.page));
@@ -59,14 +62,17 @@ export async function getClientTimeline(
   const url = qs
     ? `/api/v1/clients/${clientId}/timeline?${qs}`
     : `/api/v1/clients/${clientId}/timeline`;
-  const res = await apiClient.get<ApiEnvelope<ClientTimelineResponseData>>(url);
+  const res = await apiClient.get<ApiEnvelope<ClientTimelineResponseData>>(url, { signal: options?.signal });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }
   return res.data.data;
 }
 
-export async function listClients(params?: ListClientsQueryParams): Promise<ClientsListResponseData> {
+export async function listClients(
+  params?: ListClientsQueryParams,
+  options?: RequestOptions,
+): Promise<ClientsListResponseData> {
   const search = new URLSearchParams();
   if (params?.limit != null) search.set("limit", String(params.limit));
   if (params?.page != null) search.set("page", String(params.page));
@@ -77,16 +83,20 @@ export async function listClients(params?: ListClientsQueryParams): Promise<Clie
   if (params?.fresh) search.set("fresh", "1");
   const qs = search.toString();
   const url = qs ? `/api/v1/clients?${qs}` : "/api/v1/clients";
-  const res = await apiClient.get<ApiEnvelope<ClientsListResponseData>>(url);
+  const res = await apiClient.get<ApiEnvelope<ClientsListResponseData>>(url, { signal: options?.signal });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }
   return res.data.data;
 }
 
-export async function listPublishedStagesForPathway(pathwayId: string): Promise<PublishedStageRowDto[]> {
+export async function listPublishedStagesForPathway(
+  pathwayId: string,
+  options?: RequestOptions,
+): Promise<PublishedStageRowDto[]> {
   const res = await apiClient.get<ApiEnvelope<PublishedPathwayStagesResponseData>>(
     `/api/v1/pathways/${pathwayId}/published-stages`,
+    { signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);
@@ -95,8 +105,10 @@ export async function listPublishedStagesForPathway(pathwayId: string): Promise<
   return [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-export async function listPathwaysForTenant(): Promise<PathwayOption[]> {
-  const res = await apiClient.get<ApiEnvelope<PathwaysListResponseData>>("/api/v1/pathways");
+export async function listPathwaysForTenant(options?: RequestOptions): Promise<PathwayOption[]> {
+  const res = await apiClient.get<ApiEnvelope<PathwaysListResponseData>>("/api/v1/pathways", {
+    signal: options?.signal,
+  });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }
@@ -153,6 +165,7 @@ export async function softDeleteClient(clientId: string): Promise<void> {
 export async function listClientFiles(
   clientId: string,
   params?: ClientFilesListQueryParams,
+  options?: RequestOptions,
 ): Promise<ClientFilesListResponseData> {
   const search = new URLSearchParams();
   if (params?.page != null) search.set("page", String(params.page));
@@ -161,7 +174,7 @@ export async function listClientFiles(
   const url = qs
     ? `/api/v1/clients/${clientId}/files?${qs}`
     : `/api/v1/clients/${clientId}/files`;
-  const res = await apiClient.get<ApiEnvelope<ClientFilesListResponseData>>(url);
+  const res = await apiClient.get<ApiEnvelope<ClientFilesListResponseData>>(url, { signal: options?.signal });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }

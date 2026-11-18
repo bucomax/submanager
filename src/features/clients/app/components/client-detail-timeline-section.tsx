@@ -1,6 +1,7 @@
 "use client";
 
 import { ClientDetailCardTitle } from "@/features/clients/app/components/client-detail-card-title";
+import { useClientAuditExport } from "@/features/clients/app/hooks/use-client-audit-export";
 import { useClientTimeline } from "@/features/clients/app/hooks/use-client-timeline";
 import { lineForItem } from "@/features/clients/app/utils/timeline-line";
 import { CLIENT_TIMELINE_EVENT_CATEGORIES } from "@/domain/audit/event-category-mapper";
@@ -26,19 +27,15 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { toast } from "@/lib/toast";
 
 type ClientDetailTimelineSectionProps = {
   clientId: string;
-  /** Incrementar após ações que geram eventos (ex.: transição de etapa). */
-  refreshSignal: number;
 };
 
-export function ClientDetailTimelineSection({ clientId, refreshSignal }: ClientDetailTimelineSectionProps) {
+export function ClientDetailTimelineSection({ clientId }: ClientDetailTimelineSectionProps) {
   const t = useTranslations("clients.detail");
   const { data: session } = useSession();
-  const [exporting, setExporting] = useState(false);
+  const { exporting, downloadAuditExport } = useClientAuditExport(clientId);
   const canExportAudit =
     session?.user?.tenantRole === "tenant_admin" || session?.user?.globalRole === "super_admin";
   const {
@@ -52,36 +49,7 @@ export function ClientDetailTimelineSection({ clientId, refreshSignal }: ClientD
     selectedCategories,
     toggleCategory,
     selectAllCategories,
-  } = useClientTimeline(clientId, refreshSignal);
-
-  async function downloadAuditExport() {
-    setExporting(true);
-    try {
-      const res = await fetch(`/api/v1/clients/${clientId}/audit-export`, { credentials: "include" });
-      if (!res.ok) {
-        const body: { success?: boolean; error?: { message?: string } } = await res.json().catch(() => ({}));
-        toast.error(body.error?.message ?? t("timeline.exportError"));
-        return;
-      }
-      const cd = res.headers.get("Content-Disposition");
-      let filename = `audit-export-${clientId.slice(0, 8)}.csv`;
-      const m = cd?.match(/filename="([^"]+)"/);
-      if (m?.[1]) filename = m[1];
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      await reload();
-    } catch {
-      toast.error(t("timeline.exportError"));
-    } finally {
-      setExporting(false);
-    }
-  }
-
+  } = useClientTimeline(clientId);
 
   const pag = data?.pagination;
   const from =
@@ -148,7 +116,7 @@ export function ClientDetailTimelineSection({ clientId, refreshSignal }: ClientD
         <CardDescription className="space-y-1">
           <p>{t("timeline.description")}</p>
           {data.timelineCapped ? (
-            <p className="text-amber-700 dark:text-amber-400 text-xs">{t("timeline.cappedHint")}</p>
+            <p className="text-warning text-xs">{t("timeline.cappedHint")}</p>
           ) : null}
           {pag && pag.totalItems > 0 ? (
             <p>{t("timeline.range", { from, to, total: pag.totalItems })}</p>

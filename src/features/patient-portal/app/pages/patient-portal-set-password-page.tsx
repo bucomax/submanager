@@ -2,10 +2,8 @@
 
 import { PatientPortalFullScreenLoading } from "@/features/patient-portal/app/components/patient-portal-full-screen-loading";
 import { usePatientPortalTenantSlug } from "@/features/patient-portal/app/context/patient-portal-tenant-context";
-import {
-  fetchPatientPortalOverview,
-  updatePatientPortalPassword,
-} from "@/lib/api/patient-portal-client";
+import { usePatientPortalPassword } from "@/features/patient-portal/app/hooks/use-patient-portal-password";
+import { usePatientPortalSessionCheck } from "@/features/patient-portal/app/hooks/use-patient-portal-session";
 import { isPortalSelfRegisterPasswordComplete } from "@/lib/validators/patient-portal-auth";
 import { Link, useRouter } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
@@ -16,18 +14,17 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 
 export function PatientPortalSetPasswordPage() {
   const tenantSlug = usePatientPortalTenantSlug();
   const t = useTranslations("patientPortal");
   const router = useRouter();
-  const [loadingSession, setLoadingSession] = useState(true);
-  const [unauthorized, setUnauthorized] = useState(false);
+  const { loading: loadingSession, unauthorized } = usePatientPortalSessionCheck(tenantSlug);
+  const { submitting, updatePassword } = usePatientPortalPassword(tenantSlug);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ready = useMemo(
@@ -35,39 +32,16 @@ export function PatientPortalSetPasswordPage() {
     [password, confirm],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchPatientPortalOverview(tenantSlug)
-      .then(() => {
-        if (!cancelled) setUnauthorized(false);
-      })
-      .catch(() => {
-        if (!cancelled) setUnauthorized(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingSession(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantSlug]);
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!ready) return;
-    setSubmitting(true);
     try {
-      await updatePatientPortalPassword(tenantSlug, {
-        newPassword: password,
-        confirmNewPassword: confirm,
-      });
+      await updatePassword({ newPassword: password, confirmNewPassword: confirm });
       toast.success(t("setPassword.success"));
       router.replace(`/${tenantSlug}/patient`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("setPassword.error"));
-    } finally {
-      setSubmitting(false);
     }
   }
 

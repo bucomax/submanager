@@ -1,48 +1,30 @@
 "use client";
 
+import { clientKeys } from "@/features/clients/app/hooks/query-keys";
 import { listClientNotes } from "@/features/clients/app/services/client-notes.service";
-import type { ClientNotesListResponseData } from "@/types/api/client-notes-v1";
+import { getErrorMessage } from "@/lib/utils/error-message";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 const DEFAULT_LIMIT = 10;
 
 export function useClientNotes(clientId: string) {
   const t = useTranslations("clients.detail.notes");
-  const [data, setData] = useState<ClientNotesListResponseData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const row = await listClientNotes(clientId, { page, limit: DEFAULT_LIMIT });
-      setData(row);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, page, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const reload = useCallback(() => {
-    void load();
-  }, [load]);
+  const query = useQuery({
+    queryKey: clientKeys.notes(clientId, page),
+    queryFn: ({ signal }) => listClientNotes(clientId, { page, limit: DEFAULT_LIMIT }, { signal }),
+    placeholderData: keepPreviousData,
+  });
 
   return {
-    data,
-    error,
-    loading,
+    data: query.isError ? null : (query.data ?? null),
+    error: query.isError ? getErrorMessage(query.error, t("loadError")) : null,
+    loading: query.isFetching,
     page,
     setPage,
-    reload,
+    reload: () => void query.refetch(),
     limit: DEFAULT_LIMIT,
   };
 }

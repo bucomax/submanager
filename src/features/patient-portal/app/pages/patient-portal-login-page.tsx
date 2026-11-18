@@ -1,22 +1,15 @@
 "use client";
 
 import { usePatientPortalTenantSlug } from "@/features/patient-portal/app/context/patient-portal-tenant-context";
-import {
-  fetchPatientPortalLoginOptions,
-  requestPatientPortalOtp,
-  verifyPatientPortalOtp,
-  verifyPatientPortalPassword,
-} from "@/lib/api/patient-portal-client";
+import { usePatientPortalLogin } from "@/features/patient-portal/app/hooks/use-patient-portal-login";
 import { formatLoginDisplay } from "@/features/patient-portal/app/utils/login-display";
-import { parsePortalLoginInput } from "@/domain/auth/patient-portal-login-identifier";
-import { digitsOnlyCpf, formatCpfDisplay } from "@/lib/validators/cpf";
-import { Link, useRouter } from "@/i18n/navigation";
+import { formatCpfDisplay } from "@/lib/validators/cpf";
+import { Link } from "@/i18n/navigation";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -29,129 +22,30 @@ import {
   Send,
 } from "lucide-react";
 
-type Step = "identifier" | "password" | "sendOtp" | "code";
-
 export function PatientPortalLoginPage() {
   const tenantSlug = usePatientPortalTenantSlug();
   const t = useTranslations("patientPortal");
-  const router = useRouter();
-  const [loginInput, setLoginInput] = useState("");
-  /** Valor confirmado após o passo inicial (CPF ou e-mail), usado nas chamadas à API. */
-  const [committedLogin, setCommittedLogin] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<Step>("identifier");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [postOtpRedirect, setPostOtpRedirect] = useState<string | null>(null);
-
-  const trimmed = loginInput.trim();
-  const identifierOk = Boolean(parsePortalLoginInput(trimmed));
-
-  function onIdentifierChange(raw: string) {
-    if (raw.includes("@")) {
-      setLoginInput(raw);
-    } else {
-      setLoginInput(digitsOnlyCpf(raw));
-    }
-  }
-
-  async function onContinueFromIdentifier() {
-    setError(null);
-    setInfo(null);
-    if (!identifierOk) {
-      setError(t("login.identifierInvalid"));
-      return;
-    }
-    const login = trimmed;
-    setLoading(true);
-    try {
-      const { hasPassword } = await fetchPatientPortalLoginOptions(tenantSlug, login);
-      setCommittedLogin(login);
-      setPassword("");
-      if (hasPassword) {
-        setStep("password");
-      } else {
-        setPostOtpRedirect(`/${tenantSlug}/patient`);
-        setStep("sendOtp");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("login.optionsFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function onPasswordLogin() {
-    setError(null);
-    setInfo(null);
-    if (!password.trim()) {
-      setError(t("login.passwordRequired"));
-      return;
-    }
-    setLoading(true);
-    try {
-      await verifyPatientPortalPassword(tenantSlug, committedLogin, password);
-      router.replace(`/${tenantSlug}/patient`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("login.passwordFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function onForgotPassword() {
-    setError(null);
-    setInfo(null);
-    setPassword("");
-    setCode("");
-    setPostOtpRedirect(`/${tenantSlug}/patient/set-password`);
-    setStep("sendOtp");
-  }
-
-  async function onRequestCode() {
-    setError(null);
-    setInfo(null);
-    setLoading(true);
-    try {
-      await requestPatientPortalOtp(tenantSlug, committedLogin);
-      setInfo(t("login.codeSent"));
-      setStep("code");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("login.requestFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function onVerifyOtp() {
-    setError(null);
-    if (!/^\d{6}$/.test(code.trim())) {
-      setError(t("login.codeInvalid"));
-      return;
-    }
-    setLoading(true);
-    try {
-      await verifyPatientPortalOtp(tenantSlug, committedLogin, code.trim());
-      const dest = postOtpRedirect ?? `/${tenantSlug}/patient`;
-      router.replace(dest);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("login.verifyFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function goBackToIdentifier() {
-    setError(null);
-    setInfo(null);
-    setPassword("");
-    setCode("");
-    setCommittedLogin("");
-    setPostOtpRedirect(null);
-    setStep("identifier");
-  }
+  const {
+    step,
+    loading,
+    error,
+    info,
+    loginInput,
+    identifierOk,
+    committedLogin,
+    password,
+    setPassword,
+    code,
+    setCode,
+    onIdentifierChange,
+    onContinueFromIdentifier,
+    onPasswordLogin,
+    onForgotPassword,
+    onRequestCode,
+    onVerifyOtp,
+    goBackToIdentifier,
+    goBackToSendOtp,
+  } = usePatientPortalLogin(tenantSlug);
 
   const identifierFieldValue = loginInput.includes("@") ? loginInput : formatCpfDisplay(loginInput);
 
@@ -289,10 +183,7 @@ export function PatientPortalLoginPage() {
               size="sm"
               className="gap-1.5"
               disabled={loading}
-              onClick={() => {
-                setCode("");
-                setStep("sendOtp");
-              }}
+              onClick={goBackToSendOtp}
             >
               <ArrowLeft className="size-3.5 shrink-0" aria-hidden />
               {t("login.back")}

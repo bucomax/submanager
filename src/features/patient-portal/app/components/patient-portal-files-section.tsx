@@ -1,12 +1,5 @@
-"use client";
-
 import { usePatientPortalTenantSlug } from "@/features/patient-portal/app/context/patient-portal-tenant-context";
-import {
-  fetchPatientPortalFiles,
-  requestPatientPortalFileDownloadPresign,
-  uploadPatientPortalFile,
-  PatientPortalUnauthorizedError,
-} from "@/lib/api/patient-portal-client";
+import { usePatientPortalFiles } from "@/features/patient-portal/app/hooks/use-patient-portal-files";
 import { formatFileSize } from "@/lib/utils/format-bytes";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
@@ -15,8 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/components/ui/input";
 import { ChevronLeft, ChevronRight, ExternalLink, Info, Loader2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { PatientPortalFilesListResponseData } from "@/types/api/patient-portal-v1";
+import { useRef } from "react";
 
 type Props = {
   formatDateTime: (iso: string) => string;
@@ -27,69 +19,24 @@ export function PatientPortalFilesSection({ formatDateTime, onAfterUpload }: Pro
   const tenantSlug = usePatientPortalTenantSlug();
   const t = useTranslations("patientPortal");
   const inputRef = useRef<HTMLInputElement>(null);
-  const [data, setData] = useState<PatientPortalFilesListResponseData | null>(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [uploadState, setUploadState] = useState<{ name: string; progress: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [downloadId, setDownloadId] = useState<string | null>(null);
-  const limit = 20;
-
-  const load = useCallback(
-    (p: number) => {
-      setLoading(true);
-      setError(null);
-      void fetchPatientPortalFiles(tenantSlug, p, limit)
-        .then((d) => {
-          setData(d);
-          setPage(p);
-        })
-        .catch((e: unknown) => {
-          if (e instanceof PatientPortalUnauthorizedError) {
-            setError(null);
-            return;
-          }
-          setError(t("files.loadError"));
-        })
-        .finally(() => setLoading(false));
-    },
-    [limit, t, tenantSlug],
-  );
-
-  useEffect(() => {
-    void load(1);
-  }, [load]);
+  const {
+    data,
+    loading,
+    error,
+    page,
+    limit,
+    goToPage,
+    uploadState,
+    uploadFile,
+    downloadId,
+    openDownload,
+  } = usePatientPortalFiles(tenantSlug, onAfterUpload);
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setUploadState({ name: file.name, progress: 0 });
-    setError(null);
-    try {
-      await uploadPatientPortalFile(tenantSlug, file, (pct) => {
-        setUploadState((s) => (s ? { ...s, progress: pct } : null));
-      });
-      onAfterUpload?.();
-      load(page);
-    } catch (err: unknown) {
-      if (err instanceof PatientPortalUnauthorizedError) return;
-      setError(err instanceof Error ? err.message : t("files.uploadError"));
-    } finally {
-      setUploadState(null);
-    }
-  }
-
-  async function openDownload(fileId: string) {
-    setDownloadId(fileId);
-    try {
-      const url = await requestPatientPortalFileDownloadPresign(tenantSlug, fileId);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-      setError(t("files.downloadError"));
-    } finally {
-      setDownloadId(null);
-    }
+    await uploadFile(file);
   }
 
   const pag = data?.pagination;
@@ -224,7 +171,7 @@ export function PatientPortalFilesSection({ formatDateTime, onAfterUpload }: Pro
               variant="outline"
               size="sm"
               disabled={loading || !pag.hasPreviousPage}
-              onClick={() => load(page - 1)}
+              onClick={() => goToPage(page - 1)}
             >
               <ChevronLeft className="size-4" />
               {t("files.prev")}
@@ -234,7 +181,7 @@ export function PatientPortalFilesSection({ formatDateTime, onAfterUpload }: Pro
               variant="outline"
               size="sm"
               disabled={loading || !pag.hasNextPage}
-              onClick={() => load(page + 1)}
+              onClick={() => goToPage(page + 1)}
             >
               {t("files.next")}
               <ChevronRight className="size-4" />

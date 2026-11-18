@@ -1,20 +1,18 @@
 "use client";
 
 import { CLIENT_TIMELINE_EVENT_CATEGORIES } from "@/domain/audit/event-category-mapper";
+import { clientKeys } from "@/features/clients/app/hooks/query-keys";
 import { getClientTimeline } from "@/features/clients/app/services/clients.service";
+import { getErrorMessage } from "@/lib/utils/error-message";
 import type { ClientTimelineEventCategory } from "@/types/api/clients-v1";
-import type { ClientTimelineResponseData } from "@/types/api/clients-v1";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 const TIMELINE_LIMIT = 20;
 
-export function useClientTimeline(clientId: string, refreshSignal = 0) {
+export function useClientTimeline(clientId: string) {
   const t = useTranslations("clients.detail");
-  const [data, setData] = useState<ClientTimelineResponseData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [selectedCategories, setSelectedCategories] = useState(
     () => new Set<ClientTimelineEventCategory>([...CLIENT_TIMELINE_EVENT_CATEGORIES]),
   );
@@ -24,37 +22,29 @@ export function useClientTimeline(clientId: string, refreshSignal = 0) {
     return [...selectedCategories].sort().join(",");
   }, [selectedCategories]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [selectedCategories]);
+  /** A página fica atrelada ao filtro que a originou: trocar categorias volta à página 1 sem efeito. */
+  const filtersKey = categoriesQuery ?? "";
+  const [pageState, setPageState] = useState({ filtersKey, page: 1 });
+  const page = pageState.filtersKey === filtersKey ? pageState.page : 1;
+  const setPage = useCallback(
+    (next: number | ((current: number) => number)) =>
+      setPageState((prev) => {
+        const current = prev.filtersKey === filtersKey ? prev.page : 1;
+        return { filtersKey, page: typeof next === "function" ? next(current) : next };
+      }),
+    [filtersKey],
+  );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const row = await getClientTimeline(clientId, {
-        page,
-        limit: TIMELINE_LIMIT,
-        categories: categoriesQuery,
-      });
-      setData(row);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("timeline.loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, page, t, categoriesQuery]);
-
-  useEffect(() => {
-    // `refreshSignal` não entra em `load`: é o efeito que reexecuta a busca quando o
-    // detalhe do cliente sinaliza que a timeline mudou.
-    void load();
-  }, [load, refreshSignal]);
-
-  const reload = useCallback(() => {
-    void load();
-  }, [load]);
+  const query = useQuery({
+    queryKey: clientKeys.timeline(clientId, { page, categories: filtersKey }),
+    queryFn: ({ signal }) =>
+      getClientTimeline(
+        clientId,
+        { page, limit: TIMELINE_LIMIT, categories: categoriesQuery },
+        { signal },
+      ),
+    placeholderData: keepPreviousData,
+  });
 
   const toggleCategory = useCallback((c: ClientTimelineEventCategory) => {
     setSelectedCategories((prev) => {
@@ -74,12 +64,12 @@ export function useClientTimeline(clientId: string, refreshSignal = 0) {
   }, []);
 
   return {
-    data,
-    error,
-    loading,
+    data: query.isError ? null : (query.data ?? null),
+    error: query.isError ? getErrorMessage(query.error, t("timeline.loadError")) : null,
+    loading: query.isFetching,
     page,
     setPage,
-    reload,
+    reload: () => query.refetch(),
     limit: TIMELINE_LIMIT,
     selectedCategories,
     toggleCategory,

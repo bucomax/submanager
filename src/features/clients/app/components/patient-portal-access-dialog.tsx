@@ -1,6 +1,6 @@
 "use client";
 
-import { createPatientPortalLink } from "@/features/clients/app/services/clients.service";
+import { usePortalAccessDialog } from "@/features/clients/app/hooks/use-portal-access-dialog";
 import { formatDateTimeShort } from "@/lib/utils/date";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -11,7 +11,6 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Copy, MessageCircle, QrCode, Share2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
 import QRCode from "react-qr-code";
 
 export type PatientPortalAccessDialogProps = {
@@ -33,45 +32,19 @@ export function PatientPortalAccessDialog({
 }: PatientPortalAccessDialogProps) {
   const t = useTranslations("clients.detail.portalAccessDialog");
   const locale = useLocale();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [enterUrl, setEnterUrl] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const {
+    open,
+    openDialog: handleOpen,
+    onOpenChange,
+    loading,
+    failed,
+    url: enterUrl,
+    expiresAt,
+  } = usePortalAccessDialog(clientId);
+  const error = failed ? t("loadError") : null;
 
   const canNativeShare =
     typeof navigator !== "undefined" && typeof navigator.share === "function";
-
-  const loadLink = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setEnterUrl(null);
-    setExpiresAt(null);
-    try {
-      const data = await createPatientPortalLink(clientId, { sendEmail: false });
-      setEnterUrl(data.enterUrl);
-      setExpiresAt(data.expiresAt);
-    } catch {
-      setError(t("loadError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, t]);
-
-  const onOpenChange = useCallback((next: boolean) => {
-    setOpen(next);
-    if (!next) {
-      setLoading(false);
-      setError(null);
-      setEnterUrl(null);
-      setExpiresAt(null);
-    }
-  }, []);
-
-  function handleOpen() {
-    setOpen(true);
-    void loadLink();
-  }
 
   const expiryLabel =
     expiresAt != null
@@ -139,7 +112,7 @@ export function PatientPortalAccessDialog({
           ) : null}
           {!loading && enterUrl ? (
             <div className="flex flex-col items-center gap-4">
-              <div className="rounded-xl border bg-white p-3 dark:bg-zinc-950">
+              <div className="rounded-xl border bg-white p-3">
                 <QRCode value={enterUrl} size={200} level="M" />
               </div>
               {expiryLabel ? (
