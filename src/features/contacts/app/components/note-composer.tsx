@@ -38,9 +38,9 @@ export function NoteComposer({ editingNote, authorLabel, onSave, onCancel }: Not
   }
 
   return (
-    <div className="animate-pop-in rounded-xl border border-l-[3px] border-l-[#f59e0b] bg-card p-3">
+    <div className="animate-pop-in rounded-xl border border-l-[3px] border-l-warning bg-card p-3">
       <div className="mb-2 flex items-center gap-2">
-        <NotebookPen className="size-3.5 text-[#b45309]" aria-hidden />
+        <NotebookPen className="size-3.5 text-warning" aria-hidden />
         <span className="text-[11px] font-extrabold tracking-wide uppercase">
           {isEditing ? t("editTitle") : t("formTitle")}
         </span>
@@ -92,7 +92,7 @@ export function NoteComposer({ editingNote, authorLabel, onSave, onCancel }: Not
           className={cn(
             "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium",
             pinned
-              ? "border-[rgba(245,158,11,.5)] bg-[rgba(245,158,11,.14)] text-[#92400e]"
+              ? "border-warning/50 bg-warning-soft text-warning"
               : "text-muted-foreground",
           )}
         >

@@ -18,7 +18,7 @@ import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
+import { Check, ExternalLink, GitBranch, Loader2, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
@@ -104,7 +104,7 @@ export function PathwaysList() {
     <div className="space-y-4">
       {canManage ? (
         <div className="flex justify-end">
-          <Button type="button" size="sm" onClick={() => setDialogOpen(true)}>
+          <Button type="button" onClick={() => setDialogOpen(true)}>
             <Plus className="size-4" />
             {t("newPathway")}
           </Button>
@@ -181,17 +181,32 @@ export function PathwaysList() {
         <DataTableScroll>
           <DataTableHeader className={ROW_GRID}>
             <span>{t("columnPathway")}</span>
-            <span className="text-start">{t("columnActions")}</span>
+            <span className="sr-only">{t("columnActions")}</span>
           </DataTableHeader>
 
           {!safePathways.length ? (
-            <DataTableEmpty>{t("empty")}</DataTableEmpty>
+            <DataTableEmpty>
+              <span className="flex flex-col items-center gap-3 py-4">
+                <span className="bg-muted text-muted-foreground grid size-11 place-items-center rounded-xl" aria-hidden>
+                  <GitBranch className="size-5" />
+                </span>
+                <span className="text-foreground font-semibold">{t("empty")}</span>
+              </span>
+            </DataTableEmpty>
           ) : (
             <DataTableBody>
               {safePathways.map((p) => (
                 <DataTableRow key={p.id} className={ROW_GRID}>
-                  <span className="min-w-0 font-medium">{p.name}</span>
-                  <div className="flex justify-start">
+                  <Link
+                    href={`/dashboard/pathways/${p.id}`}
+                    className="text-foreground flex min-w-0 items-center gap-3 rounded-lg font-semibold outline-none hover:underline hover:underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="bg-accent text-accent-foreground grid size-9 shrink-0 place-items-center rounded-[11px]" aria-hidden>
+                      <GitBranch className="size-[18px]" />
+                    </span>
+                    <span className="min-w-0 truncate">{p.name}</span>
+                  </Link>
+                  <div className="flex justify-end">
                     <Button
                       nativeButton={false}
                       size="sm"

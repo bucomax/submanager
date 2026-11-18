@@ -23,12 +23,12 @@ export function LeadStagePicker({ open, onOpenChange, currentStage, daysInStage,
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger className="flex w-full items-center gap-2 rounded-lg px-0 py-1 text-left">
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-[#e9edef]/60">{t("move")}</p>
-          <p className="text-base font-extrabold text-[#e9edef]">
+          <p className="text-xs text-primary-foreground/70">{t("move")}</p>
+          <p className="text-base font-extrabold text-primary-foreground">
             {t(currentStage)} <span className="font-normal opacity-70">({daysInStage}d)</span>
           </p>
         </div>
-        <ChevronDown className="size-4 shrink-0 text-[#e9edef]/70" />
+        <ChevronDown className="size-4 shrink-0 text-primary-foreground/70" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[220px] p-1">
         {STAGE_ORDER.map((stage) => (

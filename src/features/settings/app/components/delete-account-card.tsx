@@ -63,7 +63,7 @@ export function DeleteAccountCard() {
 
   return (
     <>
-      <Card className="border-destructive/35 bg-destructive-soft text-foreground shadow-sm dark:border-destructive/50">
+      <Card className="border-destructive/35 bg-destructive-soft text-foreground dark:border-destructive/50">
         <CardHeader>
           <CardTitle className="text-destructive">{t("title")}</CardTitle>
           <CardDescription>{t("description")}</CardDescription>

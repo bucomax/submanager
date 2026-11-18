@@ -165,7 +165,7 @@ export function SettingsPageLayout() {
     <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)] lg:items-start lg:gap-8">
       <nav
         aria-label={t("aria")}
-        className="scrollbar-thin flex flex-row gap-1 overflow-x-auto pb-1 lg:sticky lg:top-[4.5rem] lg:flex lg:w-full lg:flex-col lg:gap-0.5 lg:overflow-visible lg:rounded-xl lg:border lg:bg-card lg:p-3 lg:shadow-sm"
+        className="scrollbar-thin flex flex-row gap-1 overflow-x-auto pb-1 lg:sticky lg:top-[5.5rem] lg:flex lg:w-full lg:flex-col lg:gap-0.5 lg:overflow-visible lg:rounded-[20px] lg:border lg:bg-card lg:p-2"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -174,14 +174,16 @@ export function SettingsPageLayout() {
             <button
               key={item.id}
               type="button"
+              aria-current={isActive ? "page" : undefined}
               onClick={() => goToSection(item.id)}
               className={cn(
-                "flex min-w-[10rem] shrink-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors duration-200 lg:min-w-0",
-                "text-muted-foreground hover:bg-muted",
-                isActive && "bg-primary/10 text-primary hover:bg-primary/15",
+                "relative flex h-10 min-w-[10rem] shrink-0 items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-[background-color,box-shadow] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring lg:min-w-0",
+                "text-muted-foreground hover:bg-muted hover:text-foreground",
+                isActive &&
+                  "bg-accent text-foreground font-semibold before:absolute before:top-2.5 before:bottom-2.5 before:left-0 before:w-[3px] before:rounded-r-full before:bg-brand before:content-[''] hover:bg-accent",
               )}
             >
-              <Icon className="size-4 shrink-0 opacity-90" aria-hidden />
+              <Icon className="size-[18px] shrink-0" aria-hidden />
               <span>{t(item.id)}</span>
             </button>
           );

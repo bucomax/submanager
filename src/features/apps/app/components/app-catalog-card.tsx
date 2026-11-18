@@ -24,7 +24,7 @@ export function AppCatalogCard({ app }: Props) {
 
   return (
     <Link href={`/dashboard/apps/${app.slug}`} className="block">
-      <Card className="group relative h-full transition-shadow hover:shadow-md">
+      <Card className="group relative h-full transition-shadow">
         {app.accentColor && (
           <div
             className="absolute inset-x-0 top-0 h-1 rounded-t-xl"

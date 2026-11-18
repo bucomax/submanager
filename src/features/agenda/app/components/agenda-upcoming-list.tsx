@@ -24,8 +24,8 @@ export function AgendaUpcomingList({ events }: AgendaUpcomingListProps) {
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
   return (
-    <aside className="flex w-[340px] shrink-0 flex-col border-l bg-card p-3.5">
-      <p className="mb-3 text-sm font-bold">{t("upcoming.title")}</p>
+    <aside className="bg-surface hidden w-[320px] shrink-0 flex-col border-l p-4 xl:flex">
+      <h2 className="text-foreground mb-3 text-[17px] font-bold tracking-tight">{t("upcoming.title")}</h2>
       {upcoming.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("upcoming.empty")}</p>
       ) : (
@@ -36,7 +36,7 @@ export function AgendaUpcomingList({ events }: AgendaUpcomingListProps) {
             return (
               <div
                 key={event.id}
-                className="rounded-[10px] border p-2.5"
+                className="bg-card rounded-2xl border p-3"
                 style={{ borderLeft: `3px solid ${token.solid}` }}
               >
                 <div className="flex items-center justify-between gap-2">

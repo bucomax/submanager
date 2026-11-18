@@ -26,7 +26,7 @@ export function QuickPhrasePopover({
   const t = useTranslations("contacts.phrases");
 
   return (
-    <div className="animate-pop-in absolute inset-x-[14px] bottom-[calc(100%-6px)] z-20 max-h-80 overflow-y-auto rounded-xl border bg-card shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
+    <div className="animate-pop-in absolute inset-x-[14px] bottom-[calc(100%-6px)] z-20 max-h-80 overflow-y-auto rounded-xl border bg-card shadow-s2">
       <div className="flex items-center gap-1.5 border-b px-2.5 py-2">
         <Zap className="size-3.5" aria-hidden />
         <span className="text-[11px] font-extrabold tracking-wide uppercase">{t("title")}</span>
@@ -59,7 +59,7 @@ export function QuickPhrasePopover({
                     </span>
                   )}
                   {/\{\{[a-z]+\}\}/.test(phrase.body) && (
-                    <span className="rounded bg-[#ecfdf5] px-1.5 py-0.5 text-[10px] font-semibold text-[#047857]">
+                    <span className="bg-info-soft text-info rounded-md px-1.5 py-0.5 text-[11px] font-semibold">
                       {t("variables")}
                     </span>
                   )}

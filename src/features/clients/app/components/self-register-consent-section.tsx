@@ -89,7 +89,7 @@ export function SelfRegisterConsentSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3.5 rounded-xl border border-border/80 bg-gradient-to-br from-muted/45 via-background to-muted/30 p-4 shadow-sm ring-1 ring-black/[0.03] dark:from-muted/25 dark:via-background dark:to-muted/15 dark:ring-white/[0.04] sm:p-5">
+      <div className="flex gap-3.5 rounded-xl border border-border/80 bg-surface p-4 sm:p-5">
         <div className="bg-primary/12 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
           <ScrollText className="size-5" aria-hidden />
         </div>

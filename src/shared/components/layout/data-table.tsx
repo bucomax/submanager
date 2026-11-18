@@ -18,7 +18,7 @@ export function DataTableFilters({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-card p-4 ring-1 ring-foreground/5",
+        "rounded-[20px] border bg-card p-5",
         className,
       )}
     >
@@ -39,7 +39,7 @@ export function DataTableRoot({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border bg-card ring-1 ring-foreground/5",
+        "overflow-hidden rounded-[20px] border bg-card",
         className,
       )}
     >
@@ -75,7 +75,7 @@ export function DataTableHeader({
     <div
       role="row"
       className={cn(
-        "text-muted-foreground border-b bg-muted/50 px-4 py-2 text-xs font-medium",
+        "text-muted-foreground border-b bg-surface px-4 py-3 text-xs font-semibold",
         className,
       )}
     >
@@ -94,7 +94,7 @@ export function DataTableBody({
   children: React.ReactNode;
 }) {
   return (
-    <ul className={cn("divide-y", className)}>{children}</ul>
+    <ul className={cn("divide-border/60 divide-y", className)}>{children}</ul>
   );
 }
 
@@ -105,7 +105,7 @@ export function DataTableRow({
   children,
 }: React.LiHTMLAttributes<HTMLLIElement>) {
   return (
-    <li className={cn("px-4 py-3 text-sm", className)}>{children}</li>
+    <li className={cn("hover:bg-surface px-4 py-3.5 text-sm transition-colors duration-150", className)}>{children}</li>
   );
 }
 
@@ -156,7 +156,7 @@ export function DataTablePagination({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-2 border-t bg-muted/30 px-4 py-3 sm:flex-row sm:justify-between",
+        "flex flex-col items-center gap-2 border-t px-4 py-3 sm:flex-row sm:justify-between",
         className,
       )}
     >

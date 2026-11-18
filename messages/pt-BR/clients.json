@@ -117,7 +117,9 @@
       "stageSelectPathwayFirst": "Selecione uma jornada",
       "allStages": "Todas as etapas",
       "status": "Status (SLA)",
-      "allStatus": "Todos"
+      "allStatus": "Todos",
+      "clear": "Limpar filtros",
+      "clearSearch": "Limpar busca"
     },
     "sla": {
       "ok": "No prazo",
@@ -594,6 +596,15 @@
         "whatsappDispatchFailed": "WhatsApp: falha no envio",
         "whatsappPatientConfirmed": "WhatsApp: paciente confirmou recebimento"
       }
+    },
+    "tabs": {
+      "ariaLabel": "Seções da ficha",
+      "journey": "Jornada",
+      "profile": "Cadastro",
+      "files": "Arquivos",
+      "notes": "Anotações",
+      "timeline": "Linha do tempo",
+      "completed": "Tratamentos concluídos"
     }
   }
 }

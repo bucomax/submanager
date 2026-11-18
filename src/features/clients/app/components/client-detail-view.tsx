@@ -22,7 +22,8 @@ import { useClientStageTransition } from "@/features/clients/app/hooks/use-clien
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { ArrowLeft, CheckCircle2, FileText, GitBranch, History, NotebookPen, RefreshCw, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 type ClientDetailViewProps = {
@@ -78,45 +79,93 @@ export function ClientDetailView({ clientId }: ClientDetailViewProps) {
   }
 
   const { client } = data;
+  const completedTreatments = data.completedTreatments ?? [];
 
+  // Kit: a ficha em abas no lugar da página longa. Todas as abas ficam montadas (keepMounted),
+  // então formulários em edição e carregamentos seguem como antes ao trocar de aba.
   return (
     <div className="space-y-6">
       <ClientDetailHeader client={client} />
 
-      <div className="columns-1 gap-6 [column-fill:balance] lg:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
-        <ClientDetailProfileCard clientId={clientId} client={client} />
-        <ClientDetailCaseNotesCard clientId={clientId} client={client} />
-        <ClientDetailNotesCard clientId={clientId} />
-        <ClientDetailFilesCard clientId={clientId} />
+      <Tabs defaultValue="journey">
+        <TabsList aria-label={t("tabs.ariaLabel")}>
+          <TabsTrigger value="journey">
+            <GitBranch aria-hidden />
+            {t("tabs.journey")}
+          </TabsTrigger>
+          <TabsTrigger value="profile">
+            <UserRound aria-hidden />
+            {t("tabs.profile")}
+          </TabsTrigger>
+          <TabsTrigger value="files">
+            <FileText aria-hidden />
+            {t("tabs.files")}
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <NotebookPen aria-hidden />
+            {t("tabs.notes")}
+          </TabsTrigger>
+          <TabsTrigger value="timeline">
+            <History aria-hidden />
+            {t("tabs.timeline")}
+          </TabsTrigger>
+          {completedTreatments.length > 0 ? (
+            <TabsTrigger value="completed">
+              <CheckCircle2 aria-hidden />
+              {t("tabs.completed")}
+            </TabsTrigger>
+          ) : null}
+        </TabsList>
 
-        {!pp ? (
-          <ClientDetailStartPathwayCard
-            clientId={client.id}
-            hasCompletedHistory={(data.completedTreatments ?? []).length > 0}
-          />
-        ) : (
-          <>
-            <ClientDetailJourneyCard pp={pp} />
-            {pp.completedAt ? null : <ClientDetailSwitchPathwayHint patientPathwayId={pp.id} />}
-            <ClientDetailAssigneeSection pp={pp} />
-            <ClientDetailNextActionsCard pp={pp} />
-            <ClientDetailChecklistCard
-              pp={pp}
-              updatingChecklistItemId={updatingChecklistItemId}
-              onToggle={(id, checked) => void handleChecklistToggle(id, checked)}
-            />
-            {pp.completedAt ? null : <ClientDetailTransitionCard pp={pp} transition={transition} />}
-          </>
-        )}
+        <TabsContent value="journey">
+          {!pp ? (
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
+              <ClientDetailStartPathwayCard clientId={client.id} hasCompletedHistory={completedTreatments.length > 0} />
+              <ClientDetailCaseNotesCard clientId={clientId} client={client} />
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
+              <div className="flex min-w-0 flex-col gap-6">
+                <ClientDetailJourneyCard pp={pp} />
+                {pp.completedAt ? null : <ClientDetailTransitionCard pp={pp} transition={transition} />}
+                <ClientDetailChecklistCard
+                  pp={pp}
+                  updatingChecklistItemId={updatingChecklistItemId}
+                  onToggle={(id, checked) => void handleChecklistToggle(id, checked)}
+                />
+                <ClientDetailNextActionsCard pp={pp} />
+              </div>
+              <div className="flex min-w-0 flex-col gap-6">
+                <ClientDetailAssigneeSection pp={pp} />
+                <ClientDetailCaseNotesCard clientId={clientId} client={client} />
+                {pp.completedAt ? null : <ClientDetailSwitchPathwayHint patientPathwayId={pp.id} />}
+              </div>
+            </div>
+          )}
+        </TabsContent>
 
-        <div className="mt-8 min-w-0 w-full [column-span:all]">
+        <TabsContent value="profile">
+          <ClientDetailProfileCard clientId={clientId} client={client} />
+        </TabsContent>
+
+        <TabsContent value="files">
+          <ClientDetailFilesCard clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="notes">
+          <ClientDetailNotesCard clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="timeline">
           <ClientDetailTimelineSection clientId={clientId} />
-        </div>
+        </TabsContent>
 
-        <div className="min-w-0 w-full [column-span:all]">
-          <ClientCompletedTreatmentsSection client={client} items={data.completedTreatments ?? []} />
-        </div>
-      </div>
+        {completedTreatments.length > 0 ? (
+          <TabsContent value="completed">
+            <ClientCompletedTreatmentsSection client={client} items={completedTreatments} />
+          </TabsContent>
+        ) : null}
+      </Tabs>
     </div>
   );
 }

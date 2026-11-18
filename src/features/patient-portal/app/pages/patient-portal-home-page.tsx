@@ -22,7 +22,7 @@ import { formatDateTime } from "@/lib/utils/date";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardDescription, CardHeader } from "@/shared/components/ui/card";
-import { Info, KeyRound, MapPinned } from "lucide-react";
+import { Info, KeyRound, LogOut, MapPinned } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -72,68 +72,63 @@ export function PatientPortalHomePage() {
         tenantSlug={tenantSlug}
         hasPortalPassword={hasPortalPassword}
       />
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("home.welcome", { name: client.name })}</h1>
+      <div className="animate-enter flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-foreground text-3xl leading-[1.05] font-extrabold tracking-[-0.035em]">
+            {t("home.welcome", { name: client.name })}
+          </h1>
           <p className="text-muted-foreground text-sm">{t("home.clinic", { clinic: data.tenant.name })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setPasswordDialogOpen(true)}
-          >
-            <KeyRound className="size-3.5" aria-hidden />
+          <Button type="button" variant="outline" size="sm" onClick={() => setPasswordDialogOpen(true)}>
+            <KeyRound aria-hidden />
             {t("home.passwordAction")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => void logout()}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void logout()}>
+            <LogOut aria-hidden />
             {t("home.logout")}
           </Button>
         </div>
       </div>
 
-      <div className="columns-1 gap-6 [column-fill:balance] lg:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
-        <ClientDetailProfileCard
-          clientId={client.id}
-          client={client}
-          variant="patient"
-          tenantSlug={tenantSlug}
-        />
-
-        {!pp ? (
-          <Card className="min-w-0">
-            <CardHeader>
-              <ClientDetailCardTitle icon={MapPinned}>{td("noPathway.title")}</ClientDetailCardTitle>
-              <CardDescription>
-                {completedTreatments.length > 0
-                  ? td("noPathway.portalCardDescriptionWithHistory")
-                  : td("noPathway.portalCardDescription")}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ) : (
-          <>
-            <ClientDetailJourneyCard pp={pp} />
-            <ClientDetailAssigneeSection pp={pp} />
-            <ClientDetailNextActionsCard pp={pp} />
-            <ClientDetailChecklistCard pp={pp} readOnly />
-          </>
-        )}
-
-        <PatientPortalTimelineSection
-          timeline={timeline}
-          loading={timelineLoading}
-          error={timelineError}
-          onPageChange={loadTimelinePage}
-          formatDateTime={(iso) => formatDateTime(iso)}
-        />
-
-        <PatientPortalFilesSection formatDateTime={(iso) => formatDateTime(iso)} onAfterUpload={() => loadTimelinePage(1)} />
+      {/* Kit (portal): jornada primeiro, depois documentos e linha do tempo; dados pessoais por último. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-6">
+          {!pp ? (
+            <Card className="min-w-0">
+              <CardHeader>
+                <ClientDetailCardTitle icon={MapPinned}>{td("noPathway.title")}</ClientDetailCardTitle>
+                <CardDescription>
+                  {completedTreatments.length > 0
+                    ? td("noPathway.portalCardDescriptionWithHistory")
+                    : td("noPathway.portalCardDescription")}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          ) : (
+            <>
+              <ClientDetailJourneyCard pp={pp} />
+              <ClientDetailNextActionsCard pp={pp} />
+              <ClientDetailChecklistCard pp={pp} readOnly />
+              <ClientDetailAssigneeSection pp={pp} />
+            </>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          <PatientPortalFilesSection formatDateTime={(iso) => formatDateTime(iso)} onAfterUpload={() => loadTimelinePage(1)} />
+          <PatientPortalTimelineSection
+            timeline={timeline}
+            loading={timelineLoading}
+            error={timelineError}
+            onPageChange={loadTimelinePage}
+            formatDateTime={(iso) => formatDateTime(iso)}
+          />
+        </div>
       </div>
 
-      <div className="[column-span:all] min-w-0 w-full">
+      <ClientDetailProfileCard clientId={client.id} client={client} variant="patient" tenantSlug={tenantSlug} />
+
+      <div className="min-w-0 w-full">
         <ClientCompletedTreatmentsSection
           client={client}
           items={completedTreatments}
@@ -141,7 +136,7 @@ export function PatientPortalHomePage() {
         />
       </div>
 
-      <Alert variant="info" className="[column-span:all]">
+      <Alert variant="info">
         <Info className="size-4" aria-hidden />
         <AlertDescription className="text-sm">{t("home.readOnlyJourneyHint")}</AlertDescription>
       </Alert>

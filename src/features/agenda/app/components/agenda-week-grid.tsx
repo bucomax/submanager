@@ -46,11 +46,11 @@ export function AgendaWeekGrid({ weekStart, events, onEventClick }: AgendaWeekGr
   return (
     <div className="min-w-[820px] overflow-x-auto">
       <div className="grid" style={{ gridTemplateColumns: `64px repeat(7, minmax(120px,1fr))` }}>
-        <div className="sticky top-0 z-10 h-14 bg-background" />
+        <div className="bg-card sticky top-0 z-10 h-14" />
         {days.map((day) => {
           const isToday = isSameDay(day, today);
           return (
-            <div key={day.toISOString()} className="sticky top-0 z-10 flex h-14 flex-col items-center justify-center gap-0.5 bg-background border-b">
+            <div key={day.toISOString()} className="sticky top-0 z-10 bg-card flex h-14 flex-col items-center justify-center gap-0.5 border-b">
               <span className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
                 {dayFormatter.format(day)}
               </span>
@@ -80,7 +80,7 @@ export function AgendaWeekGrid({ weekStart, events, onEventClick }: AgendaWeekGr
           return (
             <div
               key={day.toISOString()}
-              className={cn("relative border-l", isToday && "bg-muted/40")}
+              className={cn("relative border-l", isToday && "bg-accent/40")}
               style={{ gridColumnStart: dayIndex + 2 }}
             >
               {HOURS.map((hour) => (
@@ -96,7 +96,7 @@ export function AgendaWeekGrid({ weekStart, events, onEventClick }: AgendaWeekGr
                     onClick={() => onEventClick(event)}
                     onMouseEnter={() => setHoveredId(event.id)}
                     onMouseLeave={() => setHoveredId((id) => (id === event.id ? null : id))}
-                    className="absolute right-1 left-1 overflow-hidden rounded-lg border p-1 text-left"
+                    className="absolute right-1 left-1 overflow-hidden rounded-[10px] border p-1.5 text-left transition-shadow duration-200 hover:shadow-s2"
                     style={{ top, height, borderLeft: `3px solid ${token.solid}`, background: token.soft }}
                   >
                     <p className="text-[11px] font-extrabold tabular-nums">

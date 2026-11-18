@@ -46,9 +46,9 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         disabled={disabled}
         id={id}
         className={cn(
-          "peer focus-visible:ring-ring inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "peer focus-visible:ring-ring inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
           s.track,
-          checked ? "bg-primary" : "bg-input dark:bg-input/80",
+          checked ? "bg-primary" : "bg-input",
           className,
         )}
         {...restProps}
@@ -59,7 +59,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       >
         <span
           className={cn(
-            "bg-background pointer-events-none block rounded-full shadow-md ring-0 transition-transform",
+            "bg-card pointer-events-none block rounded-full shadow-[0_1px_2px_rgb(14_29_41/0.2)] ring-0 transition-transform duration-200 ease-kit",
             s.thumb,
             checked ? s.thumbChecked : s.thumbUnchecked,
           )}

@@ -46,7 +46,7 @@ export function PipelineKanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "bg-muted/30 flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border",
+        "bg-surface flex w-[min(100%,280px)] shrink-0 flex-col rounded-[18px] border",
         isOver && !dragDisabled && "ring-primary ring-2 ring-offset-2 ring-offset-background",
       )}
     >

@@ -27,7 +27,7 @@ export function ChatEventBlock({ event, onOpenInAgenda }: ChatEventBlockProps) {
 
   return (
     <div
-      className="mx-auto my-1.5 w-[min(92%,560px)] rounded-[10px] border p-[9px_12px] text-[13px] dark:bg-white/[0.06] dark:text-[#e9edef]"
+      className="mx-auto my-1.5 w-[min(92%,560px)] rounded-[10px] border p-[9px_12px] text-[13px]"
       style={{
         borderColor: token.line,
         borderLeftColor: token.solid,

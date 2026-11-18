@@ -22,7 +22,7 @@ export function ChatNoteBlock({ note, onPin, onEdit, onDelete }: ChatNoteBlockPr
 
   return (
     <div
-      className="mx-auto my-1.5 w-[min(92%,560px)] rounded-[10px] border p-[9px_12px] text-[13px] leading-[1.45] dark:bg-white/[0.06] dark:text-[#e9edef]"
+      className="mx-auto my-1.5 w-[min(92%,560px)] rounded-[10px] border p-[9px_12px] text-[13px] leading-[1.45]"
       style={{
         borderColor: token.line,
         borderLeftColor: token.solid,

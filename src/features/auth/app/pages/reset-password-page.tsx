@@ -15,7 +15,7 @@ export async function ResetPasswordPage() {
 
   return (
     <Suspense fallback={<AuthSuspenseFallback />}>
-      <Card className="w-full shadow-sm">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>{t("resetTitle")}</CardTitle>
           <CardDescription>{t("resetDescription")}</CardDescription>

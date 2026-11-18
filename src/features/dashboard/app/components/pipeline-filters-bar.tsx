@@ -60,7 +60,7 @@ export function PipelineFiltersBar({
     opmeSupplierId === "" ? "all" : opmeSupplierId;
 
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
+    <div className="rounded-[20px] border bg-card p-5">
       <div className="mb-3 flex items-center gap-2">
         <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden />
         <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Filtros</span>

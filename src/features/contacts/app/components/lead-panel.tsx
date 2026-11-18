@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 import { ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LeadStagePicker } from "@/features/contacts/app/components/lead-stage-picker";
@@ -62,7 +64,7 @@ export function LeadPanel({
 
   return (
     <div className="flex h-full flex-col overflow-hidden border-l bg-card">
-      <div className="space-y-3 p-3.5" style={{ background: "#243b47", color: "#e9edef" }}>
+      <div className="bg-primary text-primary-foreground space-y-3 p-4">
         <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger
@@ -94,8 +96,7 @@ export function LeadPanel({
           {STAGE_ORDER.map((stage, i) => (
             <span
               key={stage}
-              className="h-1 flex-1 rounded-full"
-              style={{ background: i <= stageIndex ? "#facc15" : "rgba(255,255,255,.18)" }}
+              className={cn("h-1 flex-1 rounded-full", i <= stageIndex ? "bg-sky" : "bg-primary-foreground/20")}
             />
           ))}
         </div>

@@ -280,6 +280,21 @@
     animation: chat-spin 0.7s linear infinite;
   }
 
+  /* Esqueleto do kit: brilho de 1,6 s da esquerda para a direita, sem roda. */
+  @keyframes kit-shimmer {
+    from {
+      background-position: 120% 0;
+    }
+    to {
+      background-position: -120% 0;
+    }
+  }
+  .animate-shimmer {
+    background-image: linear-gradient(90deg, var(--muted) 0%, var(--surface) 45%, var(--muted) 90%);
+    background-size: 220% 100%;
+    animation: kit-shimmer 1.6s ease-in-out infinite;
+  }
+
   /* Entrada de página e de blocos (kit): 700 ms, +55 ms por item via --i. */
   @keyframes kit-enter {
     from {
@@ -299,7 +314,8 @@
     .animate-pop-in,
     .animate-tip-in,
     .animate-chat-spin,
-    .animate-enter {
+    .animate-enter,
+    .animate-shimmer {
       animation: none;
     }
   }

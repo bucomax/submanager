@@ -17,7 +17,7 @@ export function ClientsListPageToolbar() {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
-      <Card className="border-border min-w-0 gap-2 shadow-sm">
+      <Card className="border-border min-w-0 gap-2">
         <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-2">
             <ClientDetailCardTitle icon={QrCode} className="min-w-0 flex-1">
@@ -34,7 +34,7 @@ export function ClientsListPageToolbar() {
         </CardContent>
       </Card>
 
-      <Card className="border-border min-w-0 gap-2 shadow-sm">
+      <Card className="border-border min-w-0 gap-2">
         <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-2">
             <ClientDetailCardTitle icon={UserPlus} className="min-w-0 flex-1">

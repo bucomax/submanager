@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+
 import { AgendaMonthGrid } from "@/features/agenda/app/components/agenda-month-grid";
 import { AgendaUpcomingList } from "@/features/agenda/app/components/agenda-upcoming-list";
 import { AgendaWeekGrid } from "@/features/agenda/app/components/agenda-week-grid";
@@ -7,7 +10,7 @@ import { useAgendaEvents } from "@/features/agenda/app/hooks/use-agenda-events";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 export function AgendaPage() {
@@ -23,14 +26,17 @@ export function AgendaPage() {
   const title = titleFormatter.format(from);
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] min-h-0 overflow-hidden rounded-xl border">
+    <div className="bg-card flex h-[calc(100dvh-8.5rem)] min-h-0 overflow-hidden rounded-[20px] border">
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 border-b p-[14px_18px]">
-          <p className="text-[17px] font-extrabold capitalize">{title}</p>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{t("count", { count: events.length })}</span>
+        <div className="flex flex-wrap items-center gap-3 border-b px-5 py-4">
+          <h1 className="text-foreground text-2xl font-extrabold tracking-[-0.03em] capitalize">{title}</h1>
+          <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums">
+            {t("count", { count: events.length })}
+          </span>
 
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-0.5 rounded-lg border bg-muted p-0.5">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {/* Kit: segmento Semana / Mês. */}
+            <div className="bg-muted flex items-center gap-0.5 rounded-xl p-[3px]" role="group">
               {(["semana", "mes"] as const).map((m) => (
                 <button
                   key={m}
@@ -38,25 +44,23 @@ export function AgendaPage() {
                   onClick={() => setMode(m)}
                   aria-pressed={mode === m}
                   className={cn(
-                    "flex h-[26px] items-center rounded-[7px] px-2.5 text-xs font-semibold",
-                    mode === m ? "bg-background shadow-sm" : "text-muted-foreground",
+                    "flex h-8 items-center rounded-[9px] px-3.5 text-[13px] font-semibold transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    mode === m ? "bg-card text-foreground shadow-s1" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {t(`view.${m === "semana" ? "week" : "month"}`)}
                 </button>
               ))}
             </div>
+            <Button type="button" variant="outline" size="sm" onClick={goToday}>
+              {t("view.today")}
+            </Button>
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <button
-                    type="button"
-                    onClick={goPrevious}
-                    aria-label={t("view.previous")}
-                    className="flex size-8 items-center justify-center rounded-lg border hover:bg-accent"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
+                  <Button type="button" variant="outline" size="icon-sm" onClick={goPrevious} aria-label={t("view.previous")}>
+                    <ChevronLeft aria-hidden />
+                  </Button>
                 }
               />
               <TooltipContent>{t("view.previous")}</TooltipContent>
@@ -64,33 +68,33 @@ export function AgendaPage() {
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    aria-label={t("view.next")}
-                    className="flex size-8 items-center justify-center rounded-lg border hover:bg-accent"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
+                  <Button type="button" variant="outline" size="icon-sm" onClick={goNext} aria-label={t("view.next")}>
+                    <ChevronRight aria-hidden />
+                  </Button>
                 }
               />
               <TooltipContent>{t("view.next")}</TooltipContent>
             </Tooltip>
-            <button type="button" onClick={goToday} className="flex h-8 items-center rounded-lg border px-3 text-sm font-medium hover:bg-accent">
-              {t("view.today")}
-            </button>
           </div>
         </div>
 
         <div className="flex-1 overflow-auto p-3">
           {loading ? (
-            <p className="p-8 text-center text-sm text-muted-foreground">…</p>
+            <div className="grid h-full grid-cols-7 gap-2" aria-busy="true">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} className="h-full min-h-64 rounded-xl" />
+              ))}
+            </div>
           ) : error ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-              <p className="text-sm text-muted-foreground">{t("loadError")}</p>
-              <button type="button" onClick={() => void refresh()} className="text-sm font-medium text-primary hover:underline">
+              <span className="bg-destructive-soft text-destructive grid size-11 place-items-center rounded-xl" aria-hidden>
+                <AlertTriangle className="size-5" />
+              </span>
+              <p className="text-muted-foreground text-sm">{t("loadError")}</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>
+                <RefreshCw aria-hidden />
                 {t("retry")}
-              </button>
+              </Button>
             </div>
           ) : mode === "semana" ? (
             <AgendaWeekGrid

@@ -33,9 +33,9 @@ export function ClientDetailHeader({ client }: { client: ClientDetailClientDto }
   const digits = waDigits(client.phone);
 
   return (
-    <header className="border-border/60 space-y-4 border-b pb-6">
+    <header className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:items-start">
-        <Card className="border-border min-w-0 gap-2 shadow-sm">
+        <Card className="border-border min-w-0 gap-2">
           <CardHeader className="pb-0">
             <div className="flex items-start justify-between gap-2">
               <ClientDetailCardTitle icon={UserRound} className="min-w-0 flex-1">
@@ -55,16 +55,16 @@ export function ClientDetailHeader({ client }: { client: ClientDetailClientDto }
             </div>
             <ul className="text-muted-foreground flex flex-col gap-2.5 text-sm">
               {client.phone?.trim() ? (
-                <li className="bg-muted/30 flex min-w-0 items-center gap-3 rounded-lg border border-border/50 px-3 py-2">
-                  <span className="bg-muted/70 text-muted-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md">
+                <li className="bg-surface flex min-w-0 items-center gap-3 rounded-xl px-3 py-2">
+                  <span className="bg-accent text-accent-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg">
                     <Phone className="size-3.5" aria-hidden />
                   </span>
                   <span className="min-w-0 tabular-nums">{formatPhoneBrDisplay(client.phone)}</span>
                 </li>
               ) : null}
               {client.email?.trim() ? (
-                <li className="bg-muted/30 flex min-w-0 items-center gap-3 rounded-lg border border-border/50 px-3 py-2">
-                  <span className="bg-muted/70 text-muted-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md">
+                <li className="bg-surface flex min-w-0 items-center gap-3 rounded-xl px-3 py-2">
+                  <span className="bg-accent text-accent-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg">
                     <Mail className="size-3.5" aria-hidden />
                   </span>
                   <span className="min-w-0 truncate" title={client.email}>
@@ -73,8 +73,8 @@ export function ClientDetailHeader({ client }: { client: ClientDetailClientDto }
                 </li>
               ) : null}
               {client.documentId ? (
-                <li className="bg-muted/30 flex min-w-0 items-center gap-3 rounded-lg border border-border/50 px-3 py-2">
-                  <span className="bg-muted/70 text-muted-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold tracking-wide">
+                <li className="bg-surface flex min-w-0 items-center gap-3 rounded-xl px-3 py-2">
+                  <span className="bg-accent text-accent-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold tracking-wide">
                     {t("cpf")}
                   </span>
                   <span className="min-w-0 tabular-nums">{formatCpfDisplay(client.documentId)}</span>
@@ -84,7 +84,7 @@ export function ClientDetailHeader({ client }: { client: ClientDetailClientDto }
           </CardContent>
         </Card>
 
-        <Card className="border-border min-w-0 gap-2 shadow-sm">
+        <Card className="border-border min-w-0 gap-2">
           <CardHeader className="pb-0">
             <div className="flex items-start justify-between gap-2">
               <ClientDetailCardTitle icon={LayoutDashboard} className="min-w-0 flex-1">
@@ -135,7 +135,7 @@ export function ClientDetailHeader({ client }: { client: ClientDetailClientDto }
           </CardContent>
         </Card>
 
-        <Card className="border-border min-w-0 gap-2 shadow-sm md:col-span-2 lg:col-span-1">
+        <Card className="border-border min-w-0 gap-2 md:col-span-2 lg:col-span-1">
           <CardHeader className="pb-0">
             <div className="flex items-start justify-between gap-2">
               <ClientDetailCardTitle icon={UserPlus} className="min-w-0 flex-1">

@@ -60,13 +60,12 @@ export function ConversationList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="space-y-2.5 border-b p-3">
+      <div className="space-y-3 px-4 pt-4 pb-3">
         <div className="flex items-center gap-2">
-          <p className="text-[15px] font-bold">{t("list.title")}</p>
+          <p className="text-foreground text-lg font-bold tracking-tight">{t("list.title")}</p>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{totalItems}</span>
           {unreadTotal > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#047857]">
-              <span className="size-[7px] rounded-full bg-[#10b981]" />
+            <span className="bg-info-soft text-info inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold">
               {t("list.unread", { count: unreadTotal })}
             </span>
           )}
@@ -182,7 +181,7 @@ export function ConversationList({
         </div>
       </div>
 
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-2">
         {loading ? (
           <div className="space-y-3 p-3">
             {Array.from({ length: 6 }).map((_, i) => (

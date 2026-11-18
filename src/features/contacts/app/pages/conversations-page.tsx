@@ -1,5 +1,7 @@
 "use client";
 
+import { MessageCircle } from "lucide-react";
+
 import { useState } from "react";
 import { ConversationChat } from "@/features/contacts/app/components/conversation-chat";
 import { ConversationList } from "@/features/contacts/app/components/conversation-list";
@@ -72,7 +74,7 @@ export function ConversationsPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] min-h-0 overflow-hidden rounded-xl border">
+    <div className="bg-card h-[calc(100dvh-8.5rem)] min-h-0 overflow-hidden rounded-[20px] border">
       {/* Desktop / tablet largo (Layout B): grid de 3 colunas, painel do lead como 3ª coluna animada. */}
       <div
         className="hidden h-full min-h-0 overflow-x-auto lg:grid"
@@ -81,7 +83,7 @@ export function ConversationsPage() {
           transition: "grid-template-columns .34s cubic-bezier(.22,1,.36,1)",
         }}
       >
-        <div className="col-start-1 row-start-1 min-h-0 min-w-0 overflow-hidden border-r">
+        <div className="bg-surface col-start-1 row-start-1 min-h-0 min-w-0 overflow-hidden border-r">
           <ConversationList
             activeConversationId={activeConversation?.id ?? null}
             onSelectConversation={handleSelectConversation}
@@ -113,8 +115,11 @@ export function ConversationsPage() {
               stageOverride={activeConversation.status}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              {t("chat.selectPrompt")}
+            <div className="bg-surface flex h-full flex-col items-center justify-center gap-3 text-center">
+              <span className="bg-muted text-muted-foreground grid size-11 place-items-center rounded-xl" aria-hidden>
+                <MessageCircle className="size-5" />
+              </span>
+              <p className="text-muted-foreground text-sm">{t("chat.selectPrompt")}</p>
             </div>
           )}
         </div>

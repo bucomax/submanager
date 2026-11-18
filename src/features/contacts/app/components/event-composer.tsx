@@ -72,9 +72,9 @@ export function EventComposer({ leadName, conversationId, clientId, onSave, onCa
   }
 
   return (
-    <div className="animate-pop-in space-y-2.5 rounded-xl border border-l-[3px] border-l-[#0ea5e9] bg-card p-3">
+    <div className="animate-pop-in space-y-2.5 rounded-xl border border-l-[3px] border-l-info bg-card p-3">
       <div className="flex items-center gap-2">
-        <CalendarPlus className="size-3.5 text-[#075985]" aria-hidden />
+        <CalendarPlus className="size-3.5 text-info" aria-hidden />
         <span className="text-[11px] font-extrabold tracking-wide uppercase">{t("formTitle")}</span>
         <span className="ml-auto text-[11px] text-muted-foreground">{t("goesToAgenda")}</span>
       </div>

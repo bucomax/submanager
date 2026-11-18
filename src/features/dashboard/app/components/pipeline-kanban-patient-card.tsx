@@ -17,7 +17,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { Loader2, MoreVertical, MoveRight, Siren, UserRound } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Loader2,
+  MoreVertical,
+  MoveRight,
+  Siren,
+  UserRound,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 
@@ -61,7 +69,7 @@ export function PipelineKanbanPatientCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "w-full shrink-0 rounded-lg border bg-card text-sm shadow-sm",
+        "w-full shrink-0 rounded-[14px] border bg-card text-sm",
         "transform-gpu transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]",
         slaHealthKanbanCardClassName(pp.slaStatus),
         !dragDisabled && !isTransitioning && "cursor-grab touch-none active:cursor-grabbing",
@@ -123,7 +131,7 @@ export function PipelineKanbanPatientCard({
         </div>
         <div
           className={cn(
-            "mt-2 inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium",
+            "mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
             tone === "ok" &&
               "bg-success-soft text-success",
             tone === "warning" &&
@@ -133,8 +141,12 @@ export function PipelineKanbanPatientCard({
           )}
         >
           {tone === "critical" ? (
-            <Siren className="size-3.5 shrink-0 text-destructive" aria-hidden />
-          ) : null}
+            <Siren className="size-3.5 shrink-0" aria-hidden />
+          ) : tone === "warning" ? (
+            <Clock className="size-3.5 shrink-0" aria-hidden />
+          ) : (
+            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+          )}
           <span className="min-w-0 truncate">{durationLabel}</span>
         </div>
       </div>

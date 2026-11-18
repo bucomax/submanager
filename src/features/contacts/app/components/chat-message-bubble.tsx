@@ -54,7 +54,7 @@ export function DeliveryTicks({ status }: { status: MessageDto["status"] }) {
 export function DateSeparator({ label }: { label: string }) {
   return (
     <div className="animate-chat-date-pill sticky top-2 z-10 my-3 flex justify-center">
-      <span className="rounded-full bg-black/[0.06] px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm dark:bg-white/[0.08]">
+      <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-xs font-semibold">
         {label}
       </span>
     </div>
@@ -68,25 +68,25 @@ export function ChatMessageBubble({ message, locale }: { message: MessageDto; lo
     <div className={cn("flex", isOutbound ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[72%] overflow-hidden rounded-2xl px-[11px] py-[7px] text-[14px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+          "max-w-[74%] overflow-hidden rounded-[18px] px-3.5 py-2 text-[15px]",
           isOutbound
             ? cn(
-                "animate-chat-bubble-out rounded-br-md",
+                "animate-chat-bubble-out rounded-tr-md",
                 failed
-                  ? "bg-destructive/10 text-destructive dark:bg-destructive/20"
-                  : "bg-[#d9fdd3] text-[#111b21] dark:bg-[#005c4b] dark:text-[#e9edef]",
+                  ? "bg-destructive-soft text-destructive"
+                  : "bg-primary text-primary-foreground",
               )
             : cn(
-                "animate-chat-bubble-in rounded-bl-md",
-                "bg-white text-[#111b21] dark:bg-[#202c33] dark:text-[#e9edef]",
+                "animate-chat-bubble-in rounded-tl-md",
+                "bg-card text-foreground border",
               ),
         )}
       >
         <p className="whitespace-pre-wrap leading-[1.4]">{message.body}</p>
         <div
           className={cn(
-            "mt-1 flex items-center justify-end gap-1 text-[11px] leading-none tabular-nums opacity-60",
-            isOutbound ? "text-[#111b21] dark:text-[#e9edef]" : "text-muted-foreground",
+            "mt-1 flex items-center justify-end gap-1 text-[11px] leading-none tabular-nums opacity-75",
+            isOutbound && !failed ? "text-primary-foreground" : "text-muted-foreground",
           )}
         >
           <time dateTime={message.createdAt}>{bubbleTime(message.createdAt, locale)}</time>

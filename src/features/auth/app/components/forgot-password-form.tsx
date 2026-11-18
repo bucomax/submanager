@@ -19,25 +19,19 @@ import { useForgotPasswordForm } from "../hooks/use-forgot-password-form";
 export function ForgotPasswordForm() {
   const t = useTranslations("auth.forgotPassword");
   const tLogin = useTranslations("auth.login");
-  const tGlobal = useTranslations("global");
   const { form, message, apiError, onSubmit } = useForgotPasswordForm();
 
   return (
     <div className="w-full">
-      <header className="mb-8 text-center">
-        <Link href="/" className="group inline-flex flex-col items-center gap-1">
-          <span className="text-2xl font-semibold tracking-tight transition-opacity group-hover:opacity-80">
-            {tGlobal("brand")}
-          </span>
-          <span className="text-muted-foreground text-sm">{tLogin("brandLine")}</span>
-        </Link>
-      </header>
+      <p className="text-accent-foreground mb-6 inline-flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase before:h-px before:w-[18px] before:bg-brand before:content-['']">
+        {tLogin("brandLine")}
+      </p>
 
-      <Card className="w-full border shadow-xl shadow-black/5 dark:shadow-black/20">
+      <Card className="w-full border">
         <CardHeader className="space-y-4 pb-4">
           <div className="flex gap-3 sm:gap-4">
             <span
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary shadow-sm ring-1 ring-primary/20 dark:bg-primary/15 dark:ring-primary/25"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"
               aria-hidden
             >
               <Mail className="size-5" strokeWidth={2} />

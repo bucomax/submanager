@@ -101,56 +101,38 @@ export function DashboardReportsSection() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Kit: indicadores numa faixa só; cor apenas onde há estado (críticos). */}
+      <div className="bg-card grid grid-cols-2 overflow-hidden rounded-[20px] border xl:grid-cols-4">
         {(
           [
-            [
-              "cards.patientsInScope",
-              data?.kpis.patientsInScope ?? 0,
-              Users,
-              "bg-primary/10 text-primary",
-            ],
+            ["cards.patientsInScope", data?.kpis.patientsInScope ?? 0, Users, ""],
             [
               "cards.criticalPatients",
               data?.kpis.criticalPatients ?? 0,
               Siren,
-              "bg-warning/15 text-warning",
+              (data?.kpis.criticalPatients ?? 0) > 0 ? "text-destructive font-semibold" : "",
             ],
-            [
-              "cards.transitionsInPeriod",
-              data?.kpis.transitionsInPeriod ?? 0,
-              ArrowRightLeft,
-              "bg-info/15 text-info",
-            ],
-            [
-              "cards.pathwaysInScope",
-              data?.kpis.pathwaysInScope ?? 0,
-              GitBranch,
-              "bg-foreground/15 text-foreground",
-            ],
+            ["cards.transitionsInPeriod", data?.kpis.transitionsInPeriod ?? 0, ArrowRightLeft, ""],
+            ["cards.pathwaysInScope", data?.kpis.pathwaysInScope ?? 0, GitBranch, ""],
           ] as const satisfies ReadonlyArray<
             readonly [Parameters<typeof t>[0], number, LucideIcon, string]
           >
-        ).map(([labelKey, value, Icon, iconTint]) => (
-          <Card key={labelKey} className="py-0 gap-0">
-            <CardContent className="bg-muted/15 py-3.5 sm:py-4">
-              <div className="flex items-start gap-3">
-                <div
-                  className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                    iconTint,
-                  )}
-                  aria-hidden
-                >
-                  <Icon className="size-4" strokeWidth={2} />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <p className="text-muted-foreground text-xs font-medium leading-snug">{t(labelKey)}</p>
-                  <p className="text-2xl font-semibold tabular-nums leading-none tracking-tight">{value}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        ).map(([labelKey, value, Icon, tone], i) => (
+          <div
+            key={labelKey}
+            className={cn(
+              "flex min-w-0 flex-col gap-1.5 px-6 py-5",
+              i % 2 === 1 && "border-l",
+              i >= 2 && "border-t xl:border-t-0",
+              i === 2 && "xl:border-l",
+            )}
+          >
+            <p className={cn("text-muted-foreground flex items-center gap-1.5 text-[13px]", tone)}>
+              <Icon className="size-4 shrink-0" aria-hidden />
+              {t(labelKey)}
+            </p>
+            <p className="text-foreground text-[34px] leading-none font-extrabold tracking-[-0.04em] tabular-nums">{value}</p>
+          </div>
         ))}
       </div>
 

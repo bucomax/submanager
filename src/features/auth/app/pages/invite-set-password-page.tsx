@@ -15,7 +15,7 @@ export async function InviteSetPasswordPage() {
 
   return (
     <Suspense fallback={<AuthSuspenseFallback />}>
-      <Card className="w-full shadow-sm">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>{t("inviteTitle")}</CardTitle>
           <CardDescription>{t("inviteDescription")}</CardDescription>

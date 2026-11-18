@@ -93,7 +93,7 @@ export function AgendaMonthGrid({ monthStart, events, onEventClick }: AgendaMont
                       <span className="truncate">{event.title}</span>
 
                       {hoveredId === event.id && (
-                        <div className="pointer-events-none absolute top-full left-0 z-20 mt-1.5 min-w-[190px] rounded-lg bg-foreground p-2 text-background shadow-lg">
+                        <div className="pointer-events-none absolute top-full left-0 z-20 mt-1.5 min-w-[190px] rounded-lg bg-foreground p-2 text-background shadow-s2">
                           <p className="text-[12px] font-extrabold">{event.title}</p>
                           <p className="text-[11px]">
                             {tType(event.type)} · {new Date(event.startsAt).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")}

@@ -40,7 +40,7 @@ export function ReportsFiltersBar({
   const t = useTranslations("dashboard.reports");
 
   return (
-    <div className="grid gap-4 rounded-xl border p-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
+    <div className="bg-card grid gap-4 rounded-[20px] border p-5 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
       <LabeledSelect
         id="reports-period"
         label={t("filters.period")}

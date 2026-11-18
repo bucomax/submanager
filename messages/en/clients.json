@@ -118,7 +118,9 @@
       "stageSelectPathwayFirst": "Select a pathway first",
       "allStages": "All stages",
       "status": "Status (SLA)",
-      "allStatus": "All"
+      "allStatus": "All",
+      "clear": "Clear filters",
+      "clearSearch": "Clear search"
     },
     "sla": {
       "ok": "On track",
@@ -594,6 +596,15 @@
         "whatsappDispatchFailed": "WhatsApp: send failed",
         "whatsappPatientConfirmed": "WhatsApp: patient confirmed receipt"
       }
+    },
+    "tabs": {
+      "ariaLabel": "Patient record sections",
+      "journey": "Journey",
+      "profile": "Profile",
+      "files": "Files",
+      "notes": "Notes",
+      "timeline": "Timeline",
+      "completed": "Completed treatments"
     }
   }
 }

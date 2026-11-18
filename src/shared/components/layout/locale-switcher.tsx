@@ -53,7 +53,7 @@ export function LocaleSwitcher({ variant = "toolbar" }: LocaleSwitcherProps) {
               "shrink-0 gap-0 p-0",
               variant === "floating" &&
                 "h-9 w-9 rounded-full border border-border bg-transparent shadow-sm [&_svg]:pointer-events-none",
-              variant === "toolbar" && "h-8 min-w-8 rounded-lg",
+              variant === "toolbar" && "size-9 rounded-lg",
             )}
           >
             <LocaleFlagIcon locale={locale} />

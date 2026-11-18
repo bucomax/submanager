@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Form } from "@/shared/components/forms";
 import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -28,28 +28,46 @@ export function NewClientWizard({
   const wizard = useNewClientWizard({ submitBehavior, onFlowComplete });
   const { step, submitting, pathwayOptions, pickers } = wizard;
 
-  const stepClass = (n: NewClientWizardStep) =>
-    cn(
-      "flex size-8 items-center justify-center rounded-full text-sm font-medium",
-      step >= n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-    );
+  const steps: { n: NewClientWizardStep; label: string }[] = [
+    { n: 1, label: t("step1") },
+    { n: 2, label: t("step2") },
+    { n: 3, label: t("step3") },
+  ];
 
   return (
-    <Card className="border-border shadow-sm">
+    <Card className="border-border">
       <CardHeader>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className={stepClass(1)}>1</div>
-          <span className="text-muted-foreground hidden sm:inline">—</span>
-          <div className={stepClass(2)}>2</div>
-          <span className="text-muted-foreground hidden sm:inline">—</span>
-          <div className={stepClass(3)}>3</div>
-        </div>
         <CardTitle className="sr-only">{t("title")}</CardTitle>
-        <CardDescription className="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-xs">
-          <span className={step === 1 ? "text-foreground font-medium" : ""}>{t("step1")}</span>
-          <span className={step === 2 ? "text-foreground font-medium" : ""}>{t("step2")}</span>
-          <span className={step === 3 ? "text-foreground font-medium" : ""}>{t("step3")}</span>
-        </CardDescription>
+        {/* Kit: passos com progresso visível; concluído em verde com check, atual em tinta. */}
+        <ol className="flex flex-wrap items-center gap-2" aria-label={t("title")}>
+          {steps.map(({ n, label }, i) => {
+            const done = step > n;
+            const current = step === n;
+            return (
+              <li key={n} className="flex items-center gap-2" aria-current={current ? "step" : undefined}>
+                {i > 0 ? <span aria-hidden className="bg-input h-px w-8 sm:w-10" /> : null}
+                <span
+                  className={cn(
+                    "flex items-center gap-2.5 text-sm font-semibold",
+                    current ? "text-foreground" : done ? "text-success" : "text-muted-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid size-7 place-items-center rounded-full border-[1.5px] text-[13px] tabular-nums transition-colors duration-150",
+                      current && "border-primary bg-primary text-primary-foreground",
+                      done && "border-success-soft bg-success-soft text-success",
+                      !current && !done && "border-input",
+                    )}
+                  >
+                    {done ? <Check className="size-3.5" aria-hidden /> : n}
+                  </span>
+                  {label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
       </CardHeader>
       <CardContent className="space-y-6">
         <Form {...wizard.form}>
@@ -77,7 +95,7 @@ export function NewClientWizard({
           {step === 3 ? <NewClientReviewStep selectedPathway={wizard.selectedPathway} /> : null}
         </Form>
       </CardContent>
-      <CardFooter className="flex flex-wrap gap-2 border-t">
+      <CardFooter className="flex flex-wrap justify-end gap-2 border-t">
         {step > 1 ? (
           <Button type="button" variant="outline" size="sm" onClick={wizard.goBack} disabled={submitting}>
             <ArrowLeft className="size-4 shrink-0" aria-hidden />

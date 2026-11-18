@@ -38,17 +38,17 @@ export function ConversationListItem({ conversation, active, onSelect }: Convers
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-2.5 border-b border-l-[3px] px-3 py-[11px] text-left transition-colors duration-150",
-        active ? "border-l-foreground bg-accent" : "border-l-transparent hover:bg-row-hover",
+        "relative flex w-full items-start gap-3 rounded-[14px] px-3 py-3 text-left transition-[background-color,box-shadow] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring before:absolute before:top-4 before:bottom-4 before:left-1 before:w-[3px] before:rounded-full before:content-['']",
+        active ? "bg-card shadow-s1 before:bg-brand" : "hover:bg-muted before:bg-transparent",
       )}
     >
       <div className="relative shrink-0">
         <Avatar className="mt-0.5 size-[46px] bg-avatar">
-          <AvatarFallback className="bg-transparent text-sm font-bold text-muted-foreground">
+          <AvatarFallback className="bg-transparent text-sm font-bold text-accent-foreground">
             {registered ? initialsFromName(conversation.displayName) : <UserRound className="size-[18px]" />}
           </AvatarFallback>
         </Avatar>
-        <AvatarBadge className="size-[19px] bg-background p-0.5 shadow-[0_1px_4px_rgba(0,0,0,0.22)]">
+        <AvatarBadge className="bg-card size-[19px] p-0.5 shadow-s1 ring-2 ring-background">
           <ChannelIcon className="size-3" style={{ color: CHANNEL_COLOR[conversation.channel] }} />
         </AvatarBadge>
       </div>
@@ -60,7 +60,7 @@ export function ConversationListItem({ conversation, active, onSelect }: Convers
             <span
               className={cn(
                 "shrink-0 text-[11px] tabular-nums",
-                hasUnread ? "font-bold text-[#06a556]" : "text-muted-foreground",
+                hasUnread ? "text-accent-foreground font-bold" : "text-muted-foreground",
               )}
             >
               {relativeTimeLabel(conversation.lastMessageAt, locale === "en" ? "en-US" : "pt-BR")}
@@ -73,7 +73,7 @@ export function ConversationListItem({ conversation, active, onSelect }: Convers
             {conversation.lastMessagePreview}
           </p>
           {hasUnread && (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#06cf6b] px-1.5 text-[11px] font-extrabold text-[#06251a] shadow-[0_1px_3px_rgba(6,207,107,0.45)]">
+            <span className="bg-info text-card flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums">
               {conversation.unreadCount}
             </span>
           )}
@@ -81,7 +81,7 @@ export function ConversationListItem({ conversation, active, onSelect }: Convers
 
         <span
           className={cn(
-            "inline-flex rounded-[6px] px-1.5 py-0.5 text-[10px] font-bold",
+            "inline-flex rounded-[6px] px-2 py-0.5 text-[11px] font-semibold",
             STAGE_PILL_CLASS[conversation.status],
           )}
         >

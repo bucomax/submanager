@@ -2,7 +2,7 @@
 
 import type { SlaHealthStatus } from "@/domain/pathway/sla-health";
 import { cn } from "@/lib/utils";
-import { Siren } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 /** Mesmo chip de tempo + tom de SLA do cartão do Kanban (`pipeline-kanban-patient-card`). */
@@ -27,7 +27,8 @@ export function ListStageDaysSlaChip({
   }
   if (journeyCompletedAt) {
     return (
-      <span className="text-muted-foreground inline-flex items-center rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium">
+      <span className="text-muted-foreground bg-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold">
+        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
         {t("journeyCompletedShort")}
       </span>
     );
@@ -39,7 +40,7 @@ export function ListStageDaysSlaChip({
   return (
     <div
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
         tone === "ok" &&
           "bg-success-soft text-success",
         tone === "warning" &&
@@ -48,9 +49,14 @@ export function ListStageDaysSlaChip({
           "bg-destructive-soft text-destructive",
       )}
     >
+      {/* Kit: cor nunca sozinha, cada tom tem o seu ícone. */}
       {tone === "critical" ? (
-        <Siren className="size-3.5 shrink-0 text-destructive" aria-hidden />
-      ) : null}
+        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+      ) : tone === "warning" ? (
+        <Clock className="size-3.5 shrink-0" aria-hidden />
+      ) : (
+        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+      )}
       <span className="min-w-0 truncate">{durationLabel}</span>
     </div>
   );

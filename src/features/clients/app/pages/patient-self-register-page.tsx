@@ -42,19 +42,14 @@ function PatientSelfRegisterInner() {
 
   return (
     <div className="w-full">
-      <header className="mb-8 text-center">
-        <Link href="/" className="group inline-flex flex-col items-center gap-1">
-          <span className="text-2xl font-semibold tracking-tight transition-opacity group-hover:opacity-80">
-            {tGlobal("brand")}
-          </span>
-          <span className="text-muted-foreground text-sm">{t("selfRegister.pageDescription")}</span>
-        </Link>
-      </header>
+      <p className="text-accent-foreground mb-6 inline-flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase before:h-px before:w-[18px] before:bg-brand before:content-['']">
+        {t("selfRegister.pageDescription")}
+      </p>
 
       {phase === "loading" ? <FullScreenLoading message={t("selfRegister.validating")} showMessage={false} /> : null}
 
       {phase === "invalid" ? (
-        <Card className="w-full border shadow-xl shadow-black/5 dark:shadow-black/20">
+        <Card className="w-full border">
           <CardHeader className="space-y-1 pb-2">
             <CardTitle className="text-xl">{t("selfRegister.invalidTokenTitle")}</CardTitle>
             <CardDescription>{t("selfRegister.invalidTokenBody")}</CardDescription>
@@ -68,7 +63,7 @@ function PatientSelfRegisterInner() {
       ) : null}
 
       {phase === "form" ? (
-        <Card className="@container/patient-register w-full border shadow-xl shadow-black/5 dark:shadow-black/20">
+        <Card className="@container/patient-register w-full border">
           <CardHeader className="space-y-4 pb-4">
             <CardTitle className="text-xl">{t("selfRegister.pageTitle")}</CardTitle>
             {tenantName ? (
@@ -122,7 +117,7 @@ function PatientSelfRegisterInner() {
       {phase === "success" ? (
         <Card
           data-testid="patient-self-register-success"
-          className="w-full border shadow-xl shadow-black/5 dark:shadow-black/20"
+          className="w-full border"
         >
           <CardHeader className="space-y-4 pb-4">
             <CardTitle className="text-xl">{t("selfRegister.successTitle")}</CardTitle>

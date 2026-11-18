@@ -31,7 +31,7 @@ export function InfoTooltip({ ariaLabel, children, triggerClassName, popupClassN
         type="button"
         nativeButton
         className={cn(
-          "text-muted-foreground hover:bg-muted/60 hover:text-foreground shrink-0 rounded-md p-1.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+          "text-muted-foreground hover:bg-accent hover:text-accent-foreground shrink-0 rounded-lg p-1.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
           "mt-0.5",
           triggerClassName,
         )}
@@ -43,7 +43,7 @@ export function InfoTooltip({ ariaLabel, children, triggerClassName, popupClassN
         <PopoverPrimitive.Positioner side="bottom" align="start" sideOffset={6} className="isolate z-50">
           <PopoverPrimitive.Popup
             className={cn(
-              "z-50 max-w-sm origin-(--transform-origin) rounded-md bg-foreground px-3 py-2 text-left text-sm leading-relaxed text-balance text-background shadow-md ring-1 ring-background/10 outline-none",
+              "z-50 max-w-sm origin-(--transform-origin) rounded-lg bg-foreground px-3 py-2 text-left text-sm leading-relaxed text-balance text-background shadow-md ring-1 ring-background/10 outline-none",
               "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
               popupClassName,
             )}
