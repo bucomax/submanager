@@ -19,12 +19,16 @@ export function DashboardPage({ title, description, actions, children, className
   const showHeader = Boolean(title || description || actions);
 
   return (
-    <div className={cn("mx-auto flex w-full max-w-6xl flex-col gap-6", className)}>
+    <div className={cn("mx-auto flex w-full max-w-7xl flex-col gap-6", className)}>
       {showHeader ? (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            {title ? <h1 className="text-2xl font-semibold tracking-tight">{title}</h1> : null}
-            {description ? <div className="text-muted-foreground text-sm">{description}</div> : null}
+        <div className="animate-enter flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            {title ? (
+              <h1 className="text-foreground text-3xl leading-[1.05] font-extrabold tracking-[-0.035em] md:text-4xl">
+                {title}
+              </h1>
+            ) : null}
+            {description ? <div className="text-muted-foreground max-w-[62ch] text-[15px]">{description}</div> : null}
           </div>
           {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
         </div>

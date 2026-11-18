@@ -5,6 +5,7 @@ import { dashboardHomePrismaRepository } from "@/infrastructure/repositories/das
 import { DashboardPage } from "@/shared/components/layout/dashboard-page";
 import type { AppShellUser } from "@/shared/types/layout";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   Activity,
   BarChart3,
@@ -80,41 +81,41 @@ export async function DashboardHomePage({ user }: DashboardHomePageProps) {
 
   return (
     <DashboardPage>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-l-4 border-l-sky-500 bg-sky-50/60 p-5 text-card-foreground shadow-sm dark:bg-sky-950/25">
-          <div className="flex items-center gap-2">
-            <Users className="size-4 text-sky-500" aria-hidden />
-            <p className="text-muted-foreground text-xs">{t("cards.inProgress")}</p>
+      {/* Kit: os quatro indicadores numa faixa só; cor só onde há estado (sem ação há 48 h). */}
+      <div className="animate-enter bg-card grid grid-cols-2 overflow-hidden rounded-[20px] border xl:grid-cols-4">
+        {[
+          { icon: Users, label: t("cards.inProgress"), value: String(metrics.pathwaysActive), tone: "" },
+          { icon: Activity, label: t("cards.transitionsToday"), value: String(metrics.transitionsToday), tone: "" },
+          {
+            icon: Clock,
+            label: t("cards.awaitingAction"),
+            value: String(metrics.awaitingAction),
+            tone: metrics.awaitingAction > 0 ? "text-warning" : "",
+          },
+          { icon: TrendingUp, label: t("cards.conversionRate"), value: `${metrics.conversionRate}%`, tone: "" },
+        ].map((kpi, i) => (
+          <div
+            key={kpi.label}
+            className={cn(
+              "flex min-w-0 flex-col gap-1.5 px-6 py-5",
+              i % 2 === 1 && "border-l",
+              i >= 2 && "border-t xl:border-t-0",
+              i === 2 && "xl:border-l",
+            )}
+          >
+            <p className={cn("text-muted-foreground flex items-center gap-1.5 text-[13px]", kpi.tone && `${kpi.tone} font-semibold`)}>
+              <kpi.icon className="size-4 shrink-0" aria-hidden />
+              {kpi.label}
+            </p>
+            <p className="text-foreground text-[34px] leading-none font-extrabold tracking-[-0.04em] tabular-nums">{kpi.value}</p>
           </div>
-          <p className="mt-2 text-2xl font-semibold">{metrics.pathwaysActive}</p>
-        </div>
-        <div className="rounded-xl border border-l-4 border-l-emerald-500 bg-emerald-50/60 p-5 text-card-foreground shadow-sm dark:bg-emerald-950/25">
-          <div className="flex items-center gap-2">
-            <Activity className="size-4 text-emerald-500" aria-hidden />
-            <p className="text-muted-foreground text-xs">{t("cards.transitionsToday")}</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{metrics.transitionsToday}</p>
-        </div>
-        <div className="rounded-xl border border-l-4 border-l-amber-500 bg-amber-50/70 p-5 text-card-foreground shadow-sm dark:bg-amber-950/30">
-          <div className="flex items-center gap-2">
-            <Clock className="size-4 text-amber-500" aria-hidden />
-            <p className="text-muted-foreground text-xs">{t("cards.awaitingAction")}</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{metrics.awaitingAction}</p>
-        </div>
-        <div className="rounded-xl border border-l-4 border-l-violet-500 bg-violet-50/60 p-5 text-card-foreground shadow-sm dark:bg-violet-950/25">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="size-4 text-violet-500" aria-hidden />
-            <p className="text-muted-foreground text-xs">{t("cards.conversionRate")}</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{metrics.conversionRate}%</p>
-        </div>
+        ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
-        <div className="bg-card text-card-foreground h-full min-h-0 rounded-xl border p-6 shadow-sm">
+      <div className="animate-enter grid gap-4 [--i:1] lg:grid-cols-2 lg:items-stretch">
+        <div className="bg-card text-card-foreground h-full min-h-0 rounded-[20px] border p-6">
           <div className="mb-4 flex items-start justify-between gap-2">
-            <p className="text-foreground flex min-w-0 flex-1 items-center gap-2 text-[15px] font-bold">
+            <p className="text-foreground flex min-w-0 flex-1 items-center gap-2 text-[17px] font-bold tracking-tight">
               <BarChart3 className="text-primary size-4 shrink-0" aria-hidden />
               {t("charts.weeklyActivity.title")}
             </p>
@@ -128,9 +129,9 @@ export async function DashboardHomePage({ user }: DashboardHomePageProps) {
             <DashboardWeeklyActivityChart items={weeklyActivityDays} />
           )}
         </div>
-        <div className="bg-card text-card-foreground h-full min-h-0 rounded-xl border p-6 shadow-sm">
+        <div className="bg-card text-card-foreground h-full min-h-0 rounded-[20px] border p-6">
           <div className="mb-4 flex items-start justify-between gap-2">
-            <p className="text-foreground flex min-w-0 flex-1 items-center gap-2 text-[15px] font-bold">
+            <p className="text-foreground flex min-w-0 flex-1 items-center gap-2 text-[17px] font-bold tracking-tight">
               <PieChart className="text-primary size-4 shrink-0" aria-hidden />
               {t("charts.distribution.title")}
             </p>
@@ -147,8 +148,8 @@ export async function DashboardHomePage({ user }: DashboardHomePageProps) {
                       {item.value} ({pct}%)
                     </span>
                   </div>
-                  <div className="bg-muted h-2 rounded-full">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: `${pct}%` }} />
+                  <div className="bg-muted h-2 overflow-hidden rounded-full">
+                    <div className="bg-brand h-2 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

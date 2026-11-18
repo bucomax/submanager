@@ -37,11 +37,11 @@ export function DashboardWeeklyActivityChart({ items }: DashboardWeeklyActivityC
           {t("legendTransitions")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 shrink-0 rounded-sm bg-amber-500 dark:bg-amber-400" aria-hidden />
+          <span className="size-2 shrink-0 rounded-sm bg-warning" aria-hidden />
           {t("legendNew")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 shrink-0 rounded-sm bg-emerald-600 dark:bg-emerald-500" aria-hidden />
+          <span className="size-2 shrink-0 rounded-sm bg-success" aria-hidden />
           {t("legendClosed")}
         </span>
       </div>
@@ -74,12 +74,12 @@ export function DashboardWeeklyActivityChart({ items }: DashboardWeeklyActivityC
                         value={item.transitions}
                       />
                       <BarSegment
-                        className="bg-amber-500 dark:bg-amber-400"
+                        className="bg-warning"
                         heightPct={hNew}
                         value={item.newPathways}
                       />
                       <BarSegment
-                        className="bg-emerald-600 dark:bg-emerald-500"
+                        className="bg-success"
                         heightPct={hDone}
                         value={item.completions}
                       />

@@ -36,7 +36,7 @@ export function NotificationPermissionBanner() {
   return (
     <div className="bg-muted/60 border-b px-4 py-2.5 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5 min-w-0">
-        <Bell className="size-4 shrink-0 text-blue-500" />
+        <Bell className="size-4 shrink-0 text-info" />
         <p className="text-sm text-foreground truncate">
           Ative as notificacoes do navegador para ser alertado quando algo precisar da sua atencao.
         </p>

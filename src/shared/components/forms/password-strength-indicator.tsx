@@ -27,13 +27,13 @@ function RuleRow({ ok, label }: { ok: boolean; label: string }) {
   return (
     <li className="flex items-center gap-2 text-sm">
       {ok ? (
-        <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        <Check className="size-4 shrink-0 text-success" aria-hidden />
       ) : (
         <X className="text-destructive/80 size-4 shrink-0" aria-hidden />
       )}
       <span
         className={cn(
-          ok ? "text-emerald-700 dark:text-emerald-300/95" : "text-muted-foreground",
+          ok ? "text-success" : "text-muted-foreground",
         )}
       >
         {label}

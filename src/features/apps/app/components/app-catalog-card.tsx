@@ -49,7 +49,7 @@ export function AppCatalogCard({ app }: Props) {
 
           <div className="flex flex-col items-center gap-1.5">
             {app.pricingModel === "free" ? (
-              <span className="text-xs font-medium text-green-600">{t("free")}</span>
+              <span className="text-xs font-medium text-success">{t("free")}</span>
             ) : app.priceInCents != null ? (
               <div className="text-center">
                 <span className="text-sm font-semibold">
@@ -63,7 +63,7 @@ export function AppCatalogCard({ app }: Props) {
                       : t("perYear")}
                 </span>
                 {app.trialDays > 0 && (
-                  <p className="text-xs text-blue-600">{t("trialDays", { days: app.trialDays })}</p>
+                  <p className="text-xs text-info">{t("trialDays", { days: app.trialDays })}</p>
                 )}
               </div>
             ) : null}

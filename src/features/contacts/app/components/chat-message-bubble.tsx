@@ -45,7 +45,7 @@ export function DeliveryTicks({ status }: { status: MessageDto["status"] }) {
   const Icon = status === "sent" ? Check : CheckCheck;
   return (
     <Icon
-      className={cn("size-3.5 shrink-0", read ? "text-sky-400" : "text-current opacity-60")}
+      className={cn("size-3.5 shrink-0", read ? "text-info" : "text-current opacity-60")}
       aria-hidden
     />
   );

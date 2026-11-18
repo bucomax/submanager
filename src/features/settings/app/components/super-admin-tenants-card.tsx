@@ -161,8 +161,8 @@ export function SuperAdminTenantsCard() {
                               <span
                                 className={cn(
                                   "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-                                  "border-emerald-500/40 bg-emerald-500/10 text-emerald-800",
-                                  "dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-300",
+                                  "border-success/40 bg-success/10 text-success",
+                                  "",
                                 )}
                               >
                                 {t("active")}

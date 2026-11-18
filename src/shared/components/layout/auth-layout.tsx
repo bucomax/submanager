@@ -17,7 +17,7 @@ type AuthLayoutProps = {
  */
 export function AuthLayout({ children, variant = "default" }: AuthLayoutProps) {
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-gradient-to-b from-muted/50 via-background to-background dark:from-zinc-950/80 dark:via-background dark:to-zinc-950">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-gradient-to-b from-muted/50 via-background to-background dark:via-background">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-25"
         aria-hidden

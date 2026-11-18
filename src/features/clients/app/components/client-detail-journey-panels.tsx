@@ -157,8 +157,8 @@ export function ClientDetailNextActionsCard({ pp }: { pp: ClientPatientPathwayDe
             </AlertDescription>
           </Alert>
         ) : (
-          <div className="border-emerald-500/25 bg-emerald-500/[0.06] flex items-start gap-2.5 rounded-lg border px-3 py-2.5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          <div className="border-success/25 bg-success/[0.06] flex items-start gap-2.5 rounded-lg border px-3 py-2.5">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
             <p className="text-muted-foreground text-sm leading-snug">{t("nextActions.noBlockingChecklist")}</p>
           </div>
         )}

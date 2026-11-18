@@ -6,22 +6,23 @@ import type { SlaHealthStatus } from "@/domain/pathway/sla-health";
  * usado nas rotas `/kanban` e afins.
  */
 export function slaHealthKanbanCardClassName(status: SlaHealthStatus): string {
+  // Kit: cartão neutro com filete de 3 px na cor do prazo (a palavra fica no selo do cartão).
   if (status === "danger") {
-    return "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400";
+    return "border-l-[3px] border-l-destructive";
   }
   if (status === "warning") {
-    return "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300";
+    return "border-l-[3px] border-l-warning";
   }
-  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300";
+  return "border-l-[3px] border-l-success";
 }
 
 /** Pill compacta (lista/tabela) alinhada a {@link slaHealthKanbanCardClassName}. */
 export function slaHealthPillClassName(status: SlaHealthStatus): string {
   if (status === "danger") {
-    return "bg-red-500/15 text-red-800 dark:text-red-300";
+    return "bg-destructive-soft text-destructive";
   }
   if (status === "warning") {
-    return "bg-amber-500/15 text-amber-900 dark:text-amber-200";
+    return "bg-warning-soft text-warning";
   }
-  return "bg-emerald-500/15 text-emerald-900 dark:text-emerald-200";
+  return "bg-success-soft text-success";
 }

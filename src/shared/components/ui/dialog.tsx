@@ -33,7 +33,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/40 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+        "fixed inset-0 z-50 bg-[rgb(14_29_41/0.32)] transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border p-6 shadow-lg duration-200 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 sm:max-w-lg",
+          "bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[22px] border bg-card p-6 shadow-[0_40px_90px_-30px_rgb(14_29_41/0.5)] duration-200 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 sm:max-w-lg",
           className
         )}
         {...props}
@@ -105,7 +105,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-heading text-lg leading-none font-medium", className)}
+      className={cn("font-heading text-lg leading-none font-bold tracking-tight", className)}
       {...props}
     />
   )
@@ -161,7 +161,7 @@ function StandardDialogContent({
       <DialogPrimitive.Popup
         data-slot="standard-dialog-content"
         className={cn(
-          "bg-background fixed top-[50%] left-[50%] z-50 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[calc(100vw-1.5rem)] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-xl border p-0 shadow-lg duration-200 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0",
+          "bg-background fixed top-[50%] left-[50%] z-50 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[calc(100vw-1.5rem)] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-[22px] border bg-card p-0 shadow-[0_40px_90px_-30px_rgb(14_29_41/0.5)] duration-200 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0",
           standardDialogSizeClass[size],
           className
         )}
@@ -170,12 +170,12 @@ function StandardDialogContent({
         <div
           data-slot="standard-dialog-header"
           className={cn(
-            "border-border flex shrink-0 items-start gap-3 border-b px-4 py-3",
+            "border-border flex shrink-0 items-start gap-3 border-b px-5 py-4",
             headerClassName
           )}
         >
           <div className="min-w-0 flex-1 space-y-1 text-left">
-            <DialogPrimitive.Title className="font-heading text-lg leading-tight font-medium">
+            <DialogPrimitive.Title className="font-heading text-lg leading-tight font-bold tracking-tight">
               {title}
             </DialogPrimitive.Title>
             {description ? (
@@ -210,7 +210,7 @@ function StandardDialogContent({
         <div
           data-slot="standard-dialog-body"
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4",
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5",
             bodyClassName
           )}
         >
@@ -221,7 +221,7 @@ function StandardDialogContent({
           <div
             data-slot="standard-dialog-footer"
             className={cn(
-              "border-border bg-background flex shrink-0 flex-col-reverse gap-2 border-t px-4 py-3 sm:flex-row sm:justify-end",
+              "border-border bg-surface flex shrink-0 flex-col-reverse gap-2 border-t px-5 py-3.5 sm:flex-row sm:justify-end",
               footerClassName
             )}
           >

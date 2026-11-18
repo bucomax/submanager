@@ -4,7 +4,6 @@ import { useLocale } from "next-intl";
 import { useEffect } from "react";
 import { DashboardBreadcrumb } from "@/shared/components/layout/dashboard-breadcrumb";
 import { LocaleSwitcher } from "@/shared/components/layout/locale-switcher";
-import { Separator } from "@/shared/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { AppSidebar } from "@/shared/components/layout/app-sidebar";
 import { FeedbackFloatingWidget } from "@/features/feedback/app/components/feedback-launcher";
@@ -24,8 +23,8 @@ type AppShellProps = {
 /**
  * Shell do aplicativo autenticado: sidebar, barra superior, área de conteúdo.
  * Componente compartilhado — não pertence a uma feature de domínio.
+ * Visual do kit "SubManager · Conceito Digital": topo de 64 translúcido, conteúdo sobre o fundo pedra.
  */
-const headerToolbarSeparatorClass = "hidden h-10 sm:block";
 
 export function AppShell({ children, user, headerSlots, afterHeader }: AppShellProps) {
   const locale = useLocale();
@@ -46,25 +45,18 @@ export function AppShell({ children, user, headerSlots, afterHeader }: AppShellP
       <AppSidebar user={user} />
       <FeedbackFloatingWidget />
       <SidebarInset>
-        <header className="bg-background sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-3 md:px-4">
+        <header className="bg-background/85 supports-backdrop-filter:backdrop-blur-md sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b px-3 backdrop-saturate-150 md:px-6">
           <SidebarTrigger className="-ml-1" />
           <DashboardBreadcrumb />
-          <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
             <TenantSwitcher activeTenantId={user.tenantId} />
-            {headerSlots ? (
-              <>
-                <Separator orientation="vertical" className={headerToolbarSeparatorClass} />
-                {headerSlots}
-              </>
-            ) : null}
-            <Separator orientation="vertical" className={headerToolbarSeparatorClass} />
+            {headerSlots}
             <LocaleSwitcher />
-            <Separator orientation="vertical" className={headerToolbarSeparatorClass} />
             <ThemeToggle />
           </div>
         </header>
         {afterHeader}
-        <div className="bg-muted/40 flex min-h-[calc(100svh-3.5rem)] flex-1 flex-col gap-4 p-4 md:p-6 dark:bg-muted/25">
+        <div className="flex min-h-[calc(100svh-4rem)] flex-1 flex-col gap-6 p-4 md:px-8 md:py-7">
           {children}
         </div>
       </SidebarInset>

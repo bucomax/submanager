@@ -28,13 +28,13 @@ const TYPE_ICONS: Record<string, typeof Bell> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  sla_critical: "text-red-500",
-  sla_warning: "text-amber-500",
-  stage_transition: "text-blue-500",
-  new_patient: "text-green-500",
-  checklist_complete: "text-emerald-500",
-  patient_portal_file_pending: "text-cyan-500",
-  patient_portal_link_sent: "text-sky-500",
+  sla_critical: "text-destructive",
+  sla_warning: "text-warning",
+  stage_transition: "text-info",
+  new_patient: "text-success",
+  checklist_complete: "text-success",
+  patient_portal_file_pending: "text-info",
+  patient_portal_link_sent: "text-info",
 };
 
 type NotificationItemProps = {
@@ -104,7 +104,7 @@ export function NotificationItem({ notification, onMarkRead, onPanelClose }: Not
         </Link>
       ) : null}
       {isUnread && (
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-info" />
       )}
     </div>
   );

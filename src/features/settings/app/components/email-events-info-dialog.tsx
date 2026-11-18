@@ -112,7 +112,7 @@ export function EmailEventsInfoDialog({ open, onOpenChange }: Props) {
                     key={kind}
                     title={t("modalTitle")}
                     src={previewSrc}
-                    className="h-[28rem] w-full min-w-0 border-0 bg-white dark:bg-zinc-950"
+                    className="h-[28rem] w-full min-w-0 border-0 bg-white"
                     loading="lazy"
                     lang={locale}
                   />
@@ -129,12 +129,12 @@ export function EmailEventsInfoDialog({ open, onOpenChange }: Props) {
 export function EmailEventsInfoCallout({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations("settings.email.events");
   return (
-    <div className="bg-sky-50/80 border-sky-200/90 text-sky-950 dark:bg-sky-950/30 dark:border-sky-800/50 dark:text-sky-50 flex flex-col gap-2 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+    <div className="bg-info-soft border-info/30 text-info flex flex-col gap-2 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <div className="flex min-w-0 gap-2">
-        <Info className="text-sky-600 dark:text-sky-400 mt-0.5 size-4 shrink-0" aria-hidden />
+        <Info className="text-info mt-0.5 size-4 shrink-0" aria-hidden />
         <div className="min-w-0">
           <p className="text-sm font-medium leading-snug">{t("boxTitle")}</p>
-          <p className="text-sky-900/90 dark:text-sky-100/90 mt-0.5 text-xs leading-relaxed">
+          <p className="text-info mt-0.5 text-xs leading-relaxed">
             {t("boxDescription")}
           </p>
         </div>

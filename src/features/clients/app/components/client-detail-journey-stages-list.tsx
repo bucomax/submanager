@@ -39,16 +39,16 @@ export function JourneyStagesList({
             key={stage.id}
             className={cn(
               "flex items-start gap-3 px-3 py-2.5",
-              st === "done" && "bg-emerald-50/70 dark:bg-emerald-950/25",
-              st === "current" && "bg-blue-50/85 dark:bg-blue-950/35",
+              st === "done" && "bg-success-soft",
+              st === "current" && "bg-info-soft",
               st === "pending" && "bg-muted/20 dark:bg-muted/10",
             )}
           >
             <StateIcon
               className={cn(
                 "mt-0.5 size-4 shrink-0",
-                st === "done" && "text-emerald-600 dark:text-emerald-400",
-                st === "current" && "text-blue-600 dark:text-blue-400",
+                st === "done" && "text-success",
+                st === "current" && "text-info",
                 st === "pending" && "text-muted-foreground/55",
               )}
               aria-hidden
@@ -56,8 +56,8 @@ export function JourneyStagesList({
             <span
               className={cn(
                 "text-sm leading-snug",
-                st === "done" && "text-emerald-900 dark:text-emerald-100/95",
-                st === "current" && "font-semibold text-blue-950 dark:text-blue-50",
+                st === "done" && "text-success",
+                st === "current" && "font-semibold text-info",
                 st === "pending" && "text-muted-foreground",
               )}
             >

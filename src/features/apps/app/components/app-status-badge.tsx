@@ -17,7 +17,7 @@ export function AppStatusBadge({ status }: Props) {
 
   switch (status) {
     case "active":
-      return <Badge variant="default" className="bg-green-600 hover:bg-green-700">{t("active")}</Badge>;
+      return <Badge variant="default" className="bg-success hover:bg-success">{t("active")}</Badge>;
     case "pending_config":
       return <Badge variant="secondary">{t("pendingConfig")}</Badge>;
     case "suspended":

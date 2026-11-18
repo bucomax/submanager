@@ -114,19 +114,19 @@ export function DashboardReportsSection() {
               "cards.criticalPatients",
               data?.kpis.criticalPatients ?? 0,
               Siren,
-              "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+              "bg-warning/15 text-warning",
             ],
             [
               "cards.transitionsInPeriod",
               data?.kpis.transitionsInPeriod ?? 0,
               ArrowRightLeft,
-              "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+              "bg-info/15 text-info",
             ],
             [
               "cards.pathwaysInScope",
               data?.kpis.pathwaysInScope ?? 0,
               GitBranch,
-              "bg-violet-500/15 text-violet-600 dark:text-violet-400",
+              "bg-foreground/15 text-foreground",
             ],
           ] as const satisfies ReadonlyArray<
             readonly [Parameters<typeof t>[0], number, LucideIcon, string]

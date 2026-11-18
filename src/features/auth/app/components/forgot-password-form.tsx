@@ -75,10 +75,10 @@ export function ForgotPasswordForm() {
         <CardFooter className="border-border/60 bg-muted/35 p-0 dark:border-border/50 dark:bg-muted/20">
           <Link
             href="/login"
-            className="group flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-foreground/90 no-underline transition-[background-color,color,box-shadow] hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-zinc-800/60"
+            className="group flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-foreground/90 no-underline transition-[background-color,color,box-shadow] hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/80 shadow-sm ring-1 ring-border/60 transition-[background-color,box-shadow] group-hover:bg-background group-hover:ring-border dark:bg-zinc-800/80 dark:ring-zinc-700"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/80 shadow-sm ring-1 ring-border/60 transition-[background-color,box-shadow] group-hover:bg-background group-hover:ring-border"
               aria-hidden
             >
               <ChevronLeft className="size-4" strokeWidth={2} />

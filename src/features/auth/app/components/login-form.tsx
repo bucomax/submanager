@@ -59,7 +59,7 @@ export function LoginForm() {
         <CardFooter className="border-border/60 bg-muted/35 p-0 dark:border-border/50 dark:bg-muted/20">
           <Link
             href="/auth/forgot-password"
-            className="group flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-foreground/90 no-underline transition-[background-color,color,box-shadow] hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-zinc-800/60"
+            className="group flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium text-foreground/90 no-underline transition-[background-color,color,box-shadow] hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <span
               className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary shadow-sm ring-1 ring-primary/20 transition-[background-color,box-shadow,transform] group-hover:bg-primary/18 group-hover:ring-primary/30 group-hover:shadow-md dark:bg-primary/15 dark:ring-primary/25"

@@ -22,7 +22,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
 import type { AppShellUser } from "@/shared/types/layout";
@@ -110,6 +109,14 @@ const navGroups: { labelKey: "principal" | "sistema"; items: NavItem[] }[] = [
   }
 ];
 
+/** Iniciais do avatar do rodapé: duas letras do nome, ou a primeira do e-mail. */
+function accountInitials(name: string | null | undefined, email: string | null | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (email ?? "?").slice(0, 1).toUpperCase();
+}
+
 type AppSidebarProps = {
   user: AppShellUser;
 };
@@ -133,13 +140,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-sidebar-border flex h-14 shrink-0 flex-row items-center border-b px-2 py-0">
+      <SidebarHeader className="flex h-16 shrink-0 flex-row items-center px-3 py-0">
         <Link
           href="/dashboard"
           onClick={closeMobileNav}
-          className="flex h-14 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold outline-none ring-sidebar-ring focus-visible:ring-2"
+          className="text-sidebar-accent-foreground flex h-12 w-full items-center gap-2.5 rounded-lg px-1 text-[17px] font-extrabold tracking-tight outline-none ring-sidebar-ring focus-visible:ring-2 group-data-[collapsible=icon]:justify-center"
         >
-          <Stethoscope className="size-5 shrink-0 text-sidebar-primary" />
+          <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-9 shrink-0 place-items-center rounded-[11px]">
+            <Stethoscope className="size-[18px]" aria-hidden />
+          </span>
           <span className="group-data-[collapsible=icon]:hidden">{tBrand("brand")}</span>
         </Link>
       </SidebarHeader>
@@ -195,16 +204,25 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarSeparator />
-      <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden">
+      <SidebarFooter className="gap-2 p-3 group-data-[collapsible=icon]:hidden">
         <FeedbackFooterTrigger />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="ghost" size="sm" className="h-auto w-full justify-between gap-2 px-2 py-2">
-                <div className="min-w-0 text-left">
-                  <p className="truncate text-sm font-medium">{user.name?.trim() || tShell("account")}</p>
-                  <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-card hover:bg-card h-auto w-full justify-between gap-2.5 rounded-2xl border-sidebar-border px-2.5 py-2.5 hover:border-input"
+              >
+                <span
+                  aria-hidden
+                  className="bg-avatar text-accent-foreground grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold"
+                >
+                  {accountInitials(user.name, user.email)}
+                </span>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-foreground truncate text-sm font-semibold">{user.name?.trim() || tShell("account")}</p>
+                  <p className="text-muted-foreground truncate text-xs font-normal">{user.email}</p>
                 </div>
                 <ChevronDown className="text-muted-foreground size-4 shrink-0" />
               </Button>

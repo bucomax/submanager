@@ -221,7 +221,7 @@ export function QuickPhraseManagerDrawer({ open, onOpenChange, initialDraft }: Q
                           <span className="text-sm font-bold">{phrase.title}</span>
                           {phrase.attachment && <Paperclip className="size-3 text-muted-foreground" />}
                           {/\{\{[a-z]+\}\}/.test(phrase.body) && (
-                            <span className="rounded bg-[#ecfdf5] px-1.5 py-0.5 text-[10px] font-semibold text-[#047857] dark:bg-emerald-950 dark:text-emerald-400">
+                            <span className="rounded bg-[#ecfdf5] px-1.5 py-0.5 text-[10px] font-semibold text-[#047857]">
                               {t("variables")}
                             </span>
                           )}

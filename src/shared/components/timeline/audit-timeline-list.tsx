@@ -20,15 +20,15 @@ export type AuditTimelineRowModel = {
 function categoryBorderClass(cat: ClientTimelineEventCategory): string {
   switch (cat) {
     case "security":
-      return "border-l-violet-500";
+      return "border-l-foreground";
     case "clinical":
-      return "border-l-emerald-600";
+      return "border-l-success";
     case "documents":
-      return "border-l-sky-600";
+      return "border-l-info";
     case "administrative":
-      return "border-l-slate-500";
+      return "border-l-muted-foreground";
     case "compliance":
-      return "border-l-amber-600";
+      return "border-l-warning";
     default:
       return "border-l-muted-foreground";
   }
@@ -40,15 +40,15 @@ export function timelineCategoryIconClassForActiveFilter(
 ): string {
   switch (category) {
     case "security":
-      return "text-violet-600 dark:text-violet-300";
+      return "text-foreground";
     case "clinical":
-      return "text-emerald-600 dark:text-emerald-400";
+      return "text-success";
     case "documents":
-      return "text-sky-600 dark:text-sky-300";
+      return "text-info";
     case "administrative":
-      return "text-slate-600 dark:text-slate-300";
+      return "text-muted-foreground";
     case "compliance":
-      return "text-amber-700 dark:text-amber-300";
+      return "text-warning";
     default:
       return "text-muted-foreground";
   }
@@ -81,27 +81,27 @@ export function timelineCategoryFilterChipCn(
     case "security":
       return cn(
         base,
-        "border-violet-400/80 bg-violet-500/[0.12] text-violet-950 shadow-sm hover:bg-violet-500/[0.18] dark:border-violet-500/45 dark:bg-violet-500/15 dark:text-violet-50 dark:hover:bg-violet-500/22",
+        "border-foreground/80 bg-foreground/[0.12] text-foreground shadow-sm hover:bg-foreground/[0.18]",
       );
     case "clinical":
       return cn(
         base,
-        "border-emerald-500/70 bg-emerald-500/[0.11] text-emerald-950 shadow-sm hover:bg-emerald-500/[0.16] dark:border-emerald-500/45 dark:bg-emerald-500/14 dark:text-emerald-50 dark:hover:bg-emerald-500/20",
+        "border-success/70 bg-success/[0.11] text-success shadow-sm hover:bg-success/[0.16]",
       );
     case "documents":
       return cn(
         base,
-        "border-sky-500/75 bg-sky-500/[0.11] text-sky-950 shadow-sm hover:bg-sky-500/[0.17] dark:border-sky-500/45 dark:bg-sky-500/14 dark:text-sky-50 dark:hover:bg-sky-500/20",
+        "border-info/75 bg-info/[0.11] text-info shadow-sm hover:bg-info/[0.17]",
       );
     case "administrative":
       return cn(
         base,
-        "border-slate-400/90 bg-slate-500/[0.10] text-slate-900 shadow-sm hover:bg-slate-500/[0.15] dark:border-slate-500/50 dark:bg-slate-500/15 dark:text-slate-50 dark:hover:bg-slate-500/20",
+        "border-border bg-muted-foreground/[0.10] text-muted-foreground shadow-sm hover:bg-muted-foreground/[0.15]",
       );
     case "compliance":
       return cn(
         base,
-        "border-amber-500/80 bg-amber-500/[0.12] text-amber-950 shadow-sm hover:bg-amber-500/[0.18] dark:border-amber-500/45 dark:bg-amber-500/14 dark:text-amber-50 dark:hover:bg-amber-500/20",
+        "border-warning/80 bg-warning/[0.12] text-warning shadow-sm hover:bg-warning/[0.18]",
       );
     default:
       return cn(base, "border-border bg-muted text-foreground");

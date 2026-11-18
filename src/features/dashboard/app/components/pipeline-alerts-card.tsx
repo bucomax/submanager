@@ -20,7 +20,7 @@ export function PipelineAlertsCard({ alerts }: PipelineAlertsCardProps) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Siren className="size-4 text-red-500" aria-hidden />
+          <Siren className="size-4 text-destructive" aria-hidden />
           {t("alerts.title")}
         </CardTitle>
         <CardDescription>{t("alerts.description")}</CardDescription>
@@ -29,7 +29,7 @@ export function PipelineAlertsCard({ alerts }: PipelineAlertsCardProps) {
         {alerts.map((a) => (
           <div
             key={a.patientPathwayId}
-            className="flex flex-col gap-2 rounded-lg border border-red-500/30 bg-red-500/5 p-3 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <p className="text-sm">
               <span className="font-medium">{a.clientName}</span> —{" "}

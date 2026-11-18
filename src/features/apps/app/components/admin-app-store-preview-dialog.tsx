@@ -123,7 +123,7 @@ export function AdminAppStorePreviewDialog({ app, open, onOpenChange }: Props) {
                   <Badge variant="outline">{tCat(app.category)}</Badge>
                   {app.isFeatured && (
                     <Badge variant="secondary" className="gap-0.5">
-                      <Star className="size-3 fill-amber-500 text-amber-500" />
+                      <Star className="size-3 fill-warning text-warning" />
                       {t("featured")}
                     </Badge>
                   )}
@@ -131,7 +131,7 @@ export function AdminAppStorePreviewDialog({ app, open, onOpenChange }: Props) {
 
                 <div className="mt-4 text-center">
                   {app.pricingModel === "free" ? (
-                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    <p className="text-sm font-semibold text-success">
                       {tCard("free")}
                     </p>
                   ) : app.priceInCents != null ? (
@@ -147,7 +147,7 @@ export function AdminAppStorePreviewDialog({ app, open, onOpenChange }: Props) {
                         </span>
                       </p>
                       {app.trialDays > 0 && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                        <p className="text-xs text-info">
                           {tCard("trialDays", { days: app.trialDays })}
                         </p>
                       )}

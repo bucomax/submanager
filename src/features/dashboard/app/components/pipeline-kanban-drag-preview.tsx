@@ -35,13 +35,13 @@ export function PipelineKanbanDragPreview({ pp }: { pp: KanbanPatientPathway }) 
         <div
           className={cn(
             "mt-2 inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium",
-            tone === "ok" && "bg-teal-50 text-teal-900 dark:bg-teal-950/45 dark:text-teal-100",
-            tone === "warning" && "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100",
-            tone === "critical" && "bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-100",
+            tone === "ok" && "bg-success-soft text-success",
+            tone === "warning" && "bg-warning-soft text-warning",
+            tone === "critical" && "bg-destructive-soft text-destructive",
           )}
         >
           {tone === "critical" ? (
-            <Siren className="size-3.5 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
+            <Siren className="size-3.5 shrink-0 text-destructive" aria-hidden />
           ) : null}
           <span className="min-w-0 truncate">{durationLabel}</span>
         </div>
