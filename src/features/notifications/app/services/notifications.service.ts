@@ -1,6 +1,7 @@
 import { normalizeApiError } from "@/lib/api/axios-error";
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type {
   MarkAllReadResponseData,
   MarkReadResponseData,
@@ -8,11 +9,14 @@ import type {
   UnreadCountResponseData,
 } from "@/types/api/notification-v1";
 
-export async function getNotifications(params?: {
-  limit?: number;
-  cursor?: string;
-  unreadOnly?: boolean;
-}): Promise<NotificationsListResponseData> {
+export async function getNotifications(
+  params?: {
+    limit?: number;
+    cursor?: string;
+    unreadOnly?: boolean;
+  },
+  options?: RequestOptions,
+): Promise<NotificationsListResponseData> {
   try {
     const res = await apiClient.get<ApiEnvelope<NotificationsListResponseData>>(
       "/api/v1/notifications",
@@ -22,6 +26,7 @@ export async function getNotifications(params?: {
           cursor: params?.cursor || undefined,
           unreadOnly: params?.unreadOnly ? "true" : undefined,
         },
+        signal: options?.signal,
       },
     );
     if (!res.data.success) throw new Error(res.data.error.message);
@@ -31,10 +36,11 @@ export async function getNotifications(params?: {
   }
 }
 
-export async function getUnreadCount(): Promise<number> {
+export async function getUnreadCount(options?: RequestOptions): Promise<number> {
   try {
     const res = await apiClient.get<ApiEnvelope<UnreadCountResponseData>>(
       "/api/v1/notifications/unread-count",
+      { signal: options?.signal },
     );
     if (!res.data.success) throw new Error(res.data.error.message);
     return res.data.data.count;

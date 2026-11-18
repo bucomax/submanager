@@ -4,7 +4,7 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useRef, useState } from "react";
 
-import { uploadAppIcon, removeAppIcon } from "@/features/apps/app/services/admin-app-upload.service";
+import { useAppIconMutations } from "@/features/apps/app/hooks/use-app-icon-mutations";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
@@ -34,10 +34,8 @@ export function AppIconUpload({
   localPreview,
 }: Props) {
   const tw = useTranslations("apps.admin.wizard");
-  const [uploading, setUploading] = useState(false);
-  const [removing, setRemoving] = useState(false);
+  const { upload, uploading, progress, remove, removing } = useAppIconMutations();
   const [dragOver, setDragOver] = useState(false);
-  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const busy = uploading || removing;
@@ -63,19 +61,14 @@ export function AppIconUpload({
       }
 
       // Edit mode — upload immediately
-      setUploading(true);
-      setProgress(0);
       try {
-        const res = await uploadAppIcon(appId, file, setProgress);
+        const res = await upload({ appId, file });
         onChanged(res.publicUrl);
       } catch {
         // apiClient handles toast
-      } finally {
-        setUploading(false);
-        setProgress(0);
       }
     },
-    [appId, onChanged, onFileSelected, tw],
+    [appId, onChanged, onFileSelected, tw, upload],
   );
 
   const handleRemove = useCallback(async () => {
@@ -85,16 +78,13 @@ export function AppIconUpload({
       return;
     }
 
-    setRemoving(true);
     try {
-      await removeAppIcon(appId);
+      await remove(appId);
       onChanged(null);
     } catch {
       // apiClient handles toast
-    } finally {
-      setRemoving(false);
     }
-  }, [appId, onChanged, onFileSelected]);
+  }, [appId, onChanged, onFileSelected, remove]);
 
   return (
     <Field>

@@ -7,7 +7,7 @@ import { LeadPanel } from "@/features/contacts/app/components/lead-panel";
 import { QuickPhraseManagerDrawer } from "@/features/contacts/app/components/quick-phrase-manager-drawer";
 import { useConversationDetail } from "@/features/contacts/app/hooks/use-conversation-detail";
 import { useQuickPhrases } from "@/features/contacts/app/hooks/use-quick-phrases";
-import { updateConversationStatus } from "@/features/contacts/app/services/contacts.service";
+import { useUpdateConversationStatus } from "@/features/contacts/app/hooks/use-conversation-actions";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
 import { useTranslations } from "next-intl";
@@ -34,6 +34,7 @@ export function ConversationsPage() {
   // — evita o fetch duplicado de notas/frases que existia quando cada um tinha seu próprio hook.
   const detail = useConversationDetail(activeConversation?.id ?? "");
   const { items: phrases } = useQuickPhrases();
+  const { updateStatus } = useUpdateConversationStatus();
 
   function handleSelectConversation(item: ConversationListItemDto) {
     if (typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT_PX) {
@@ -60,7 +61,7 @@ export function ConversationsPage() {
   async function handleStageChange(status: ConversationStatus) {
     if (!activeConversation) return;
     try {
-      await updateConversationStatus(activeConversation.id, status);
+      await updateStatus(activeConversation.id, status);
       setActiveConversation((prev) =>
         prev ? { ...prev, status, stageChangedAt: new Date().toISOString() } : prev,
       );

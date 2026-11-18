@@ -10,6 +10,7 @@ import type {
   MessageDto,
   SendMessageRequestBody,
 } from "@/types/api/contacts-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
 export async function updateConversationStatus(
   conversationId: string,
@@ -27,10 +28,11 @@ export async function updateConversationStatus(
 
 export async function getConversationDetail(
   conversationId: string,
+  options?: RequestOptions,
 ): Promise<ConversationDetailResponseData> {
   const res = await apiClient.get<ApiEnvelope<ConversationDetailResponseData>>(
     `/api/v1/tenant/conversations/${conversationId}`,
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);
@@ -40,6 +42,7 @@ export async function getConversationDetail(
 
 export async function getConversationsList(
   params: ConversationListQueryParams,
+  options?: RequestOptions,
 ): Promise<ConversationsListResponseData> {
   const search = new URLSearchParams();
   if (params.channel) search.set("channel", params.channel);
@@ -50,7 +53,7 @@ export async function getConversationsList(
 
   const res = await apiClient.get<ApiEnvelope<ConversationsListResponseData>>(
     `/api/v1/tenant/conversations?${search.toString()}`,
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);

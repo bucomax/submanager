@@ -5,7 +5,7 @@ import { ConversationChat } from "@/features/contacts/app/components/conversatio
 import { LeadPanel } from "@/features/contacts/app/components/lead-panel";
 import { useConversationDetail } from "@/features/contacts/app/hooks/use-conversation-detail";
 import { useQuickPhrases } from "@/features/contacts/app/hooks/use-quick-phrases";
-import { updateConversationStatus } from "@/features/contacts/app/services/contacts.service";
+import { useUpdateConversationStatus } from "@/features/contacts/app/hooks/use-conversation-actions";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { Link } from "@/i18n/navigation";
@@ -24,12 +24,13 @@ export function MobileConversationView({ conversationId }: MobileConversationVie
   const detail = useConversationDetail(conversationId);
   const { data, refresh } = detail;
   const { items: phrases } = useQuickPhrases();
+  const { updateStatus } = useUpdateConversationStatus();
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [stagePickerOpen, setStagePickerOpen] = useState(false);
 
   async function handleStageChange(status: ConversationStatus) {
     try {
-      await updateConversationStatus(conversationId, status);
+      await updateStatus(conversationId, status);
       await refresh();
       toast.success(t("stage.changed", { stage: t(`stage.${status}`) }));
     } catch {

@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
 
 import type { MeUser } from "@/features/settings/app/types/account";
+import type { RequestOptions } from "@/types/api/request-options";
 
 type GetMePayload = { user: MeUser };
 
@@ -19,9 +20,11 @@ type PatchMePayload = {
   };
 };
 
-export async function getMe(): Promise<MeUser> {
+export async function getMe(options?: RequestOptions): Promise<MeUser> {
   try {
-    const res = await apiClient.get<ApiEnvelope<GetMePayload>>("/api/v1/me");
+    const res = await apiClient.get<ApiEnvelope<GetMePayload>>("/api/v1/me", {
+      signal: options?.signal,
+    });
     if (!res.data.success) {
       throw new Error(res.data.error.message);
     }

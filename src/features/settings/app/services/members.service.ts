@@ -3,12 +3,18 @@ import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
 
 import type { TenantMemberRow, TenantRole } from "@/features/settings/app/types/account";
+import type { RequestOptions } from "@/types/api/request-options";
 
 type ListPayload = { members: TenantMemberRow[] };
 
-export async function listTenantMembers(tenantId: string): Promise<TenantMemberRow[]> {
+export async function listTenantMembers(
+  tenantId: string,
+  options?: RequestOptions,
+): Promise<TenantMemberRow[]> {
   try {
-    const res = await apiClient.get<ApiEnvelope<ListPayload>>(`/api/v1/admin/tenants/${tenantId}/members`);
+    const res = await apiClient.get<ApiEnvelope<ListPayload>>(`/api/v1/admin/tenants/${tenantId}/members`, {
+      signal: options?.signal,
+    });
     if (!res.data.success) {
       throw new Error(res.data.error.message);
     }

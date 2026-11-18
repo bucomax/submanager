@@ -1,40 +1,39 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { notifyActiveAppsMenuInvalidated } from "@/features/apps/app/lib/invalidate-active-apps";
 import { activateApp, deactivateApp } from "@/features/apps/app/services/apps.service";
 
 export function useAppActivation(onSuccess?: () => void) {
-  const [activating, setActivating] = useState(false);
-  const [deactivating, setDeactivating] = useState(false);
+  const activateMutation = useMutation({
+    mutationFn: ({ appId, config }: { appId: string; config?: Record<string, unknown> }) =>
+      activateApp(appId, config),
+    onSuccess: () => {
+      notifyActiveAppsMenuInvalidated();
+      onSuccess?.();
+    },
+  });
+  const deactivateMutation = useMutation({
+    mutationFn: (appId: string) => deactivateApp(appId),
+    onSuccess: () => {
+      notifyActiveAppsMenuInvalidated();
+      onSuccess?.();
+    },
+  });
 
+  const { mutateAsync: activateAsync } = activateMutation;
+  const { mutateAsync: deactivateAsync } = deactivateMutation;
   const activate = useCallback(
-    async (appId: string, config?: Record<string, unknown>) => {
-      setActivating(true);
-      try {
-        await activateApp(appId, config);
-        notifyActiveAppsMenuInvalidated();
-        onSuccess?.();
-      } finally {
-        setActivating(false);
-      }
-    },
-    [onSuccess],
+    (appId: string, config?: Record<string, unknown>) => activateAsync({ appId, config }),
+    [activateAsync],
   );
+  const deactivate = useCallback((appId: string) => deactivateAsync(appId), [deactivateAsync]);
 
-  const deactivate = useCallback(
-    async (appId: string) => {
-      setDeactivating(true);
-      try {
-        await deactivateApp(appId);
-        notifyActiveAppsMenuInvalidated();
-        onSuccess?.();
-      } finally {
-        setDeactivating(false);
-      }
-    },
-    [onSuccess],
-  );
-
-  return { activate, deactivate, activating, deactivating };
+  return {
+    activate,
+    deactivate,
+    activating: activateMutation.isPending,
+    deactivating: deactivateMutation.isPending,
+  };
 }

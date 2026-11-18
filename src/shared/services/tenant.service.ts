@@ -1,6 +1,7 @@
 import { clearQueryCache } from "@/shared/lib/query/query-client";
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type { TenantListItem } from "@/shared/types/tenant";
 
 type TenantsPayload = { tenants: TenantListItem[] };
@@ -17,8 +18,10 @@ type ContextPayload = {
   };
 };
 
-export async function listTenants(): Promise<TenantListItem[]> {
-  const res = await apiClient.get<ApiEnvelope<TenantsPayload>>("/api/v1/tenants");
+export async function listTenants(options?: RequestOptions): Promise<TenantListItem[]> {
+  const res = await apiClient.get<ApiEnvelope<TenantsPayload>>("/api/v1/tenants", {
+    signal: options?.signal,
+  });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }

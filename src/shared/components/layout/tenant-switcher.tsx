@@ -7,56 +7,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { listTenants, setActiveTenant } from "@/shared/services/tenant.service";
-import type { TenantListItem } from "@/shared/types/tenant";
+import { useTenantSwitcher } from "@/shared/hooks/use-tenant-switcher";
 import { Building2, Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
 
 type TenantSwitcherProps = {
   activeTenantId: string | null | undefined;
 };
 
 export function TenantSwitcher({ activeTenantId }: TenantSwitcherProps) {
-  const { update } = useSession();
-  const [tenants, setTenants] = useState<TenantListItem[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoadError(null);
-    try {
-      const list = await listTenants();
-      setTenants(list);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao carregar tenants";
-      setLoadError(msg);
-      setTenants([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { tenants, loadError, pendingId, selectTenant } = useTenantSwitcher(activeTenantId);
 
   const current = tenants?.find((t) => t.id === activeTenantId) ?? null;
   const label = current?.name ?? (activeTenantId ? "Tenant selecionado" : "Sem tenant");
-
-  async function onSelect(tenantId: string) {
-    if (tenantId === activeTenantId) return;
-    setPendingId(tenantId);
-    try {
-      await setActiveTenant(tenantId);
-      await update();
-      // Hard reload para descartar todo estado client-side do tenant anterior
-      window.location.replace("/dashboard");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Falha ao trocar tenant";
-      setLoadError(msg);
-    } finally {
-      setPendingId(null);
-    }
-  }
 
   if (tenants && tenants.length === 0 && !loadError) {
     return (
@@ -93,7 +55,7 @@ export function TenantSwitcher({ activeTenantId }: TenantSwitcherProps) {
         {tenants?.map((t) => (
           <DropdownMenuItem
             key={t.id}
-            onClick={() => void onSelect(t.id)}
+            onClick={() => void selectTenant(t.id)}
             disabled={!!pendingId}
           >
             <span className="flex flex-1 flex-col gap-0.5 truncate text-left">

@@ -8,7 +8,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import type { AppDetailResponseData } from "@/types/api/apps-v1";
 import { useIframeProtocol } from "@/features/apps/app/hooks/use-iframe-protocol";
-import { getAppScopedToken } from "@/features/apps/app/services/apps.service";
+import { useAppScopedToken } from "@/features/apps/app/hooks/use-app-scoped-token";
 
 // Internal app components
 import { WhatsAppSettingsCard } from "@/features/settings/app/components/whatsapp-settings-card";
@@ -103,19 +103,10 @@ function IframeViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [containerHeight, setContainerHeight] = useState<number | null>(null);
-  const [scopedToken, setScopedToken] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch scoped token
-  const fetchToken = useCallback(async () => {
-    try {
-      const { token } = await getAppScopedToken(appId);
-      setScopedToken(token);
-    } catch {
-      // Non-critical — iframe works without token
-    }
-  }, [appId]);
+  const { scopedToken, fetchToken } = useAppScopedToken(appId);
 
   const { handleIframeLoad: protocolOnLoad } = useIframeProtocol({
     iframeRef,

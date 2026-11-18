@@ -1,28 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { getAppCatalog } from "@/features/apps/app/services/apps.service";
-import type { AppCatalogResponseData } from "@/types/api/apps-v1";
+import { appKeys } from "@/features/apps/app/hooks/query-keys";
 
 export function useAppCatalog(params?: { category?: string; search?: string }) {
-  const [data, setData] = useState<AppCatalogResponseData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: appKeys.catalog(params),
+    queryFn: ({ signal }) => getAppCatalog(params, { signal }),
+    placeholderData: keepPreviousData,
+  });
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await getAppCatalog(params);
-      setData(result);
-    } catch {
-      // apiClient já trata toast
-    } finally {
-      setLoading(false);
-    }
-  }, [params?.category, params?.search]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  return { data, loading, refresh };
+  return { data: query.data ?? null, loading: isQueryLoading(query), refresh: query.refetch };
 }

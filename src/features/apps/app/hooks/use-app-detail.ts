@@ -1,29 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { getAppDetail } from "@/features/apps/app/services/apps.service";
-import type { AppDetailResponseData } from "@/types/api/apps-v1";
+import { appKeys } from "@/features/apps/app/hooks/query-keys";
 
 export function useAppDetail(appId: string | undefined) {
-  const [data, setData] = useState<AppDetailResponseData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: appKeys.detail(appId),
+    queryFn: ({ signal }) => getAppDetail(appId!, { signal }),
+    enabled: Boolean(appId),
+  });
 
-  const refresh = useCallback(async () => {
-    if (!appId) return;
-    setLoading(true);
-    try {
-      const result = await getAppDetail(appId);
-      setData(result);
-    } catch {
-      // apiClient já trata toast
-    } finally {
-      setLoading(false);
-    }
-  }, [appId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  return { data, loading, refresh };
+  return { data: query.data ?? null, loading: isQueryLoading(query), refresh: query.refetch };
 }

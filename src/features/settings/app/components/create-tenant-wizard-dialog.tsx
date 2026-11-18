@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslatedZodResolver } from "@/shared/lib/forms/translated-zod-resolver";
 import { ArrowLeft, ArrowRight, Loader2, Save, X } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -12,46 +12,27 @@ import {
   createTenantWizardSchema,
   type CreateTenantWizardValues,
 } from "@/features/settings/app/utils/schemas";
-import { digitsOnlyCep, formatCepDisplay } from "@/lib/validators/cep";
-import { digitsOnlyTaxDocument, formatTaxDocumentDisplay } from "@/lib/validators/tax-document";
-import { digitsOnlyPhone, formatPhoneBrDisplay } from "@/lib/validators/phone";
 import { slugifyTenantSlugFromName } from "@/lib/utils/string";
+import {
+  CreateTenantStepAddress,
+  CreateTenantStepAdmin,
+  CreateTenantStepIdentity,
+} from "@/features/settings/app/components/create-tenant-wizard-fields";
+import { CreateTenantReviewStep } from "@/features/settings/app/components/create-tenant-review-step";
+import {
+  STEP1_FIELDS,
+  STEP2_FIELDS,
+  STEP3_FIELDS,
+  buildCreateTenantRequestBody,
+  createTenantWizardDefaultValues,
+  type CreateTenantWizardStep,
+} from "@/features/settings/app/utils/create-tenant-wizard";
 import { toast } from "@/lib/toast";
 import type { CreateAdminTenantRequestBody, CreateAdminTenantResponseData } from "@/types/api/admin-tenants-v1";
-import { Form, FormCep, FormInput, FormPhoneNumber, FormTaxDocument } from "@/shared/components/forms";
+import { Form } from "@/shared/components/forms";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-type Step = 1 | 2 | 3 | 4;
-
-const STEP1_FIELDS: (keyof CreateTenantWizardValues)[] = ["name", "slug", "taxId", "phone"];
-const STEP2_FIELDS: (keyof CreateTenantWizardValues)[] = [
-  "postalCode",
-  "addressLine",
-  "addressNumber",
-  "addressComp",
-  "neighborhood",
-  "city",
-  "state",
-];
-const STEP3_FIELDS: (keyof CreateTenantWizardValues)[] = ["adminEmail", "adminName"];
-
-const defaultValues: CreateTenantWizardValues = {
-  name: "",
-  slug: "",
-  taxId: "",
-  phone: "",
-  postalCode: "",
-  addressLine: "",
-  addressNumber: "",
-  addressComp: "",
-  neighborhood: "",
-  city: "",
-  state: "",
-  adminEmail: "",
-  adminName: "",
-};
 
 export type CreateTenantWizardDialogProps = {
   open: boolean;
@@ -59,49 +40,6 @@ export type CreateTenantWizardDialogProps = {
   createTenant: (input: CreateAdminTenantRequestBody) => Promise<CreateAdminTenantResponseData>;
   creating: boolean;
 };
-
-function mergeTenantAddressLine(v: CreateTenantWizardValues): string | null {
-  const street = v.addressLine?.trim() ?? "";
-  const num = v.addressNumber?.trim() ?? "";
-  const comp = v.addressComp?.trim() ?? "";
-  const neighborhood = v.neighborhood?.trim() ?? "";
-
-  let line = street;
-  if (line && num) line = `${line}, ${num}`;
-  else if (!line && num) line = num;
-  if (comp) line = line ? `${line} - ${comp}` : comp;
-  if (neighborhood) line = line ? `${line}, ${neighborhood}` : neighborhood;
-
-  return line || null;
-}
-
-function buildRequestBody(v: CreateTenantWizardValues): CreateAdminTenantRequestBody {
-  const adminEmail = v.adminEmail.trim();
-  const addressLineMerged = mergeTenantAddressLine(v);
-  const cityPart = v.city?.trim() ?? "";
-  const statePart = (v.state ?? "").trim().toUpperCase().slice(0, 2);
-  const cityMerged =
-    cityPart || statePart ? [cityPart, statePart].filter(Boolean).join(" · ") : null;
-  const cep = digitsOnlyCep(v.postalCode ?? "");
-  return {
-    name: v.name.trim(),
-    slug: v.slug.trim(),
-    taxId: (() => {
-      const d = digitsOnlyTaxDocument(v.taxId ?? "");
-      return d.length > 0 ? d : null;
-    })(),
-    phone: (() => {
-      const d = digitsOnlyPhone(v.phone ?? "");
-      return d.length > 0 ? d : null;
-    })(),
-    addressLine: addressLineMerged ? addressLineMerged.slice(0, 500) : null,
-    city: cityMerged ? cityMerged.slice(0, 200) : null,
-    postalCode: cep.length === 8 ? cep : null,
-    admin: adminEmail
-      ? { email: adminEmail, name: v.adminName?.trim() || null }
-      : null,
-  };
-}
 
 type ManualPasswordState = {
   open: boolean;
@@ -118,9 +56,8 @@ export function CreateTenantWizardDialog({
   creating,
 }: CreateTenantWizardDialogProps) {
   const t = useTranslations("settings.tenants");
-  const tc = useTranslations("settings.clinic");
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<CreateTenantWizardStep>(1);
   const [slugTouched, setSlugTouched] = useState(false);
   const [manualPassword, setManualPassword] = useState<ManualPasswordState>({
     open: false,
@@ -132,7 +69,7 @@ export function CreateTenantWizardDialog({
   const resolver = useTranslatedZodResolver<CreateTenantWizardValues>(createTenantWizardSchema);
   const form = useForm<CreateTenantWizardValues>({
     resolver,
-    defaultValues,
+    defaultValues: createTenantWizardDefaultValues,
   });
 
   const nameWatch = useWatch({ control: form.control, name: "name" });
@@ -146,7 +83,7 @@ export function CreateTenantWizardDialog({
   }, [open, slugTouched, nameWatch, form]);
 
   const goBack = useCallback(() => {
-    setStep((s) => (s > 1 ? ((s - 1) as Step) : s));
+    setStep((s) => (s > 1 ? ((s - 1) as CreateTenantWizardStep) : s));
   }, []);
 
   const goNext = useCallback(() => {
@@ -154,7 +91,7 @@ export function CreateTenantWizardDialog({
       step === 1 ? STEP1_FIELDS : step === 2 ? STEP2_FIELDS : step === 3 ? STEP3_FIELDS : [];
     if (step >= 4) return;
     void form.trigger(fields).then((ok) => {
-      if (ok) setStep((s) => ((s + 1) as Step));
+      if (ok) setStep((s) => ((s + 1) as CreateTenantWizardStep));
     });
   }, [form, step]);
 
@@ -166,7 +103,7 @@ export function CreateTenantWizardDialog({
     }
     const v = form.getValues();
     try {
-      const res = await createTenant(buildRequestBody(v));
+      const res = await createTenant(buildCreateTenantRequestBody(v));
       onOpenChange(false);
       toast.success(
         res.adminEmail
@@ -190,32 +127,7 @@ export function CreateTenantWizardDialog({
     }
   }, [createTenant, form, onOpenChange, t]);
 
-  const watched = useWatch({ control: form.control });
-
-  const reviewAddress = useMemo(() => {
-    const parts = [
-      watched?.postalCode,
-      watched?.addressLine,
-      watched?.addressNumber,
-      watched?.addressComp,
-      watched?.neighborhood,
-      watched?.city,
-      watched?.state,
-    ]
-      .map((x) => (typeof x === "string" ? x.trim() : ""))
-      .filter(Boolean);
-    return parts.length > 0;
-  }, [
-    watched?.postalCode,
-    watched?.addressLine,
-    watched?.addressNumber,
-    watched?.addressComp,
-    watched?.neighborhood,
-    watched?.city,
-    watched?.state,
-  ]);
-
-  const stepClass = (n: Step) =>
+  const stepClass = (n: CreateTenantWizardStep) =>
     cn(
       "flex size-7 items-center justify-center rounded-full text-xs font-medium transition-colors",
       step >= n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
@@ -298,184 +210,10 @@ export function CreateTenantWizardDialog({
 
           <Form {...form}>
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-              {step === 1 ? (
-                <>
-                  <p className="text-muted-foreground text-sm">{t("wizard.step1Description")}</p>
-                  <FormInput name="name" label={t("name")} placeholder={t("namePlaceholder")} autoFocus />
-                  <FormInput
-                    name="slug"
-                    label={t("slug")}
-                    placeholder={t("slugPlaceholder")}
-                    onFocus={() => setSlugTouched(true)}
-                  />
-                  <FormTaxDocument
-                    name="taxId"
-                    label={tc("taxId")}
-                    placeholder={tc("taxIdPlaceholder")}
-                    className="tabular-nums"
-                  />
-                  <FormPhoneNumber
-                    name="phone"
-                    label={tc("phone")}
-                    placeholder={tc("phonePlaceholder")}
-                    className="tabular-nums"
-                  />
-                </>
-              ) : null}
-
-              {step === 2 ? (
-                <>
-                  <p className="text-muted-foreground text-sm">{t("wizard.step2Description")}</p>
-                  <div className="bg-muted/40 space-y-4 rounded-lg border p-4">
-                    <p className="text-sm font-medium">{t("wizard.addressSectionTitle")}</p>
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      <FormCep
-                        name="postalCode"
-                        label={t("wizard.postalCodeLabel")}
-                        description={t("wizard.postalCodeHint")}
-                      />
-                      <FormInput
-                        name="addressLine"
-                        label={t("wizard.streetLabel")}
-                        placeholder={t("wizard.streetPlaceholder")}
-                        autoComplete="street-address"
-                      />
-                      <FormInput name="addressNumber" label={t("wizard.addressNumberLabel")} autoComplete="off" />
-                      <FormInput name="addressComp" label={t("wizard.addressCompLabel")} required={false} />
-                      <FormInput
-                        name="neighborhood"
-                        label={t("wizard.neighborhoodLabel")}
-                        placeholder={t("wizard.neighborhoodPlaceholder")}
-                      />
-                      <FormInput
-                        name="city"
-                        label={t("wizard.cityLabel")}
-                        placeholder={t("wizard.cityPlaceholder")}
-                        autoComplete="address-level2"
-                      />
-                      <FormInput
-                        name="state"
-                        label={t("wizard.stateLabel")}
-                        placeholder={t("wizard.statePlaceholder")}
-                        maxLength={2}
-                        className="uppercase tabular-nums"
-                        autoComplete="address-level1"
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : null}
-
-              {step === 3 ? (
-                <>
-                  <p className="text-muted-foreground text-sm">{t("wizard.step3Description")}</p>
-                  <p className="text-muted-foreground text-xs">{t("wizard.adminHint")}</p>
-                  <FormInput
-                    name="adminEmail"
-                    label={t("wizard.adminEmailLabel")}
-                    placeholder={t("wizard.adminEmailPlaceholder")}
-                    type="email"
-                    autoComplete="email"
-                  />
-                  <FormInput name="adminName" label={t("wizard.adminNameLabel")} placeholder={t("wizard.adminNamePlaceholder")} />
-                </>
-              ) : null}
-
-              {step === 4 ? (
-                <div className="space-y-6">
-                  <p className="text-muted-foreground text-sm">{t("wizard.step4Description")}</p>
-
-                  <section className="space-y-2">
-                    <h3 className="text-sm font-medium">{t("wizard.reviewIdentification")}</h3>
-                    <dl className="grid gap-2 text-sm sm:grid-cols-[minmax(0,140px)_1fr]">
-                      <dt className="text-muted-foreground">{t("name")}</dt>
-                      <dd className="min-w-0 font-medium">{watched?.name}</dd>
-                      <dt className="text-muted-foreground">{t("slug")}</dt>
-                      <dd className="min-w-0 font-mono text-sm">{watched?.slug}</dd>
-                      {watched?.taxId ? (
-                        <>
-                          <dt className="text-muted-foreground">{tc("taxId")}</dt>
-                          <dd className="tabular-nums">{formatTaxDocumentDisplay(String(watched.taxId))}</dd>
-                        </>
-                      ) : null}
-                      {watched?.phone ? (
-                        <>
-                          <dt className="text-muted-foreground">{tc("phone")}</dt>
-                          <dd className="tabular-nums">{formatPhoneBrDisplay(String(watched.phone))}</dd>
-                        </>
-                      ) : null}
-                    </dl>
-                  </section>
-
-                  {reviewAddress ? (
-                    <section className="space-y-2">
-                      <h3 className="text-sm font-medium">{t("wizard.reviewAddress")}</h3>
-                      <dl className="grid gap-2 text-sm sm:grid-cols-[minmax(0,140px)_1fr]">
-                        {watched?.postalCode && String(watched.postalCode).replace(/\D/g, "").length > 0 ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.postalCodeLabel")}</dt>
-                            <dd className="tabular-nums">{formatCepDisplay(String(watched.postalCode))}</dd>
-                          </>
-                        ) : null}
-                        {watched?.addressLine ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.streetLabel")}</dt>
-                            <dd>{watched.addressLine}</dd>
-                          </>
-                        ) : null}
-                        {watched?.addressNumber ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.addressNumberLabel")}</dt>
-                            <dd>{watched.addressNumber}</dd>
-                          </>
-                        ) : null}
-                        {watched?.addressComp ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.addressCompLabel")}</dt>
-                            <dd>{watched.addressComp}</dd>
-                          </>
-                        ) : null}
-                        {watched?.neighborhood ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.neighborhoodLabel")}</dt>
-                            <dd>{watched.neighborhood}</dd>
-                          </>
-                        ) : null}
-                        {watched?.city ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.cityLabel")}</dt>
-                            <dd>{watched.city}</dd>
-                          </>
-                        ) : null}
-                        {watched?.state ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.stateLabel")}</dt>
-                            <dd className="uppercase">{watched.state}</dd>
-                          </>
-                        ) : null}
-                      </dl>
-                    </section>
-                  ) : null}
-
-                  <section className="space-y-2">
-                    <h3 className="text-sm font-medium">{t("wizard.reviewAdmin")}</h3>
-                    {watched?.adminEmail?.trim() ? (
-                      <dl className="grid gap-2 text-sm sm:grid-cols-[minmax(0,140px)_1fr]">
-                        <dt className="text-muted-foreground">{t("wizard.adminEmailLabel")}</dt>
-                        <dd>{watched.adminEmail}</dd>
-                        {watched?.adminName?.trim() ? (
-                          <>
-                            <dt className="text-muted-foreground">{t("wizard.adminNameLabel")}</dt>
-                            <dd>{watched.adminName}</dd>
-                          </>
-                        ) : null}
-                      </dl>
-                    ) : (
-                      <p className="text-amber-700 dark:text-amber-400 text-sm">{t("wizard.noAdminWarning")}</p>
-                    )}
-                  </section>
-                </div>
-              ) : null}
+              {step === 1 ? <CreateTenantStepIdentity onSlugFocus={() => setSlugTouched(true)} /> : null}
+              {step === 2 ? <CreateTenantStepAddress /> : null}
+              {step === 3 ? <CreateTenantStepAdmin /> : null}
+              {step === 4 ? <CreateTenantReviewStep /> : null}
             </form>
           </Form>
         </StandardDialogContent>

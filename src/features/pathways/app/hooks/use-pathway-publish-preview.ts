@@ -1,13 +1,19 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+
+import { pathwayKeys } from "@/features/pathways/app/hooks/query-keys";
 import { postPathwayPublishPreview } from "@/features/pathways/app/services/pathways.service";
-import type { PathwayPublishPreviewDto } from "@/types/api/pathways-v1";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { parsePathwayGraph, pathwayDraftSignature } from "@/features/pathways/app/utils/pathway-graph";
+import { useDebounce } from "@/shared/hooks/use-debounce";
 
 const DEBOUNCE_MS = 400;
 
 /**
  * Pré-validação alinhada ao POST `…/publish` (debounce sobre o grafo local ou rascunho salvo).
+ * A key usa a assinatura do grafo: mudanças que não alteram o conteúdo (seleção, medidas do React Flow)
+ * não geram nova requisição.
  */
 export function usePathwayPublishPreview(
   pathwayId: string,
@@ -17,52 +23,32 @@ export function usePathwayPublishPreview(
   /** `false` evita chamadas ao preview (somente admin pode publicar). */
   enabled = true,
 ) {
-  const [preview, setPreview] = useState<PathwayPublishPreviewDto | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const seq = useRef(0);
+  const graph = useDebounce(localGraphJson, { delayMs: DEBOUNCE_MS });
+  const signature = useMemo(() => {
+    const parsed = parsePathwayGraph(graph);
+    return pathwayDraftSignature(parsed.nodes, parsed.edges);
+  }, [graph]);
 
-  const refreshPublishPreview = useCallback(
-    async (graph: unknown) => {
-      if (!versionId || !enabled) return;
-      const my = ++seq.current;
-      setLoading(true);
-      setError(null);
-      try {
-        const p = await postPathwayPublishPreview(pathwayId, versionId, { graphJson: graph });
-        if (seq.current === my) {
-          setPreview(p);
-        }
-      } catch (e) {
-        if (seq.current === my) {
-          setError(e instanceof Error ? e.message : "Error");
-          setPreview(null);
-        }
-      } finally {
-        if (seq.current === my) {
-          setLoading(false);
-        }
-      }
-    },
-    [pathwayId, versionId, enabled],
-  );
+  const query = useQuery({
+    queryKey: pathwayKeys.publishPreview(pathwayId, versionId, signature),
+    queryFn: ({ signal }) =>
+      postPathwayPublishPreview(pathwayId, versionId!, { graphJson: graph }, { signal }),
+    enabled: Boolean(versionId) && enabled,
+    // O resultado depende do estado do servidor (pacientes por etapa): sempre revalida.
+    staleTime: 0,
+    placeholderData: keepPreviousData,
+  });
+  const { refetch } = query;
 
-  useEffect(() => {
-    if (!versionId || !enabled) {
-      setPreview(null);
-      setError(null);
-      return;
-    }
-    const handle = window.setTimeout(() => {
-      void refreshPublishPreview(localGraphJson);
-    }, DEBOUNCE_MS);
-    return () => window.clearTimeout(handle);
-  }, [versionId, enabled, localGraphJson, refreshPublishPreview]);
+  const refreshPublishPreview = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
+  const active = Boolean(versionId) && enabled;
   return {
-    publishPreview: preview,
-    publishPreviewLoading: loading,
-    publishPreviewError: error,
+    publishPreview: active ? (query.data ?? null) : null,
+    publishPreviewLoading: active && query.isFetching,
+    publishPreviewError: active && query.error ? query.error.message || "Error" : null,
     refreshPublishPreview,
   };
 }

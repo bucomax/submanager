@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+"use client";
+
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   getTenantSmtpSettings,
   patchTenantSmtpSettings,
@@ -23,62 +28,52 @@ const EMPTY: TenantSmtpDto = {
 export function useTenantSmtp() {
   const t = useTranslations("settings.email");
   const { data: session, status: sessionStatus } = useSession();
-  const [data, setData] = useState<TenantSmtpDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
 
   const canEdit =
     session?.user?.tenantRole === "tenant_admin" || session?.user?.globalRole === "super_admin";
 
+  const query = useQuery({
+    queryKey: settingsKeys.smtp,
+    queryFn: ({ signal }) => getTenantSmtpSettings({ signal }),
+    enabled: sessionStatus === "authenticated",
+    select: (response) => response.smtp,
+  });
+  const { refetch } = query;
+
+  const saveMutation = useMutation({
+    mutationFn: (body: Parameters<typeof patchTenantSmtpSettings>[0]) => patchTenantSmtpSettings(body),
+    onSuccess: (response) => queryClient.setQueryData(settingsKeys.smtp, response),
+  });
+  const testMutation = useMutation({
+    mutationFn: (toOverride?: string) => postTestTenantSmtp(toOverride ? { to: toOverride } : {}),
+  });
+  const { mutateAsync: saveAsync } = saveMutation;
+  const { mutateAsync: testAsync } = testMutation;
+
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await getTenantSmtpSettings();
-      setData(r.smtp);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
-    void reload();
-  }, [reload, sessionStatus]);
-
+    await refetch();
+  }, [refetch]);
   const save = useCallback(
     async (body: Parameters<typeof patchTenantSmtpSettings>[0]) => {
-      setBusy(true);
-      try {
-        const r = await patchTenantSmtpSettings(body);
-        setData(r.smtp);
-      } finally {
-        setBusy(false);
-      }
+      await saveAsync(body);
     },
-    [],
+    [saveAsync],
   );
-
-  const test = useCallback(async (toOverride?: string) => {
-    setBusy(true);
-    try {
-      await postTestTenantSmtp(toOverride ? { to: toOverride } : {});
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const test = useCallback(
+    async (toOverride?: string) => {
+      await testAsync(toOverride);
+    },
+    [testAsync],
+  );
 
   return {
     sessionStatus,
-    smtp: data ?? EMPTY,
-    hasLoaded: data !== null,
-    loading,
-    error,
-    busy,
+    smtp: query.data ?? EMPTY,
+    hasLoaded: query.data !== undefined,
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || t("loadError") : null,
+    busy: saveMutation.isPending || testMutation.isPending,
     canEdit,
     reload,
     save,

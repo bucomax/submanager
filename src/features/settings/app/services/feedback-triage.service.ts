@@ -6,14 +6,16 @@ import type {
   UpdateFeedbackRequestBody,
   UpdateFeedbackResponseData,
 } from "@/types/api/feedback-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
 /** Lista relatos de feedback cross-tenant (apenas `super_admin`). */
 export async function listFeedback(
   params: ListFeedbackQueryParams,
+  options?: RequestOptions,
 ): Promise<FeedbackListResponseData> {
   const res = await apiClient.get<ApiEnvelope<FeedbackListResponseData>>(
     "/api/v1/admin/feedback",
-    { params },
+    { params, signal: options?.signal },
   );
   if (!res.data.success) throw new Error(res.data.error.message);
   return res.data.data;

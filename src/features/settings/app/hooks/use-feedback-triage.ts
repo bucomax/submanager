@@ -1,60 +1,57 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   listFeedback,
   updateFeedback,
 } from "@/features/settings/app/services/feedback-triage.service";
 import type {
-  FeedbackDto,
+  FeedbackListResponseData,
   FeedbackStatus,
   FeedbackType,
   ListFeedbackQueryParams,
 } from "@/types/api/feedback-v1";
-import type { ApiPagination } from "@/lib/api/pagination";
 
 /** Estado e ações da fila de triagem de feedback (`super_admin`). */
 export function useFeedbackTriage() {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ListFeedbackQueryParams>({ page: 1, limit: 20 });
-  const [rows, setRows] = useState<FeedbackDto[]>([]);
-  const [pagination, setPagination] = useState<ApiPagination | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pendingId, setPendingId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await listFeedback(filters);
-      setRows(data.data);
-      setPagination(data.pagination);
-    } catch {
-      // O interceptor do apiClient já mostrou o toast. Sem este catch, `void load()`
-      // no efeito abaixo deixaria a rejeição escapar como unhandledrejection — e o
-      // Sentry a capturaria como erro de aplicação nesta mesma fila de triagem.
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+  // Erro: o interceptor do apiClient já mostrou o toast; a query guarda o erro sem rejeição solta.
+  const query = useQuery({
+    queryKey: settingsKeys.feedback(filters),
+    queryFn: ({ signal }) => listFeedback(filters, { signal }),
+    placeholderData: keepPreviousData,
+  });
+  const { refetch } = query;
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: FeedbackStatus }) =>
+      updateFeedback(id, { status }),
+    onSuccess: ({ feedback }) => {
+      queryClient.setQueryData<FeedbackListResponseData>(settingsKeys.feedback(filters), (current) =>
+        current
+          ? { ...current, data: current.data.map((row) => (row.id === feedback.id ? feedback : row)) }
+          : current,
+      );
+    },
+    // O reload devolve o Select ao estado real do servidor em vez de deixar a UI otimista desalinhada.
+    onError: () => refetch(),
+  });
+  const { mutateAsync: statusAsync } = statusMutation;
 
   const changeStatus = useCallback(
     async (id: string, status: FeedbackStatus) => {
-      setPendingId(id);
       try {
-        const { feedback } = await updateFeedback(id, { status });
-        setRows((current) => current.map((row) => (row.id === id ? feedback : row)));
+        await statusAsync({ id, status });
       } catch {
-        // Idem: o interceptor já avisou o usuário. O reload devolve o Select ao
-        // estado real do servidor em vez de deixar a UI otimista desalinhada.
-        await load();
-      } finally {
-        setPendingId(null);
+        // O interceptor já avisou o usuário; onError do mutation recarrega a fila.
       }
     },
-    [load],
+    [statusAsync],
   );
 
   const setPage = useCallback((page: number) => {
@@ -72,10 +69,10 @@ export function useFeedbackTriage() {
   }, []);
 
   return {
-    rows,
-    pagination,
-    loading,
-    pendingId,
+    rows: query.data?.data ?? [],
+    pagination: query.data?.pagination ?? null,
+    loading: isQueryLoading(query),
+    pendingId: statusMutation.isPending ? statusMutation.variables.id : null,
     filters,
     setPage,
     setStatusFilter,

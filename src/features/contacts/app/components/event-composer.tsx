@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { listTenantMembersForPicker } from "@/features/settings/app/services/tenant-settings.service";
+import { useState } from "react";
+import { useTenantMemberPicker } from "@/features/settings/app/hooks/use-tenant-member-picker";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
@@ -10,7 +10,6 @@ import { todayIsoDateLocal } from "@/lib/utils/date";
 import { CalendarPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CreateAgendaEventRequestBody, AgendaEventType } from "@/types/api/agenda-v1";
-import type { TenantMemberPickerRow } from "@/types/api/tenant-settings-v1";
 
 const TYPES: AgendaEventType[] = ["consulta", "retorno", "exame", "ligacao"];
 const DURATIONS = [30, 45, 60, 90];
@@ -39,19 +38,12 @@ export function EventComposer({ leadName, conversationId, clientId, onSave, onCa
   const [date, setDate] = useState(todayIsoDateLocal());
   const [time, setTime] = useState("09:00");
   const [duration, setDuration] = useState(30);
-  const [ownerUserId, setOwnerUserId] = useState("");
-  const [members, setMembers] = useState<TenantMemberPickerRow[]>([]);
+  const [chosenOwnerUserId, setOwnerUserId] = useState("");
+  const { members } = useTenantMemberPicker();
+  // Sem escolha explícita, o responsável é o primeiro membro da lista.
+  const ownerUserId = chosenOwnerUserId || members[0]?.userId || "";
   const [sendConfirmation, setSendConfirmation] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    void listTenantMembersForPicker()
-      .then((res) => {
-        setMembers(res.members);
-        setOwnerUserId((prev) => prev || res.members[0]?.userId || "");
-      })
-      .catch(() => setMembers([]));
-  }, []);
 
   const dateShortcuts: Array<{ key: string; label: string; iso: string }> = [
     { key: "today", label: t("dateShortcuts.today"), iso: addDaysIso(0) },

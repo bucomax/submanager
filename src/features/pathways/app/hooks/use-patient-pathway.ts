@@ -1,52 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
+import { pathwayKeys } from "@/features/pathways/app/hooks/query-keys";
 import {
   getPatientPathway,
   transitionPatientStage,
 } from "@/features/pathways/app/services/patient-pathways.service";
-import type {
-  PatientPathwayDetail,
-  TransitionPatientStageInput,
-} from "@/features/pathways/app/types/patient-pathways";
-import { useTranslations } from "next-intl";
+import type { TransitionPatientStageInput } from "@/features/pathways/app/types/patient-pathways";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 
 export function usePatientPathway(patientPathwayId: string) {
   const t = useTranslations("pathways.patient");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [data, setData] = useState<PatientPathwayDetail | null>(null);
+  const query = useQuery({
+    queryKey: pathwayKeys.patientPathway(patientPathwayId),
+    queryFn: ({ signal }) => getPatientPathway(patientPathwayId, { signal }),
+  });
+  const { refetch } = query;
+
+  const transitionMutation = useMutation({
+    mutationFn: (input: TransitionPatientStageInput) => transitionPatientStage(patientPathwayId, input),
+    // Aguarda o refetch para o formulário só liberar com a etapa nova já carregada.
+    onSuccess: () => refetch(),
+  });
+  const { mutateAsync } = transitionMutation;
 
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const row = await getPatientPathway(patientPathwayId);
-      setData(row);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [patientPathwayId, t]);
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const submitTransition = useCallback(
+    async (input: TransitionPatientStageInput) => {
+      await mutateAsync(input);
+    },
+    [mutateAsync],
+  );
 
-  async function submitTransition(input: TransitionPatientStageInput) {
-    setSubmitting(true);
-    try {
-      await transitionPatientStage(patientPathwayId, input);
-      await reload();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
+  const data = query.data ?? null;
   const nextOptions = useMemo(() => {
     if (!data?.pathwayVersion?.stages?.length) return [];
     const currentStageId = data.currentStage?.id;
@@ -55,9 +47,9 @@ export function usePatientPathway(patientPathwayId: string) {
 
   return {
     data,
-    loading,
-    error,
-    submitting,
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || t("loadError") : null,
+    submitting: transitionMutation.isPending,
     reload,
     submitTransition,
     nextOptions,

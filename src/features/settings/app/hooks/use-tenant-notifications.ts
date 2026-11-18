@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   getTenantNotificationSettings,
   updateTenantNotificationSettings,
@@ -21,51 +24,40 @@ const DEFAULT_PREFERENCES: TenantNotificationSettingsDto = {
 export function useTenantNotifications() {
   const t = useTranslations("settings.notifications");
   const { data: session, status: sessionStatus } = useSession();
-  const [preferences, setPreferences] = useState<TenantNotificationSettingsDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const canEdit =
     session?.user?.tenantRole === "tenant_admin" || session?.user?.globalRole === "super_admin";
 
+  const query = useQuery({
+    queryKey: settingsKeys.notifications,
+    queryFn: ({ signal }) => getTenantNotificationSettings({ signal }),
+    enabled: sessionStatus === "authenticated",
+    select: (response) => response.notifications,
+  });
+  const { refetch } = query;
+
+  const saveMutation = useMutation({
+    mutationFn: (input: TenantNotificationSettingsDto) => updateTenantNotificationSettings(input),
+    onSuccess: (response) => queryClient.setQueryData(settingsKeys.notifications, response),
+  });
+  const { mutateAsync: saveAsync } = saveMutation;
+
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getTenantNotificationSettings();
-      setPreferences(response.notifications);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setPreferences(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
-    void reload();
-  }, [reload, sessionStatus]);
-
-  const savePreferences = useCallback(async (input: TenantNotificationSettingsDto) => {
-    setSaving(true);
-    try {
-      const response = await updateTenantNotificationSettings(input);
-      setPreferences(response.notifications);
-      return response.notifications;
-    } finally {
-      setSaving(false);
-    }
-  }, []);
+    await refetch();
+  }, [refetch]);
+  const savePreferences = useCallback(
+    async (input: TenantNotificationSettingsDto) => (await saveAsync(input)).notifications,
+    [saveAsync],
+  );
 
   return {
     sessionStatus,
-    preferences: preferences ?? DEFAULT_PREFERENCES,
-    hasLoaded: preferences !== null,
-    loading,
-    error,
-    saving,
+    preferences: query.data ?? DEFAULT_PREFERENCES,
+    hasLoaded: query.data !== undefined,
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || t("loadError") : null,
+    saving: saveMutation.isPending,
     canEdit,
     reload,
     savePreferences,

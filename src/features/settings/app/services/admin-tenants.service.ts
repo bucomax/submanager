@@ -7,9 +7,12 @@ import type {
   PatchAdminTenantRequestBody,
   PatchAdminTenantResponseData,
 } from "@/types/api/admin-tenants-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
-export async function listAdminTenants(): Promise<ListAdminTenantsResponseData> {
-  const res = await apiClient.get<ApiEnvelope<ListAdminTenantsResponseData>>("/api/v1/admin/tenants");
+export async function listAdminTenants(options?: RequestOptions): Promise<ListAdminTenantsResponseData> {
+  const res = await apiClient.get<ApiEnvelope<ListAdminTenantsResponseData>>("/api/v1/admin/tenants", {
+    signal: options?.signal,
+  });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }

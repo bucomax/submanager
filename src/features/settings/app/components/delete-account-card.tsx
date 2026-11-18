@@ -18,7 +18,7 @@ import { Input } from "@/shared/components/ui/input";
 import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const LOGIN_CALLBACK = "/login";
 
@@ -32,16 +32,18 @@ export function DeleteAccountCard() {
   const expectedWord = t("confirmWord");
   const matches = confirmText.trim().toLowerCase() === expectedWord.trim().toLowerCase();
 
-  useEffect(() => {
-    if (!dialogOpen) {
+  /** Fechar sempre zera o formulário de confirmação. */
+  function changeDialogOpen(next: boolean) {
+    setDialogOpen(next);
+    if (!next) {
       setConfirmText("");
       setPending(false);
     }
-  }, [dialogOpen]);
+  }
 
   function handleDialogOpenChange(next: boolean) {
     if (pending && !next) return;
-    setDialogOpen(next);
+    changeDialogOpen(next);
   }
 
   async function handleConfirm() {
@@ -50,7 +52,7 @@ export function DeleteAccountCard() {
     try {
       await deleteCurrentAccount();
       toast.success(t("success"));
-      setDialogOpen(false);
+      changeDialogOpen(false);
       await signOut({ callbackUrl: LOGIN_CALLBACK });
     } catch {
       toast.error(t("genericError"));
@@ -61,7 +63,7 @@ export function DeleteAccountCard() {
 
   return (
     <>
-      <Card className="border-destructive/35 bg-red-50/90 text-foreground shadow-sm dark:border-destructive/50 dark:bg-red-950/35">
+      <Card className="border-destructive/35 bg-destructive-soft text-foreground shadow-sm dark:border-destructive/50">
         <CardHeader>
           <CardTitle className="text-destructive">{t("title")}</CardTitle>
           <CardDescription>{t("description")}</CardDescription>
@@ -90,7 +92,7 @@ export function DeleteAccountCard() {
                 variant="outline"
                 className="gap-1.5"
                 disabled={pending}
-                onClick={() => setDialogOpen(false)}
+                onClick={() => changeDialogOpen(false)}
               >
                 <X className="size-4 shrink-0" aria-hidden />
                 {t("cancel")}

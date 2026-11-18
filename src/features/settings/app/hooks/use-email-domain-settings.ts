@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   deleteEmailDomain,
   getEmailDomainSettings,
@@ -24,92 +27,82 @@ const EMPTY: TenantEmailDomainDto = {
   verifiedAt: null,
 };
 
+type EmailDomainResponse = { emailDomain: TenantEmailDomainDto };
+
+type PatchInput = {
+  emailOutboundMode?: "platform" | "smtp" | "resend_domain";
+  emailEnabled?: boolean;
+  fromName?: string;
+  fromAddress?: string;
+};
+
 export function useEmailDomainSettings() {
   const t = useTranslations("settings.email");
   const { data: session, status: sessionStatus } = useSession();
-  const [data, setData] = useState<TenantEmailDomainDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
 
   const canEdit =
     session?.user?.tenantRole === "tenant_admin" || session?.user?.globalRole === "super_admin";
 
+  const query = useQuery({
+    queryKey: settingsKeys.emailDomain,
+    queryFn: ({ signal }) => getEmailDomainSettings({ signal }),
+    enabled: sessionStatus === "authenticated",
+    select: (response) => response.emailDomain,
+  });
+  const { refetch } = query;
+
+  const store = (response: EmailDomainResponse) =>
+    queryClient.setQueryData(settingsKeys.emailDomain, response);
+
+  const setupMutation = useMutation({
+    mutationFn: postSetupEmailDomain,
+    onSuccess: store,
+  });
+  const verifyMutation = useMutation({ mutationFn: postVerifyEmailDomain, onSuccess: store });
+  const removeMutation = useMutation({ mutationFn: deleteEmailDomain, onSuccess: store });
+  const patchMutation = useMutation({
+    mutationFn: (input: PatchInput) => patchEmailDomain(input),
+    onSuccess: store,
+  });
+  const { mutateAsync: setupAsync } = setupMutation;
+  const { mutateAsync: verifyAsync } = verifyMutation;
+  const { mutateAsync: removeAsync } = removeMutation;
+  const { mutateAsync: patchAsync } = patchMutation;
+
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await getEmailDomainSettings();
-      setData(r.emailDomain);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
-    void reload();
-  }, [reload, sessionStatus]);
-
+    await refetch();
+  }, [refetch]);
   const setup = useCallback(
     async (input: { domainName: string; fromName: string; localPart: string }) => {
-      setBusy(true);
-      try {
-        const r = await postSetupEmailDomain(input);
-        setData(r.emailDomain);
-      } finally {
-        setBusy(false);
-      }
+      await setupAsync(input);
     },
-    [],
+    [setupAsync],
   );
-
   const verify = useCallback(async () => {
-    setBusy(true);
-    try {
-      const r = await postVerifyEmailDomain();
-      setData(r.emailDomain);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
+    await verifyAsync();
+  }, [verifyAsync]);
   const remove = useCallback(async () => {
-    setBusy(true);
-    try {
-      const r = await deleteEmailDomain();
-      setData(r.emailDomain);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
+    await removeAsync();
+  }, [removeAsync]);
   const patch = useCallback(
-    async (input: {
-      emailOutboundMode?: "platform" | "smtp" | "resend_domain";
-      emailEnabled?: boolean;
-      fromName?: string;
-      fromAddress?: string;
-    }) => {
-    setBusy(true);
-    try {
-      const r = await patchEmailDomain(input);
-      setData(r.emailDomain);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+    async (input: PatchInput) => {
+      await patchAsync(input);
+    },
+    [patchAsync],
+  );
 
   return {
     sessionStatus,
-    emailDomain: data ?? EMPTY,
-    hasLoaded: data !== null,
-    loading,
-    error,
-    busy,
+    emailDomain: query.data ?? EMPTY,
+    hasLoaded: query.data !== undefined,
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || t("loadError") : null,
+    busy:
+      setupMutation.isPending ||
+      verifyMutation.isPending ||
+      removeMutation.isPending ||
+      patchMutation.isPending,
     canEdit,
     reload,
     setup,

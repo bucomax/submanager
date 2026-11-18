@@ -1,11 +1,15 @@
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
 import type { LeadNoteDto, LeadNotesResponseData, UpsertLeadNoteRequestBody } from "@/types/api/contacts-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
-export async function listLeadNotes(conversationId: string): Promise<LeadNoteDto[]> {
+export async function listLeadNotes(
+  conversationId: string,
+  options?: RequestOptions,
+): Promise<LeadNoteDto[]> {
   const res = await apiClient.get<ApiEnvelope<LeadNotesResponseData>>(
     `/api/v1/tenant/conversations/${conversationId}/notes`,
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);

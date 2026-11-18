@@ -1,10 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
-import { notifyActiveAppsMenuInvalidated } from "@/features/apps/app/lib/invalidate-active-apps";
-import { getAdminApps, deleteApp, publishApp } from "@/features/apps/app/services/admin-apps.service";
-import { activateApp, deactivateApp, getActiveApps } from "@/features/apps/app/services/apps.service";
+import { useState } from "react";
+import { useAdminApps } from "@/features/apps/app/hooks/use-admin-apps";
 import { AdminAppStorePreviewDialog } from "@/features/apps/app/components/admin-app-store-preview-dialog";
 import { AppIcon } from "@/features/apps/app/components/app-icon";
 import type { AppDto } from "@/types/api/apps-v1";
@@ -25,31 +23,13 @@ const AdminAppWizardDialog = dynamic(
 export function AdminAppList() {
   const t = useTranslations("apps.admin");
   const tCat = useTranslations("apps.catalog.categories");
-  const [apps, setApps] = useState<AppDto[]>([]);
-  const [activeSlugs, setActiveSlugs] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [togglingAppId, setTogglingAppId] = useState<string | null>(null);
+  const { apps, activeSlugs, loading, togglingAppId, togglePublish, toggleActivation, remove, onSaved } =
+    useAdminApps();
 
   // Wizard dialog state
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<AppDto | null>(null);
   const [previewApp, setPreviewApp] = useState<AppDto | null>(null);
-
-  const refresh = useCallback(async () => {
-    try {
-      const [data, active] = await Promise.all([getAdminApps(), getActiveApps()]);
-      setApps(data);
-      setActiveSlugs(new Set(active.map((a) => a.slug)));
-    } catch {
-      // apiClient trata toast
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   function openCreate() {
     setEditingApp(null);
@@ -62,30 +42,17 @@ export function AdminAppList() {
   }
 
   async function handleTogglePublish(app: AppDto) {
-    await publishApp(app.id, !app.isPublished);
-    void refresh();
+    await togglePublish(app);
   }
 
   async function handleToggleActivate(app: AppDto) {
-    setTogglingAppId(app.id);
-    try {
-      if (activeSlugs.has(app.slug)) {
-        await deactivateApp(app.id);
-      } else {
-        await activateApp(app.id);
-      }
-      notifyActiveAppsMenuInvalidated();
-      await refresh();
-    } finally {
-      setTogglingAppId(null);
-    }
+    await toggleActivation(app);
   }
 
   async function handleDelete(app: AppDto) {
     if (!window.confirm(t("deleteConfirm"))) return;
     try {
-      await deleteApp(app.id);
-      void refresh();
+      await remove(app);
     } catch {
       // apiClient trata toast
     }
@@ -134,7 +101,7 @@ export function AdminAppList() {
                         {tCat(app.category)}
                       </Badge>
                       {activeSlugs.has(app.slug) && (
-                        <Badge variant="outline" className="border-emerald-700 text-xs text-emerald-600">
+                        <Badge variant="outline" className="border-success text-xs text-success">
                           {t("active")}
                         </Badge>
                       )}
@@ -264,10 +231,7 @@ export function AdminAppList() {
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         editApp={editingApp}
-        onSaved={() => {
-          notifyActiveAppsMenuInvalidated();
-          void refresh();
-        }}
+        onSaved={onSaved}
       />
 
       <AdminAppStorePreviewDialog

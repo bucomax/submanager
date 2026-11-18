@@ -8,11 +8,14 @@ import type {
   PostSetupTenantEmailDomainResponseData,
   PostVerifyTenantEmailDomainResponseData,
 } from "@/types/api/email-domain-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
-export async function getEmailDomainSettings(): Promise<GetTenantEmailDomainResponseData> {
+export async function getEmailDomainSettings(
+  options?: RequestOptions,
+): Promise<GetTenantEmailDomainResponseData> {
   const res = await apiClient.get<ApiEnvelope<GetTenantEmailDomainResponseData>>(
     "/api/v1/tenant/email-domain",
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);

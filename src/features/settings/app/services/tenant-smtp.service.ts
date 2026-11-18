@@ -6,10 +6,12 @@ import type {
   PostTestTenantSmtpResponse,
 } from "@/types/api/tenant-smtp-v1";
 import type { PatchTenantSmtpBody } from "@/lib/validators/tenant-smtp";
+import type { RequestOptions } from "@/types/api/request-options";
 
-export async function getTenantSmtpSettings(): Promise<GetTenantSmtpResponse> {
+export async function getTenantSmtpSettings(options?: RequestOptions): Promise<GetTenantSmtpResponse> {
   const res = await apiClient.get<ApiEnvelope<GetTenantSmtpResponse>>("/api/v1/tenant/email-smtp", {
     skipErrorToast: true,
+    signal: options?.signal,
   });
   if (!res.data.success) {
     throw new Error(res.data.error.message);

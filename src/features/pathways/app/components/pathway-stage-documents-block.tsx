@@ -1,26 +1,18 @@
 "use client";
 
-import { requestFileDownloadPresign } from "@/features/clients/app/services/clients.service";
-import { uploadTenantLibraryFile } from "@/features/pathways/app/services/pathway-tenant-file-upload.service";
+import { useStageDocuments } from "@/features/pathways/app/hooks/use-stage-documents";
 import { normalizeStageDocumentDraftItems } from "@/domain/pathway/graph-normalizer";
 import { cn } from "@/lib/utils";
-import { toast } from "@/lib/toast";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { ExternalLink, FileText, Info, Loader2, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useRef, useState } from "react";
+import { useRef } from "react";
 
 type PathwayStageDocumentsBlockProps = {
   stageDocuments: unknown;
   onDocumentsAdded: (items: { fileAssetId: string; fileName: string; mimeType: string }[]) => void;
   onRemove: (fileAssetId: string) => void;
-};
-
-type PendingRow = {
-  tempId: string;
-  fileName: string;
-  progress: number;
 };
 
 export function PathwayStageDocumentsBlock({
@@ -30,71 +22,10 @@ export function PathwayStageDocumentsBlock({
 }: PathwayStageDocumentsBlockProps) {
   const t = useTranslations("pathways.editor");
   const inputRef = useRef<HTMLInputElement>(null);
-  const [pendingRows, setPendingRows] = useState<PendingRow[]>([]);
-  const [openingId, setOpeningId] = useState<string | null>(null);
+  const { pendingRows, openingId, openFile, uploadFiles } = useStageDocuments({ onDocumentsAdded });
   const docs = normalizeStageDocumentDraftItems(stageDocuments);
 
   const anyUploading = pendingRows.length > 0;
-
-  const updatePendingProgress = useCallback((tempId: string, progress: number) => {
-    setPendingRows((rows) =>
-      rows.map((r) => (r.tempId === tempId ? { ...r, progress } : r)),
-    );
-  }, []);
-
-  const handleOpenFile = useCallback(
-    async (fileAssetId: string) => {
-      setOpeningId(fileAssetId);
-      try {
-        const { downloadUrl } = await requestFileDownloadPresign({ fileId: fileAssetId });
-        window.open(downloadUrl, "_blank", "noopener,noreferrer");
-      } catch {
-        /* erro: toast global no apiClient */
-      } finally {
-        setOpeningId(null);
-      }
-    },
-    [],
-  );
-
-  const handleFiles = useCallback(
-    async (list: FileList | null) => {
-      if (!list?.length) return;
-      const files = Array.from(list);
-      const queued = files.map((file) => ({
-        tempId: crypto.randomUUID(),
-        file,
-        fileName: file.name,
-      }));
-
-      setPendingRows((rows) => [
-        ...rows,
-        ...queued.map((q) => ({ tempId: q.tempId, fileName: q.fileName, progress: 0 })),
-      ]);
-
-      let successCount = 0;
-
-      await Promise.all(
-        queued.map(async ({ tempId, file }) => {
-          try {
-            const f = await uploadTenantLibraryFile(file, (pct) => updatePendingProgress(tempId, pct));
-            onDocumentsAdded([{ fileAssetId: f.id, fileName: f.fileName, mimeType: f.mimeType }]);
-            successCount += 1;
-            setPendingRows((rows) => rows.filter((r) => r.tempId !== tempId));
-          } catch (e) {
-            setPendingRows((rows) => rows.filter((r) => r.tempId !== tempId));
-            toast.error(e instanceof Error ? e.message : t("stageDocumentsUploadError"));
-          }
-        }),
-      );
-
-      if (successCount > 0) {
-        toast.success(t("stageDocumentsUploadSuccess", { count: successCount }));
-      }
-      if (inputRef.current) inputRef.current.value = "";
-    },
-    [onDocumentsAdded, t, updatePendingProgress],
-  );
 
   return (
     <div className="border-border/55 w-full min-w-0 space-y-3 border-t pt-5">
@@ -104,7 +35,10 @@ export function PathwayStageDocumentsBlock({
         className="sr-only"
         multiple
         accept="application/pdf,image/*,.pdf"
-        onChange={(e) => void handleFiles(e.target.files)}
+        onChange={(e) => {
+          void uploadFiles(e.target.files);
+          e.target.value = "";
+        }}
       />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="text-foreground text-sm font-semibold tracking-tight">{t("stageDocumentsTitle")}</p>
@@ -180,7 +114,7 @@ export function PathwayStageDocumentsBlock({
                   size="icon-sm"
                   className="text-muted-foreground hover:text-foreground"
                   disabled={openingId === d.fileAssetId}
-                  onClick={() => void handleOpenFile(d.fileAssetId)}
+                  onClick={() => void openFile(d.fileAssetId)}
                   aria-label={t("openStageDocumentAria")}
                 >
                   {openingId === d.fileAssetId ? (

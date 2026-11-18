@@ -4,11 +4,7 @@ import { GripVertical, ImagePlus, Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useRef, useState } from "react";
 
-import {
-  uploadAppScreenshot,
-  removeAppScreenshot,
-  reorderAppScreenshots,
-} from "@/features/apps/app/services/admin-app-upload.service";
+import { useAppScreenshotMutations } from "@/features/apps/app/hooks/use-app-screenshot-mutations";
 import type { AppScreenshotDto } from "@/types/api/apps-v1";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -56,8 +52,7 @@ export function AppScreenshotsUpload({
   onLocalScreenshotsChange,
 }: Props) {
   const tw = useTranslations("apps.admin.wizard");
-  const [uploading, setUploading] = useState(false);
-  const [removingId, setRemovingId] = useState<string | null>(null);
+  const { uploadFiles, uploading, remove, removingId, reorder } = useAppScreenshotMutations();
   const [dragOverZone, setDragOverZone] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,19 +101,14 @@ export function AppScreenshotsUpload({
 
       if (!appId) return;
 
-      setUploading(true);
       try {
-        for (const file of toUpload) {
-          await uploadAppScreenshot(appId, file);
-        }
+        await uploadFiles({ appId, files: toUpload });
         onChanged();
       } catch {
         // apiClient handles toast
-      } finally {
-        setUploading(false);
       }
     },
-    [appId, isCreateMode, localScreenshots, onLocalScreenshotsChange, onChanged, currentCount, tw],
+    [appId, isCreateMode, localScreenshots, onLocalScreenshotsChange, onChanged, currentCount, tw, uploadFiles],
   );
 
   // -- Remove --
@@ -134,17 +124,14 @@ export function AppScreenshotsUpload({
 
       if (!appId) return;
 
-      setRemovingId(screenshotId);
       try {
-        await removeAppScreenshot(appId, screenshotId);
+        await remove({ appId, screenshotId });
         onChanged();
       } catch {
         // apiClient handles toast
-      } finally {
-        setRemovingId(null);
       }
     },
-    [appId, isCreateMode, localScreenshots, onLocalScreenshotsChange, onChanged],
+    [appId, isCreateMode, localScreenshots, onLocalScreenshotsChange, onChanged, remove],
   );
 
   // -- Move (simple up/down for now — drag & drop would be a future enhancement) --
@@ -165,13 +152,13 @@ export function AppScreenshotsUpload({
       const reordered = [...screenshots];
       [reordered[index - 1], reordered[index]] = [reordered[index], reordered[index - 1]];
       try {
-        await reorderAppScreenshots(appId, reordered.map((s) => s.id));
+        await reorder({ appId, order: reordered.map((s) => s.id) });
         onChanged();
       } catch {
         // apiClient handles toast
       }
     },
-    [appId, isCreateMode, localScreenshots, onLocalScreenshotsChange, screenshots, onChanged],
+    [appId, isCreateMode, localScreenshots, onLocalScreenshotsChange, screenshots, onChanged, reorder],
   );
 
   // -- Items to render --

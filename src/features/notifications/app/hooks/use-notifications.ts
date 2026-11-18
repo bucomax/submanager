@@ -1,222 +1,168 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import type { NotificationDto } from "@/features/notifications/app/types";
+import { notificationKeys } from "@/features/notifications/app/hooks/query-keys";
+import {
+  useNotificationStream,
+  warnNotificationFailure,
+} from "@/features/notifications/app/hooks/use-notification-stream";
 import {
   getNotifications,
   getUnreadCount,
   markAllRead,
   markNotificationRead,
 } from "@/features/notifications/app/services/notifications.service";
+import type { NotificationDto } from "@/features/notifications/app/types";
 import { alertUserOfNotification } from "@/features/notifications/app/utils/notification-alert";
 import { toast } from "@/lib/toast";
+import type { NotificationsListResponseData } from "@/types/api/notification-v1";
 
 const PAGE_SIZE = 20;
-const SSE_RECONNECT_MS = 5_000;
 const POLL_INTERVAL_MS = 30_000;
-const MAX_SSE_FAILURES = 3;
 
-/** Falhas aqui não devem interromper a UI (sino é secundário), mas não podem sumir em silêncio. */
-function warnNotificationFailure(scope: string, err: unknown): void {
-  if (process.env.NODE_ENV !== "production") {
-    console.warn(`[notifications] ${scope} failed:`, err);
-  }
+type NotificationPages = InfiniteData<NotificationsListResponseData, string | undefined>;
+
+/** Aplica `update` a cada notificação em cache (as páginas já carregadas). */
+function mapCachedItems(
+  pages: NotificationPages | undefined,
+  update: (items: NotificationDto[]) => NotificationDto[],
+): NotificationPages | undefined {
+  return pages && { ...pages, pages: pages.pages.map((page) => ({ ...page, data: update(page.data) })) };
 }
 
 export function useNotifications() {
   const t = useTranslations("notifications.bell");
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [items, setItems] = useState<NotificationDto[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [markAllReadPending, setMarkAllReadPending] = useState(false);
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sseFailuresRef = useRef(0);
-  const usingPollingRef = useRef(false);
 
-  const prevUnreadRef = useRef(-1);
-  /** Última versão de `connectSSE` (reconexão agendada a partir do próprio callback). */
-  const connectSSERef = useRef<() => void>(() => {});
+  const prependToCache = useCallback(
+    (notification: NotificationDto, dedupe: boolean) =>
+      queryClient.setQueryData<NotificationPages>(notificationKeys.list, (pages) => {
+        if (!pages || pages.pages.length === 0) return pages;
+        const [first, ...rest] = pages.pages;
+        if (dedupe && pages.pages.some((p) => p.data.some((n) => n.id === notification.id))) return pages;
+        return { ...pages, pages: [{ ...first, data: [notification, ...first.data] }, ...rest] };
+      }),
+    [queryClient],
+  );
 
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const count = await getUnreadCount();
-      const prev = prevUnreadRef.current;
-      prevUnreadRef.current = count;
-      setUnreadCount(count);
+  const { polling } = useNotificationStream({
+    onUnreadCount: (count) => queryClient.setQueryData(notificationKeys.unreadCount, count),
+    onNotification: (notification) => {
+      queryClient.setQueryData<number>(notificationKeys.unreadCount, (prev) => (prev ?? 0) + 1);
+      prependToCache(notification, false);
+      alertUserOfNotification(notification);
+    },
+  });
 
-      // Se o count aumentou durante polling (ignora a primeira carga com prev === -1)
-      if (prev >= 0 && count > prev) {
+  // Contagem: no modo SSE ela chega por eventos (setQueryData); no polling a query busca no intervalo.
+  const unreadQuery = useQuery({
+    queryKey: notificationKeys.unreadCount,
+    queryFn: async ({ signal }) => {
+      const previous = queryClient.getQueryData<number>(notificationKeys.unreadCount);
+      const count = await getUnreadCount({ signal });
+      // Contagem subiu durante o polling (ignora a primeira carga): busca e avisa a mais nova.
+      if (previous !== undefined && count > previous) {
         try {
-          const result = await getNotifications({ limit: 1 });
+          const result = await getNotifications({ limit: 1 }, { signal });
           const newest = result.data[0];
           if (newest && !newest.readAt) {
-            setItems((current) => {
-              if (current.some((n) => n.id === newest.id)) return current;
-              return [newest, ...current];
-            });
+            prependToCache(newest, true);
             alertUserOfNotification(newest);
           }
         } catch (err) {
           warnNotificationFailure("fetch newest notification", err);
         }
       }
-    } catch (err) {
-      warnNotificationFailure("fetch unread count", err);
-    }
-  }, []);
+      return count;
+    },
+    enabled: polling,
+    refetchInterval: polling ? POLL_INTERVAL_MS : false,
+    staleTime: 0,
+  });
+  const unreadCount = unreadQuery.data ?? 0;
 
-  const startPolling = useCallback(() => {
-    if (pollTimerRef.current) return;
-    usingPollingRef.current = true;
-    void fetchUnreadCount();
-    pollTimerRef.current = setInterval(() => {
-      void fetchUnreadCount();
-    }, POLL_INTERVAL_MS);
-  }, [fetchUnreadCount]);
-
-  const stopPolling = useCallback(() => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-    usingPollingRef.current = false;
-  }, []);
-
-  const connectSSE = useCallback(() => {
-    if (eventSourceRef.current) return;
-    if (usingPollingRef.current) return;
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
-    const es = new EventSource(`${baseUrl}/api/v1/notifications/stream`, {
-      withCredentials: true,
-    });
-
-    es.addEventListener("unread-count", (e) => {
-      try {
-        const data = JSON.parse(e.data) as { count: number };
-        setUnreadCount(data.count);
-        prevUnreadRef.current = data.count;
-        // Não zera `sseFailuresRef` aqui: o servidor envia este evento a cada (re)conexão,
-        // mesmo quando o stream cai logo em seguida.
-      } catch (err) {
-        warnNotificationFailure("parse unread-count event", err);
-      }
-    });
-
-    // Servidor sem tempo real (ex.: Vercel/modo inline): troca para polling imediatamente.
-    es.addEventListener("mode", (e) => {
-      try {
-        const data = JSON.parse(e.data) as { mode?: string };
-        if (data.mode !== "polling") return;
-      } catch (err) {
-        warnNotificationFailure("parse mode event", err);
-        return;
-      }
-      es.close();
-      eventSourceRef.current = null;
-      startPolling();
-    });
-
-    es.addEventListener("notification", (e) => {
-      try {
-        const notification = JSON.parse(e.data) as NotificationDto;
-        setUnreadCount((prev) => prev + 1);
-        setItems((prev) => [notification, ...prev]);
-        sseFailuresRef.current = 0;
-        alertUserOfNotification(notification);
-      } catch (err) {
-        warnNotificationFailure("parse notification event", err);
-      }
-    });
-
-    es.onerror = () => {
-      es.close();
-      eventSourceRef.current = null;
-      sseFailuresRef.current += 1;
-
-      if (sseFailuresRef.current >= MAX_SSE_FAILURES) {
-        startPolling();
-        return;
-      }
-
-      reconnectTimerRef.current = setTimeout(() => {
-        reconnectTimerRef.current = null;
-        connectSSERef.current();
-      }, SSE_RECONNECT_MS);
-    };
-
-    eventSourceRef.current = es;
-  }, [startPolling]);
-
-  useEffect(() => {
-    connectSSERef.current = connectSSE;
-  }, [connectSSE]);
-
-  useEffect(() => {
-    connectSSE();
-    return () => {
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      stopPolling();
-    };
-  }, [connectSSE, stopPolling]);
-
-  const loadItems = useCallback(async (cursor?: string) => {
-    setLoading(true);
-    try {
-      const result = await getNotifications({ limit: PAGE_SIZE, cursor });
-      if (cursor) {
-        setItems((prev) => [...prev, ...result.data]);
-      } else {
-        setItems(result.data);
-      }
-      setNextCursor(result.nextCursor);
-    } catch (err) {
-      warnNotificationFailure("load notifications", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Lista: só carrega com o painel aberto; abrir sempre recomeça da primeira página.
+  const listQuery = useInfiniteQuery({
+    queryKey: notificationKeys.list,
+    queryFn: ({ pageParam, signal }) => getNotifications({ limit: PAGE_SIZE, cursor: pageParam }, { signal }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: isOpen,
+    staleTime: 0,
+  });
+  const { fetchNextPage, hasNextPage, isFetching } = listQuery;
+  const items = useMemo(() => listQuery.data?.pages.flatMap((page) => page.data) ?? [], [listQuery.data]);
 
   const open = useCallback(() => {
+    queryClient.setQueryData<NotificationPages>(notificationKeys.list, (pages) =>
+      pages && { pages: pages.pages.slice(0, 1), pageParams: pages.pageParams.slice(0, 1) },
+    );
     setIsOpen(true);
-    void loadItems();
-  }, [loadItems]);
+  }, [queryClient]);
 
   const close = useCallback(() => {
     setIsOpen(false);
   }, []);
 
   const loadMore = useCallback(() => {
-    if (nextCursor && !loading) {
-      void loadItems(nextCursor);
+    if (hasNextPage && !isFetching) {
+      void fetchNextPage().catch((err) => warnNotificationFailure("load notifications", err));
     }
-  }, [nextCursor, loading, loadItems]);
+  }, [hasNextPage, isFetching, fetchNextPage]);
 
-  const markRead = useCallback(
-    async (id: string) => {
-      setItems((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+  /** Estado real do servidor após falha de uma mutação otimista (a contagem é rebuscada mesmo fora do polling). */
+  const { refetch: refetchUnread } = unreadQuery;
+  const resync = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: notificationKeys.list });
+    void refetchUnread();
+  }, [queryClient, refetchUnread]);
+
+  const markReadMutation = useMutation({
+    mutationFn: markNotificationRead,
+    onMutate: (id) => {
+      const readAt = new Date().toISOString();
+      queryClient.setQueryData<NotificationPages>(notificationKeys.list, (pages) =>
+        mapCachedItems(pages, (list) => list.map((n) => (n.id === id ? { ...n, readAt } : n))),
       );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-      try {
-        await markNotificationRead(id);
-      } catch {
-        void loadItems();
-        void fetchUnreadCount();
-      }
+      queryClient.setQueryData<number>(notificationKeys.unreadCount, (prev) => Math.max(0, (prev ?? 0) - 1));
     },
-    [loadItems, fetchUnreadCount],
-  );
+    onError: resync,
+  });
+  const { mutate: markReadMutate } = markReadMutation;
+  const markRead = useCallback(async (id: string) => markReadMutate(id), [markReadMutate]);
+
+  const markAllMutation = useMutation({
+    mutationFn: markAllRead,
+    onMutate: () => {
+      const snapshot = {
+        list: queryClient.getQueryData<NotificationPages>(notificationKeys.list),
+        count: queryClient.getQueryData<number>(notificationKeys.unreadCount),
+      };
+      const readAt = new Date().toISOString();
+      queryClient.setQueryData<NotificationPages>(notificationKeys.list, (pages) =>
+        mapCachedItems(pages, (list) => list.map((n) => (n.readAt ? n : { ...n, readAt }))),
+      );
+      queryClient.setQueryData<number>(notificationKeys.unreadCount, 0);
+      return snapshot;
+    },
+    onSuccess: () => toast.success(t("markAllReadSuccess")),
+    onError: (_error, _vars, snapshot) => {
+      queryClient.setQueryData(notificationKeys.list, snapshot?.list);
+      queryClient.setQueryData(notificationKeys.unreadCount, snapshot?.count);
+      resync();
+      toast.error(t("markAllReadError"));
+    },
+  });
+  const { mutate: markAllMutate } = markAllMutation;
 
   const canMarkAllRead = useMemo(
     () => unreadCount > 0 || items.some((n) => !n.readAt),
@@ -224,45 +170,18 @@ export function useNotifications() {
   );
 
   const markAllAsRead = useCallback(async () => {
-    const hasUnread = unreadCount > 0 || items.some((n) => !n.readAt);
-    if (!hasUnread || markAllReadPending) return;
-
-    const prevItems = items.map((n) => ({ ...n }));
-    const prevCount = unreadCount;
-    setItems((prev) =>
-      prev.map((n) => (n.readAt ? n : { ...n, readAt: new Date().toISOString() })),
-    );
-    setUnreadCount(0);
-    setMarkAllReadPending(true);
-    try {
-      await markAllRead();
-      toast.success(t("markAllReadSuccess"));
-    } catch {
-      setItems(prevItems);
-      setUnreadCount(prevCount);
-      void loadItems();
-      void fetchUnreadCount();
-      toast.error(t("markAllReadError"));
-    } finally {
-      setMarkAllReadPending(false);
-    }
-  }, [
-    unreadCount,
-    items,
-    markAllReadPending,
-    loadItems,
-    fetchUnreadCount,
-    t,
-  ]);
+    if (!canMarkAllRead || markAllMutation.isPending) return;
+    markAllMutate();
+  }, [canMarkAllRead, markAllMutation.isPending, markAllMutate]);
 
   return {
     unreadCount,
     items,
-    loading,
+    loading: isFetching,
     isOpen,
-    hasMore: nextCursor !== null,
+    hasMore: Boolean(hasNextPage),
     canMarkAllRead,
-    markAllReadPending,
+    markAllReadPending: markAllMutation.isPending,
     open,
     close,
     loadMore,

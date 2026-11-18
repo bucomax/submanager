@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
+import { agendaKeys } from "@/features/agenda/app/hooks/query-keys";
 import { listAgendaEvents } from "@/features/agenda/app/services/agenda.service";
-import type { AgendaEventDto } from "@/types/api/agenda-v1";
 
 export type AgendaMode = "semana" | "mes";
 
@@ -34,9 +36,6 @@ export function useAgendaEvents() {
   const [mode, setMode] = useState<AgendaMode>("semana");
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
-  const [events, setEvents] = useState<AgendaEventDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const { from, to } = useMemo(() => {
     const now = new Date();
@@ -47,22 +46,14 @@ export function useAgendaEvents() {
     return { from: startOfMonth(now, monthOffset), to: endOfMonth(now, monthOffset) };
   }, [mode, weekOffset, monthOffset]);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await listAgendaEvents(from.toISOString(), to.toISOString());
-      setEvents(result);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "load_error");
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const fromIso = from.toISOString();
+  const toIso = to.toISOString();
+  const query = useQuery({
+    queryKey: agendaKeys.range(fromIso, toIso),
+    queryFn: ({ signal }) => listAgendaEvents(fromIso, toIso, { signal }),
+  });
+  const { refetch } = query;
+  const error = query.error ? (query.error.message || "load_error") : null;
 
   function goToday() {
     setWeekOffset(0);
@@ -79,5 +70,17 @@ export function useAgendaEvents() {
     else setMonthOffset((o) => o + 1);
   }
 
-  return { mode, setMode, from, to, events, loading, error, refresh, goToday, goPrevious, goNext };
+  return {
+    mode,
+    setMode,
+    from,
+    to,
+    events: query.data ?? [],
+    loading: isQueryLoading(query),
+    error,
+    refresh: refetch,
+    goToday,
+    goPrevious,
+    goNext,
+  };
 }

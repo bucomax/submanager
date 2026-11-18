@@ -5,12 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 
-import {
-  type ProfileAvatarStorageState,
-  ProfileAvatarValidationError,
-  fetchProfileAvatarStorageState,
-  uploadProfileAvatarToStorage,
-} from "@/features/settings/app/services/profile-avatar-storage.service";
+import { useProfileAvatarUpload } from "@/features/settings/app/hooks/use-profile-avatar-upload";
 import type { ProfileFormValues } from "@/features/settings/app/utils/schemas";
 import { toast } from "@/lib/toast";
 import { USER_PROFILE_IMAGE_GCS_PREFIX } from "@/lib/utils/user-profile-image-ref";
@@ -39,59 +34,33 @@ export function AccountProfileImageField({ displayUrl }: AccountProfileImageFiel
   const { setValue, watch } = useFormContext<ProfileFormValues>();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [storageState, setStorageState] = useState<ProfileAvatarStorageState | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const { storageState, uploading, upload } = useProfileAvatarUpload();
   const [dragOver, setDragOver] = useState(false);
-  const [blobPreview, setBlobPreview] = useState<string | null>(null);
+  // Preview local vale só para o `displayUrl` em que foi criado; ao salvar (novo displayUrl) some sem efeito.
+  const [preview, setPreview] = useState<{ src: string; displayUrl: string | null } | null>(null);
+  const blobPreview = preview && preview.displayUrl === displayUrl ? preview.src : null;
 
   const storedImage = watch("image")?.trim() ?? "";
 
+  const previewSrc = preview?.src;
   useEffect(() => {
-    setBlobPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-  }, [displayUrl]);
+    if (!previewSrc) return;
+    return () => URL.revokeObjectURL(previewSrc);
+  }, [previewSrc]);
 
   const avatarSrc =
     blobPreview ??
     (storedImage.startsWith(USER_PROFILE_IMAGE_GCS_PREFIX) ? displayUrl : storedImage || null);
 
-  useEffect(() => {
-    void fetchProfileAvatarStorageState().then(setStorageState);
-  }, []);
-
   const handleFile = useCallback(
     async (file: File | undefined) => {
       if (!file) return;
-      if (storageState === "unavailable") {
-        toast.error(t("imageStorageUnavailable"));
-        return;
-      }
-      setUploading(true);
-      try {
-        const url = await uploadProfileAvatarToStorage(file);
-        setBlobPreview((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(file);
-        });
-        setValue("image", url, { shouldDirty: true, shouldValidate: true });
-        toast.success(t("imageUploadSuccess"));
-      } catch (e) {
-        if (e instanceof ProfileAvatarValidationError) {
-          if (e.code === "INVALID_TYPE") {
-            toast.error(t("imageInvalidType"));
-          } else if (e.code === "TOO_LARGE") {
-            toast.error(t("imageTooLarge", { maxMb: 5 }));
-          }
-        } else {
-          toast.error(e instanceof Error ? e.message : t("imageUploadError"));
-        }
-      } finally {
-        setUploading(false);
-      }
+      const url = await upload(file);
+      if (url === null) return;
+      setPreview({ src: URL.createObjectURL(file), displayUrl });
+      setValue("image", url, { shouldDirty: true, shouldValidate: true });
     },
-    [setValue, storageState, t],
+    [displayUrl, setValue, upload],
   );
 
   function openFilePicker() {

@@ -1,23 +1,26 @@
 "use client";
 
+import { useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { pathwayKeys } from "@/features/pathways/app/hooks/query-keys";
 import { postPathway } from "@/features/pathways/app/services/pathways.service";
 import type { CreatePathwayInput, CreatedPathway } from "@/features/pathways/app/types/pathways";
-import { useState } from "react";
 
 export function useCreatePathway() {
-  const [creating, setCreating] = useState(false);
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: postPathway,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: pathwayKeys.list }),
+  });
+  const { mutateAsync } = mutation;
 
-  async function createPathway(input: CreatePathwayInput): Promise<CreatedPathway> {
-    setCreating(true);
-    try {
-      return await postPathway(input);
-    } finally {
-      setCreating(false);
-    }
-  }
+  const createPathway = useCallback(
+    (input: CreatePathwayInput): Promise<CreatedPathway> => mutateAsync(input),
+    [mutateAsync],
+  );
 
   return {
-    creating,
+    creating: mutation.isPending,
     createPathway,
   };
 }

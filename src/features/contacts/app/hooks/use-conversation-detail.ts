@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
+import { contactKeys } from "@/features/contacts/app/hooks/query-keys";
 import { getConversationDetail, sendMessage as sendMessageRequest } from "@/features/contacts/app/services/contacts.service";
 import {
   createLeadNote,
@@ -23,51 +26,49 @@ let optimisticIdCounter = 0;
  * usuário escolher uma conversa), sem violar as regras de hooks do React.
  */
 export function useConversationDetail(conversationId: string) {
-  const [data, setData] = useState<ConversationDetailResponseData | null>(null);
-  const [loading, setLoading] = useState(Boolean(conversationId));
-  const [error, setError] = useState<string | null>(null);
-  const [notes, setNotes] = useState<LeadNoteDto[]>([]);
-  const [notesLoading, setNotesLoading] = useState(Boolean(conversationId));
+  const queryClient = useQueryClient();
+  const enabled = Boolean(conversationId);
+  const detailKey = contactKeys.conversationDetail(conversationId);
+  const notesKey = contactKeys.leadNotes(conversationId);
+
+  // Conversa viva: staleTime 0 para rebuscar mensagens novas ao reabrir.
+  const detailQuery = useQuery({
+    queryKey: detailKey,
+    queryFn: ({ signal }) => getConversationDetail(conversationId, { signal }),
+    enabled,
+    staleTime: 0,
+  });
+  const notesQuery = useQuery({
+    queryKey: notesKey,
+    queryFn: ({ signal }) => listLeadNotes(conversationId, { signal }),
+    enabled,
+    staleTime: 0,
+  });
+  const { refetch: refetchDetail } = detailQuery;
+  const { refetch: refetchNotes } = notesQuery;
 
   const refresh = useCallback(async () => {
-    if (!conversationId) return;
-    setLoading(true);
-    try {
-      const result = await getConversationDetail(conversationId);
-      setData(result);
-      setError(null);
-    } catch (e) {
-      setData(null);
-      setError(e instanceof Error ? e.message : "load_error");
-    } finally {
-      setLoading(false);
-    }
-  }, [conversationId]);
+    if (!enabled) return;
+    await refetchDetail();
+  }, [enabled, refetchDetail]);
 
   const refreshNotes = useCallback(async () => {
-    if (!conversationId) return;
-    setNotesLoading(true);
-    try {
-      const result = await listLeadNotes(conversationId);
-      setNotes(result);
-    } catch {
-      setNotes([]);
-    } finally {
-      setNotesLoading(false);
-    }
-  }, [conversationId]);
+    if (!enabled) return;
+    await refetchNotes();
+  }, [enabled, refetchNotes]);
 
-  useEffect(() => {
-    if (!conversationId) {
-      setData(null);
-      setNotes([]);
-      setLoading(false);
-      setNotesLoading(false);
-      return;
-    }
-    void refresh();
-    void refreshNotes();
-  }, [conversationId, refresh, refreshNotes]);
+  const patchMessages = useCallback(
+    (updater: (messages: MessageDto[]) => MessageDto[]) =>
+      queryClient.setQueryData<ConversationDetailResponseData>(detailKey, (prev) =>
+        prev ? { ...prev, messages: updater(prev.messages) } : prev,
+      ),
+    [queryClient, detailKey],
+  );
+
+  const sendMutation = useMutation({
+    mutationFn: (body: string) => sendMessageRequest(conversationId, { body }),
+  });
+  const { mutateAsync: sendAsync } = sendMutation;
 
   /** Envia mensagem outbound com atualização otimista (bolha "sent" imediata; substitui pela resposta real). */
   const sendMessage = useCallback(
@@ -81,63 +82,62 @@ export function useConversationDetail(conversationId: string) {
         status: "sent",
         createdAt: new Date().toISOString(),
       };
-      setData((prev) => (prev ? { ...prev, messages: [...prev.messages, optimisticMessage] } : prev));
+      patchMessages((messages) => [...messages, optimisticMessage]);
 
       try {
-        const sent = await sendMessageRequest(conversationId, { body });
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                messages: prev.messages.map((m) => (m.id === optimisticId ? sent : m)),
-              }
-            : prev,
-        );
+        const sent = await sendAsync(body);
+        patchMessages((messages) => messages.map((m) => (m.id === optimisticId ? sent : m)));
       } catch {
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                messages: prev.messages.map((m) =>
-                  m.id === optimisticId ? { ...m, status: "failed" as const } : m,
-                ),
-              }
-            : prev,
+        patchMessages((messages) =>
+          messages.map((m) => (m.id === optimisticId ? { ...m, status: "failed" as const } : m)),
         );
         throw new Error("send_error");
       }
     },
-    [conversationId],
+    [patchMessages, sendAsync],
   );
+
+  const patchNotes = useCallback(
+    (updater: (notes: LeadNoteDto[]) => LeadNoteDto[]) =>
+      queryClient.setQueryData<LeadNoteDto[]>(notesKey, (prev) => updater(prev ?? [])),
+    [queryClient, notesKey],
+  );
+
+  const createNoteMutation = useMutation({
+    mutationFn: (input: UpsertLeadNoteRequestBody) => createLeadNote(conversationId, input),
+    onSuccess: (note) => patchNotes((prev) => [note, ...prev]),
+  });
+  const updateNoteMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<UpsertLeadNoteRequestBody> }) =>
+      updateLeadNote(id, input),
+    onSuccess: (updated, { id }) => patchNotes((prev) => prev.map((n) => (n.id === id ? updated : n))),
+  });
+  const deleteNoteMutation = useMutation({
+    mutationFn: deleteLeadNote,
+    onSuccess: (_data, id) => patchNotes((prev) => prev.filter((n) => n.id !== id)),
+  });
+  const { mutateAsync: createNoteAsync } = createNoteMutation;
+  const { mutateAsync: updateNoteAsync } = updateNoteMutation;
+  const { mutateAsync: deleteNoteAsync } = deleteNoteMutation;
 
   const createNote = useCallback(
-    async (input: UpsertLeadNoteRequestBody) => {
-      const note = await createLeadNote(conversationId, input);
-      setNotes((prev) => [note, ...prev]);
-      return note;
-    },
-    [conversationId],
+    (input: UpsertLeadNoteRequestBody) => createNoteAsync(input),
+    [createNoteAsync],
   );
-
-  const updateNote = useCallback(async (id: string, input: Partial<UpsertLeadNoteRequestBody>) => {
-    const updated = await updateLeadNote(id, input);
-    setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
-    return updated;
-  }, []);
-
-  const deleteNote = useCallback(async (id: string) => {
-    await deleteLeadNote(id);
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  const updateNote = useCallback(
+    (id: string, input: Partial<UpsertLeadNoteRequestBody>) => updateNoteAsync({ id, input }),
+    [updateNoteAsync],
+  );
+  const deleteNote = useCallback((id: string) => deleteNoteAsync(id), [deleteNoteAsync]);
 
   return {
-    data,
-    loading,
-    error,
+    data: detailQuery.data ?? null,
+    loading: enabled && isQueryLoading(detailQuery),
+    error: detailQuery.error ? detailQuery.error.message || "load_error" : null,
     refresh,
     sendMessage,
-    notes,
-    notesLoading,
+    notes: notesQuery.data ?? [],
+    notesLoading: enabled && isQueryLoading(notesQuery),
     refreshNotes,
     createNote,
     updateNote,

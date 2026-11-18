@@ -1,16 +1,21 @@
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type {
   AgendaEventDto,
   AgendaListResponseData,
   CreateAgendaEventRequestBody,
 } from "@/types/api/agenda-v1";
 
-export async function listAgendaEvents(from: string, to: string): Promise<AgendaEventDto[]> {
+export async function listAgendaEvents(
+  from: string,
+  to: string,
+  options?: RequestOptions,
+): Promise<AgendaEventDto[]> {
   const search = new URLSearchParams({ from, to });
   const res = await apiClient.get<ApiEnvelope<AgendaListResponseData>>(
     `/api/v1/tenant/agenda?${search.toString()}`,
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);

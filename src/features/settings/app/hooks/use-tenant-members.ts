@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   listTenantMembers,
   patchMemberRole,
@@ -13,6 +15,7 @@ import type { TenantMemberRow, TenantRole } from "@/features/settings/app/types/
 
 export function useTenantMembers() {
   const t = useTranslations("settings.members");
+  const queryClient = useQueryClient();
   const { data: session, status } = useSession();
   const tenantId = session?.user?.tenantId ?? null;
   const tenantRole = session?.user?.tenantRole ?? null;
@@ -21,75 +24,73 @@ export function useTenantMembers() {
   const canManage = Boolean(
     tenantId && (tenantRole === "tenant_admin" || globalRole === "super_admin"),
   );
+  const key = settingsKeys.tenantMembers(tenantId);
 
-  const [rows, setRows] = useState<TenantMemberRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  const reload = useCallback(async () => {
-    if (!tenantId || !canManage) return;
-    setError(null);
-    try {
-      const list = await listTenantMembers(tenantId);
-      setRows(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setRows([]);
-    }
-  }, [canManage, t, tenantId]);
-
-  useEffect(() => {
-    if (status !== "authenticated" || !canManage || !tenantId) {
-      return;
-    }
-    void reload();
-  }, [status, canManage, tenantId, reload]);
+  const query = useQuery({
+    queryKey: key,
+    queryFn: ({ signal }) => listTenantMembers(tenantId!, { signal }),
+    enabled: status === "authenticated" && canManage && Boolean(tenantId),
+  });
+  const { refetch } = query;
 
   const sortedRows = useMemo(() => {
-    if (!rows) return [];
-    return [...rows].sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""));
-  }, [rows]);
+    if (!query.data) return [];
+    return [...query.data].sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""));
+  }, [query.data]);
+
+  const roleMutation = useMutation({
+    mutationFn: ({ member, role }: { member: TenantMemberRow; role: TenantRole }) =>
+      patchMemberRole(tenantId!, member.userId, role),
+    onSuccess: (_data, { member, role }) =>
+      queryClient.setQueryData<TenantMemberRow[]>(key, (prev) =>
+        (prev ?? []).map((row) => (row.userId === member.userId ? { ...row, role } : row)),
+      ),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (member: TenantMemberRow) => removeTenantMember(tenantId!, member.userId),
+    onSuccess: (_data, member) =>
+      queryClient.setQueryData<TenantMemberRow[]>(key, (prev) =>
+        (prev ?? []).filter((row) => row.userId !== member.userId),
+      ),
+  });
+  const { mutateAsync: roleAsync } = roleMutation;
+  const { mutateAsync: removeAsync } = removeMutation;
+
+  const reload = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const updateMemberRole = useCallback(
     async (member: TenantMemberRow, role: TenantRole) => {
       if (!tenantId || member.role === role) return;
-      setBusyId(member.userId);
-      try {
-        await patchMemberRole(tenantId, member.userId, role);
-        setRows((prev) =>
-          (prev ?? []).map((row) =>
-            row.userId === member.userId ? { ...row, role } : row,
-          ),
-        );
-      } finally {
-        setBusyId(null);
-      }
+      await roleAsync({ member, role });
     },
-    [tenantId],
+    [tenantId, roleAsync],
   );
 
   const deleteMember = useCallback(
     async (member: TenantMemberRow) => {
       if (!tenantId) return;
-      setBusyId(member.userId);
-      try {
-        await removeTenantMember(tenantId, member.userId);
-        setRows((prev) => (prev ?? []).filter((row) => row.userId !== member.userId));
-      } finally {
-        setBusyId(null);
-      }
+      await removeAsync(member);
     },
-    [tenantId],
+    [tenantId, removeAsync],
   );
+
+  const busyId = roleMutation.isPending
+    ? roleMutation.variables.member.userId
+    : removeMutation.isPending
+      ? removeMutation.variables.userId
+      : null;
 
   return {
     sessionStatus: status,
     currentUserId,
     tenantId,
     canManage,
-    rows,
+    // `null` enquanto não carregou; erro vira lista vazia (como antes).
+    rows: query.data ?? (query.isError ? [] : null),
     sortedRows,
-    error,
+    error: query.error ? query.error.message || t("loadError") : null,
     busyId,
     reload,
     updateMemberRole,

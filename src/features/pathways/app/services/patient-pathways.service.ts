@@ -9,6 +9,7 @@ import type {
   TogglePatientChecklistItemInput,
   TransitionPatientStageInput,
 } from "@/features/pathways/app/types/patient-pathways";
+import type { RequestOptions } from "@/types/api/request-options";
 
 export class TransitionBlockedByChecklistError extends Error {
   readonly pendingItems: { id: string; label: string }[];
@@ -20,10 +21,14 @@ export class TransitionBlockedByChecklistError extends Error {
   }
 }
 
-export async function getPatientPathway(patientPathwayId: string): Promise<PatientPathwayDetail> {
+export async function getPatientPathway(
+  patientPathwayId: string,
+  options?: RequestOptions,
+): Promise<PatientPathwayDetail> {
   try {
     const res = await apiClient.get<ApiEnvelope<{ patientPathway: PatientPathwayDetail }>>(
       `/api/v1/patient-pathways/${patientPathwayId}`,
+      { signal: options?.signal },
     );
     if (!res.data.success) {
       throw new Error(res.data.error.message);

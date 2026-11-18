@@ -1,11 +1,12 @@
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
 import type { QuickPhraseDto, QuickPhrasesResponseData, UpsertQuickPhraseRequestBody } from "@/types/api/contacts-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
-export async function listQuickPhrases(): Promise<QuickPhraseDto[]> {
+export async function listQuickPhrases(options?: RequestOptions): Promise<QuickPhraseDto[]> {
   const res = await apiClient.get<ApiEnvelope<QuickPhrasesResponseData>>(
     "/api/v1/tenant/quick-phrases",
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);

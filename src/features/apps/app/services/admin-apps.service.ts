@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api/http-client";
 import { notifyActiveAppsMenuInvalidated } from "@/features/apps/app/lib/invalidate-active-apps";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type {
   AdminAppDetailResponseData,
   AdminAppsListResponseData,
@@ -10,9 +11,10 @@ import type {
 } from "@/types/api/apps-v1";
 
 /** Lista todos os apps (admin). */
-export async function getAdminApps(): Promise<AppDto[]> {
+export async function getAdminApps(options?: RequestOptions): Promise<AppDto[]> {
   const res = await apiClient.get<ApiEnvelope<AdminAppsListResponseData>>(
     "/api/v1/admin/apps",
+    { signal: options?.signal },
   );
   if (!res.data.success) throw new Error(res.data.error.message);
   return res.data.data.apps;

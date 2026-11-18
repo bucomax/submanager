@@ -1,39 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { getMe, patchMe } from "@/features/settings/app/services/profile.service";
 import type { MeUser } from "@/features/settings/app/types/account";
 
 export function useAccountProfile() {
   const t = useTranslations("settings.profile");
-  const [profile, setProfile] = useState<MeUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const me = await getMe();
-      setProfile(me);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setProfile(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+  const query = useQuery({
+    queryKey: settingsKeys.profile,
+    queryFn: ({ signal }) => getMe({ signal }),
+  });
+  const { refetch } = query;
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const saveProfile = useCallback(
-    async (values: { name: string; image?: string | null }) => {
-      const nextUser = await patchMe(values);
-      setProfile((prev) =>
+  const saveMutation = useMutation({
+    mutationFn: (values: { name: string; image?: string | null }) => patchMe(values),
+    onSuccess: (nextUser) => {
+      queryClient.setQueryData<MeUser>(settingsKeys.profile, (prev) =>
         prev
           ? {
               ...prev,
@@ -47,13 +36,23 @@ export function useAccountProfile() {
           : prev,
       );
     },
-    [],
+  });
+  const { mutateAsync: saveAsync } = saveMutation;
+
+  const reload = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+  const saveProfile = useCallback(
+    async (values: { name: string; image?: string | null }) => {
+      await saveAsync(values);
+    },
+    [saveAsync],
   );
 
   return {
-    profile,
-    loading,
-    error,
+    profile: query.data ?? null,
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || t("loadError") : null,
     reload,
     saveProfile,
   };

@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   createOpmeSupplier,
   listOpmeSuppliers,
 } from "@/features/settings/app/services/tenant-settings.service";
 import type { ApiPagination } from "@/lib/api/pagination";
 import { useDebouncedState } from "@/shared/hooks/use-debounce";
-import type { OpmeSupplierDto } from "@/types/api/tenant-settings-v1";
 
 const PAGE_SIZE = 10;
 
@@ -26,45 +28,36 @@ const EMPTY_PAGINATION: ApiPagination = {
 export function useOpmeSuppliers() {
   const t = useTranslations("settings.opme");
   const { data: session, status: sessionStatus } = useSession();
+  const queryClient = useQueryClient();
   const [query, debouncedQuery, setQuery] = useDebouncedState("", { trim: true });
-  const [page, setPage] = useState(1);
-  const [rows, setRows] = useState<OpmeSupplierDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<ApiPagination>(EMPTY_PAGINATION);
-  const [creating, setCreating] = useState(false);
+  // A página vale só para a busca em que foi escolhida: trocar a busca volta para a 1ª sem efeito.
+  const [pageState, setPageState] = useState({ query: "", page: 1 });
+  const page = pageState.query === debouncedQuery ? pageState.page : 1;
+  const setPage = useCallback(
+    (next: number | ((current: number) => number)) =>
+      setPageState((prev) => {
+        const current = prev.query === debouncedQuery ? prev.page : 1;
+        return { query: debouncedQuery, page: typeof next === "function" ? next(current) : next };
+      }),
+    [debouncedQuery],
+  );
 
   const canCreate =
     session?.user?.tenantRole === "tenant_admin" || session?.user?.globalRole === "super_admin";
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await listOpmeSuppliers({
-        page,
-        limit: PAGE_SIZE,
-        q: debouncedQuery || undefined,
-        includeInactive: true,
-      });
-      setRows(response.data);
-      setPagination(response.pagination);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("listError"));
-      setRows([]);
-      setPagination(EMPTY_PAGINATION);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQuery, page, t]);
+  const list = useQuery({
+    queryKey: settingsKeys.opme({ page, q: debouncedQuery || undefined }),
+    queryFn: ({ signal }) =>
+      listOpmeSuppliers(
+        { page, limit: PAGE_SIZE, q: debouncedQuery || undefined, includeInactive: true },
+        { signal },
+      ),
+    placeholderData: keepPreviousData,
+  });
+  const { refetch } = list;
 
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedQuery]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const rows = useMemo(() => list.data?.data ?? [], [list.data]);
+  const pagination = list.data?.pagination ?? EMPTY_PAGINATION;
 
   const rangeLabel = useMemo(() => {
     if (pagination.totalItems === 0) {
@@ -75,21 +68,31 @@ export function useOpmeSuppliers() {
     return t("range", { from, to, total: pagination.totalItems });
   }, [pagination, rows.length, t]);
 
+  const createMutation = useMutation({
+    mutationFn: (name: string) => createOpmeSupplier(name),
+    onSuccess: () => {
+      setPage(1);
+      // Também invalida os pickers (clientes) que listam fornecedores.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: settingsKeys.opmeAll }),
+        queryClient.invalidateQueries({ queryKey: settingsKeys.pickers }),
+      ]);
+    },
+  });
+  const { mutateAsync: createAsync } = createMutation;
+
   const createSupplier = useCallback(
     async (name: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      setCreating(true);
-      try {
-        await createOpmeSupplier(trimmed);
-        setPage(1);
-        await reload();
-      } finally {
-        setCreating(false);
-      }
+      await createAsync(trimmed);
     },
-    [reload],
+    [createAsync],
   );
+
+  const reload = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   return {
     sessionStatus,
@@ -99,11 +102,11 @@ export function useOpmeSuppliers() {
     page,
     setPage,
     rows,
-    loading,
-    error,
+    loading: isQueryLoading(list),
+    error: list.error ? list.error.message || t("listError") : null,
     pagination,
     rangeLabel,
-    creating,
+    creating: createMutation.isPending,
     reload,
     createSupplier,
   };

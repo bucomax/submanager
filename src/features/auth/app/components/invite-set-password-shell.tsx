@@ -2,10 +2,9 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 
 import type { InviteSetPasswordPreviewDto } from "../types/api";
-import { fetchInviteSetPasswordPreview } from "../services/password.service";
+import { useInvitePreview } from "../hooks/use-invite-preview";
 import { SetPasswordForm } from "./set-password-form";
 
 type InviteSetPasswordShellProps = {
@@ -42,18 +41,7 @@ function InvitePreviewCard({ preview }: { preview: InviteSetPasswordPreviewDto }
 export function InviteSetPasswordShell({ successMessage }: InviteSetPasswordShellProps) {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
-  const [preview, setPreview] = useState<InviteSetPasswordPreviewDto | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    void fetchInviteSetPasswordPreview(token).then((p) => {
-      if (!cancelled) setPreview(p);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+  const preview = useInvitePreview(token);
 
   return (
     <>

@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/api/http-client";
 import { readFileHeader, validateMagicBytes } from "@/lib/utils/magic-bytes";
 import { formatUserProfileImageGcsRef } from "@/lib/utils/user-profile-image-ref";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
 const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -23,10 +24,13 @@ type PresignResponseData = {
  */
 export type ProfileAvatarStorageState = "available" | "unavailable" | "unknown";
 
-export async function fetchProfileAvatarStorageState(): Promise<ProfileAvatarStorageState> {
+export async function fetchProfileAvatarStorageState(
+  options?: RequestOptions,
+): Promise<ProfileAvatarStorageState> {
   try {
     const res = await apiClient.get<ApiEnvelope<{ available: boolean }>>(
       "/api/v1/files/storage-status",
+      { signal: options?.signal },
     );
     const body = res.data;
     if (body?.success !== true || body.data == null || typeof body.data.available !== "boolean") {

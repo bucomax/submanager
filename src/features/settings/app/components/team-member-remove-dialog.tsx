@@ -6,7 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Dialog, StandardDialogContent } from "@/shared/components/ui/dialog";
 import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type TeamMemberRemoveDialogProps = {
   open: boolean;
@@ -27,10 +27,6 @@ export function TeamMemberRemoveDialog({
   const [pending, setPending] = useState(false);
 
   const displayName = member?.name?.trim() || member?.email || "";
-
-  useEffect(() => {
-    if (!open) setPending(false);
-  }, [open]);
 
   function handleOpenChange(next: boolean) {
     if ((pending || busy) && !next) return;

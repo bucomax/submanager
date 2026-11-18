@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from "axios";
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type {
   CreateOpmeSupplierResponseData,
   GetTenantNotificationSettingsResponseData,
@@ -18,7 +19,7 @@ import type {
 } from "@/types/api/tenant-settings-v1";
 
 export async function listTenantMembersForPicker(
-  requestConfig?: Pick<AxiosRequestConfig, "skipErrorToast">,
+  requestConfig?: Pick<AxiosRequestConfig, "skipErrorToast" | "signal">,
 ): Promise<TenantMembersListResponseData> {
   const res = await apiClient.get<ApiEnvelope<TenantMembersListResponseData>>("/api/v1/tenant/members", {
     ...requestConfig,
@@ -31,7 +32,7 @@ export async function listTenantMembersForPicker(
 }
 
 export async function getTenantClinicSettings(
-  requestConfig?: Pick<AxiosRequestConfig, "skipErrorToast">,
+  requestConfig?: Pick<AxiosRequestConfig, "skipErrorToast" | "signal">,
 ): Promise<GetTenantClinicSettingsResponseData> {
   const res = await apiClient.get<ApiEnvelope<GetTenantClinicSettingsResponseData>>("/api/v1/tenant", requestConfig);
   if (!res.data.success) {
@@ -53,10 +54,13 @@ export async function updateTenantClinicSettings(
   return res.data.data;
 }
 
-export async function getTenantNotificationSettings(): Promise<GetTenantNotificationSettingsResponseData> {
+export async function getTenantNotificationSettings(
+  options?: RequestOptions,
+): Promise<GetTenantNotificationSettingsResponseData> {
   const res =
     await apiClient.get<ApiEnvelope<GetTenantNotificationSettingsResponseData>>(
       "/api/v1/tenant/notifications",
+      { signal: options?.signal },
     );
   if (!res.data.success) {
     throw new Error(res.data.error.message);
@@ -80,6 +84,7 @@ export async function updateTenantNotificationSettings(
 
 export async function listOpmeSuppliers(
   params?: ListOpmeSuppliersQueryParams,
+  options?: RequestOptions,
 ): Promise<OpmeSuppliersListResponseData> {
   const search = new URLSearchParams();
   if (params?.page != null) search.set("page", String(params.page));
@@ -88,7 +93,9 @@ export async function listOpmeSuppliers(
   if (params?.includeInactive) search.set("includeInactive", "1");
   const qs = search.toString();
   const url = qs ? `/api/v1/opme-suppliers?${qs}` : "/api/v1/opme-suppliers";
-  const res = await apiClient.get<ApiEnvelope<OpmeSuppliersListResponseData>>(url);
+  const res = await apiClient.get<ApiEnvelope<OpmeSuppliersListResponseData>>(url, {
+    signal: options?.signal,
+  });
   if (!res.data.success) {
     throw new Error(res.data.error.message);
   }
@@ -110,10 +117,12 @@ export async function createOpmeSupplier(name: string): Promise<CreateOpmeSuppli
 // WhatsApp Business API Settings
 // ---------------------------------------------------------------------------
 
-export async function getWhatsAppSettings(): Promise<GetWhatsAppSettingsResponseData> {
+export async function getWhatsAppSettings(
+  options?: RequestOptions,
+): Promise<GetWhatsAppSettingsResponseData> {
   const res = await apiClient.get<ApiEnvelope<GetWhatsAppSettingsResponseData>>(
     "/api/v1/tenant/whatsapp",
-    { skipErrorToast: true },
+    { skipErrorToast: true, signal: options?.signal },
   );
   if (!res.data.success) {
     throw new Error(res.data.error.message);

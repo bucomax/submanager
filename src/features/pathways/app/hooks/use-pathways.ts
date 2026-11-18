@@ -1,38 +1,29 @@
 "use client";
 
-import { listPathways } from "@/features/pathways/app/services/pathways.service";
-import type { PathwayListItem } from "@/features/pathways/app/types/pathways";
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { pathwayKeys } from "@/features/pathways/app/hooks/query-keys";
+import { listPathways } from "@/features/pathways/app/services/pathways.service";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 
 export function usePathways() {
   const t = useTranslations("pathways.list");
-  const [pathways, setPathways] = useState<PathwayListItem[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: pathwayKeys.list,
+    queryFn: ({ signal }) => listPathways({ signal }),
+  });
+  const { refetch } = query;
 
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listPathways();
-      setPathways(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadError"));
-      setPathways([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+    await refetch();
+  }, [refetch]);
 
   return {
-    pathways,
-    loading,
-    error,
+    // `null` enquanto carrega; falha vira lista vazia (como antes).
+    pathways: query.data ?? (query.isError ? [] : null),
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || t("loadError") : null,
     reload,
   };
 }

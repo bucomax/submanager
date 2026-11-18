@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isQueryLoading } from "@/shared/utils/query-loading";
 import { useSession } from "next-auth/react";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   getWhatsAppSettings,
   testWhatsAppConnection,
@@ -23,68 +26,50 @@ const DEFAULT_SETTINGS: WhatsAppSettingsDto = {
 
 export function useWhatsAppSettings() {
   const { data: session, status: sessionStatus } = useSession();
-  const [settings, setSettings] = useState<WhatsAppSettingsDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
+  const queryClient = useQueryClient();
 
   const canEdit =
     session?.user?.tenantRole === "tenant_admin" ||
     session?.user?.globalRole === "super_admin";
 
+  const query = useQuery({
+    queryKey: settingsKeys.whatsapp,
+    queryFn: ({ signal }) => getWhatsAppSettings({ signal }),
+    enabled: sessionStatus === "authenticated",
+    select: (response) => response.whatsapp,
+  });
+  const { refetch } = query;
+
+  const saveMutation = useMutation({
+    mutationFn: (input: UpdateWhatsAppSettingsRequestBody) => updateWhatsAppSettings(input),
+    onSuccess: (response) => queryClient.setQueryData(settingsKeys.whatsapp, response),
+  });
+  const testMutation = useMutation({
+    mutationFn: testWhatsAppConnection,
+    // Recarrega para obter o whatsappVerifiedAt atualizado.
+    onSuccess: (result) =>
+      result.ok ? queryClient.invalidateQueries({ queryKey: settingsKeys.whatsapp }) : undefined,
+  });
+  const { mutateAsync: saveAsync } = saveMutation;
+  const { mutateAsync: testAsync } = testMutation;
+
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getWhatsAppSettings();
-      setSettings(response.whatsapp);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar configurações.");
-      setSettings(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
-    void reload();
-  }, [reload, sessionStatus]);
-
-  const save = useCallback(async (input: UpdateWhatsAppSettingsRequestBody) => {
-    setSaving(true);
-    try {
-      const response = await updateWhatsAppSettings(input);
-      setSettings(response.whatsapp);
-      return response.whatsapp;
-    } finally {
-      setSaving(false);
-    }
-  }, []);
-
-  const testConnection = useCallback(async () => {
-    setTesting(true);
-    try {
-      const result = await testWhatsAppConnection();
-      if (result.ok) {
-        // Reload to get updated whatsappVerifiedAt
-        await reload();
-      }
-      return result;
-    } finally {
-      setTesting(false);
-    }
-  }, [reload]);
+    await refetch();
+  }, [refetch]);
+  const save = useCallback(
+    async (input: UpdateWhatsAppSettingsRequestBody) => (await saveAsync(input)).whatsapp,
+    [saveAsync],
+  );
+  const testConnection = useCallback(() => testAsync(), [testAsync]);
 
   return {
     sessionStatus,
-    settings: settings ?? DEFAULT_SETTINGS,
-    hasLoaded: settings !== null,
-    loading,
-    error,
-    saving,
-    testing,
+    settings: query.data ?? DEFAULT_SETTINGS,
+    hasLoaded: query.data !== undefined,
+    loading: isQueryLoading(query),
+    error: query.error ? query.error.message || "Erro ao carregar configurações." : null,
+    saving: saveMutation.isPending,
+    testing: testMutation.isPending,
     canEdit,
     reload,
     save,

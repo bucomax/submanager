@@ -7,19 +7,17 @@ import { ChatNoteBlock } from "@/features/contacts/app/components/chat-note-bloc
 import { EventComposer } from "@/features/contacts/app/components/event-composer";
 import { NoteComposer } from "@/features/contacts/app/components/note-composer";
 import { PinnedNotesBar } from "@/features/contacts/app/components/pinned-notes-bar";
-import { QuickPhrasePopover } from "@/features/contacts/app/components/quick-phrase-popover";
-import { createAgendaEvent } from "@/features/agenda/app/services/agenda.service";
+import { ConversationChatHeader } from "@/features/contacts/app/components/conversation-chat-header";
+import { ConversationChatSkeleton } from "@/features/contacts/app/components/conversation-chat-skeleton";
+import { ConversationComposerBar } from "@/features/contacts/app/components/conversation-composer-bar";
+import { useCreateAgendaEvent } from "@/features/agenda/app/hooks/use-create-agenda-event";
 import { resolvePhraseVariables } from "@/features/contacts/app/utils/resolve-phrase-variables";
-import { STAGE_PILL_CLASS } from "@/features/contacts/app/utils/stage-colors";
-import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import { CHAT_BACKGROUND_CLASS } from "@/features/contacts/app/utils/chat-style";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
-import { ChevronsUpDown, Paperclip, Send, UserPen, UserRound, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import type { AgendaEventDto } from "@/types/api/agenda-v1";
+import type { AgendaEventDto, CreateAgendaEventRequestBody } from "@/types/api/agenda-v1";
 import type {
   ConversationDetailResponseData,
   ConversationStatus,
@@ -29,22 +27,10 @@ import type {
   UpsertLeadNoteRequestBody,
 } from "@/types/api/contacts-v1";
 
-/** Fundo pontilhado estilo WhatsApp — reaproveitado pelo skeleton de loading e pela timeline real. */
-const CHAT_BACKGROUND_CLASS =
-  "bg-[#f0f2f5] bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.035)_1px,transparent_0)] bg-[length:18px_18px] dark:bg-[#0b141a] dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.035)_1px,transparent_0)]";
-
 const BUILTIN_COMMANDS: QuickPhraseDto[] = [
   { id: "cmd-agendar", slug: "agendar", title: "Agendar compromisso", body: "Abre o formulário de agendamento.", attachment: null, usageCount: 0, createdAt: "", updatedAt: "" },
   { id: "cmd-notas", slug: "notas", title: "Nota interna", body: "Abre o formulário de nota interna.", attachment: null, usageCount: 0, createdAt: "", updatedAt: "" },
 ];
-
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return `${first}${last}`.toUpperCase();
-}
 
 type TimelineItem =
   | { kind: "message"; timestamp: string; message: MessageDto }
@@ -91,6 +77,7 @@ export function ConversationChat({
   const tDetail = useTranslations("contacts.detail");
   const locale = useLocale();
   const router = useRouter();
+  const { mutateAsync: createEvent } = useCreateAgendaEvent();
 
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<string | null>(null);
@@ -212,9 +199,9 @@ export function ConversationChat({
     }
   }
 
-  async function handleSaveEvent(input: Parameters<typeof createAgendaEvent>[0]) {
+  async function handleSaveEvent(input: CreateAgendaEventRequestBody) {
     try {
-      const created = await createAgendaEvent(input);
+      const created = await createEvent(input);
       setSessionEvents((prev) => [...prev, created]);
       setEventOpen(false);
       void refresh();
@@ -224,46 +211,7 @@ export function ConversationChat({
   }
 
   if (loading) {
-    return (
-      <div className="flex h-full flex-col overflow-hidden">
-        <div className="flex min-h-[60px] items-center gap-2 border-b px-3.5">
-          <Skeleton className="size-8 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <Skeleton className="h-3.5 w-32" />
-            <Skeleton className="h-3 w-44" />
-          </div>
-          <Skeleton className="h-[26px] w-24 shrink-0 rounded-full" />
-          <Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
-        </div>
-
-        <div className={cn("flex-1 space-y-3 overflow-hidden p-4", CHAT_BACKGROUND_CLASS)}>
-          <div className="flex justify-center">
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-          <div className="flex justify-start">
-            <Skeleton className="h-12 w-2/3 rounded-2xl rounded-bl-md" />
-          </div>
-          <div className="flex justify-end">
-            <Skeleton className="h-10 w-1/2 rounded-2xl rounded-br-md" />
-          </div>
-          <div className="flex justify-start">
-            <Skeleton className="h-16 w-3/5 rounded-2xl rounded-bl-md" />
-          </div>
-          <div className="flex justify-end">
-            <Skeleton className="h-8 w-2/5 rounded-2xl rounded-br-md" />
-          </div>
-        </div>
-
-        <div className="border-t bg-background p-[10px_14px_14px]">
-          <div className="flex items-center gap-2">
-            <Skeleton className="size-[38px] shrink-0 rounded-full" />
-            <Skeleton className="size-[38px] shrink-0 rounded-full" />
-            <Skeleton className="h-[38px] flex-1 rounded-[10px]" />
-            <Skeleton className="size-[38px] shrink-0 rounded-full" />
-          </div>
-        </div>
-      </div>
-    );
+    return <ConversationChatSkeleton />;
   }
 
   if (error || !data) {
@@ -283,41 +231,13 @@ export function ConversationChat({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex min-h-[60px] items-center gap-2 border-b px-3.5">
-        <Avatar size="sm">
-          <AvatarFallback>
-            {conversation.clientId ? initialsFromName(conversation.displayName) : <UserRound className="size-4" />}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{conversation.displayName}</p>
-          <p className="truncate text-xs tabular-nums text-muted-foreground">
-            {conversation.externalId} · #{conversation.id.slice(-8)}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-          <button
-            type="button"
-            onClick={() => onOpenLeadPanel(true)}
-            title={t("chat.changeStage")}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold",
-              STAGE_PILL_CLASS[displayStatus],
-            )}
-          >
-            {t(`stage.${displayStatus}`)}
-            <ChevronsUpDown className="size-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => (leadPanelOpen ? onCloseLeadPanel() : onOpenLeadPanel())}
-            className="flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium hover:bg-accent"
-          >
-            <UserPen className="size-3.5" />
-            {leadPanelOpen ? t("chat.closeLead") : t("chat.editLead")}
-          </button>
-        </div>
-      </div>
+      <ConversationChatHeader
+        conversation={conversation}
+        displayStatus={displayStatus}
+        leadPanelOpen={leadPanelOpen}
+        onOpenLeadPanel={onOpenLeadPanel}
+        onCloseLeadPanel={onCloseLeadPanel}
+      />
 
       <PinnedNotesBar notes={pinnedNotes} />
 
@@ -380,84 +300,22 @@ export function ConversationChat({
         </div>
       )}
 
-      <div ref={composerRef} className="relative border-t bg-background p-[10px_14px_14px]">
-        {popoverOpen && (
-          <QuickPhrasePopover
-            phrases={filteredPhrases}
-            activeIndex={Math.min(slashIndex, Math.max(filteredPhrases.length - 1, 0))}
-            onHoverIndex={setSlashIndex}
-            onSelect={applyPhraseSelection}
-            onCreateFromDraft={() => setDraft("")}
-          />
-        )}
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraft("/");
-                    setSlashDismissed(false);
-                  }}
-                  className="flex size-[38px] shrink-0 items-center justify-center rounded-full border hover:bg-accent"
-                >
-                  <Zap className="size-4" />
-                </button>
-              }
-            />
-            <TooltipContent>{t("chat.phrases")}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex size-[38px] shrink-0 items-center justify-center rounded-full border hover:bg-accent"
-                >
-                  <Paperclip className="size-4" />
-                </button>
-              }
-            />
-            <TooltipContent>{t("chat.attach")}</TooltipContent>
-          </Tooltip>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={(e) => setAttachment(e.target.files?.[0]?.name ?? null)}
-          />
-          <textarea
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setSlashDismissed(false);
-            }}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            placeholder={t("chat.composerPlaceholder")}
-            className="max-h-[120px] min-h-[38px] flex-1 resize-none rounded-[10px] border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={() => void handleSend()}
-                  disabled={!draft.trim()}
-                  className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
-                >
-                  <Send className="size-4" />
-                </button>
-              }
-            />
-            <TooltipContent>{t("chat.send")}</TooltipContent>
-          </Tooltip>
-        </div>
-        {attachment && <p className="mt-1.5 text-xs text-muted-foreground">{attachment}</p>}
-      </div>
+      <ConversationComposerBar
+        composerRef={composerRef}
+        fileInputRef={fileInputRef}
+        draft={draft}
+        attachment={attachment}
+        popoverOpen={popoverOpen}
+        filteredPhrases={filteredPhrases}
+        slashIndex={slashIndex}
+        onSlashIndexChange={setSlashIndex}
+        onDraftChange={setDraft}
+        onSlashDismissedChange={setSlashDismissed}
+        onAttachmentChange={setAttachment}
+        onSelectPhrase={applyPhraseSelection}
+        onKeyDown={handleKeyDown}
+        onSend={() => void handleSend()}
+      />
     </div>
   );
 }

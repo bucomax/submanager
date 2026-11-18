@@ -3,11 +3,11 @@
 import { KeyRound, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ManualSetPasswordDialog } from "@/features/settings/app/components/manual-set-password-dialog";
 import { TeamMemberRemoveDialog } from "@/features/settings/app/components/team-member-remove-dialog";
-import { getTenantClinicSettings } from "@/features/settings/app/services/tenant-settings.service";
+import { useTenantNameFallback } from "@/features/settings/app/hooks/use-tenant-name-fallback";
 import { useTenantMembers } from "@/features/settings/app/hooks/use-tenant-members";
 import type { TenantMemberRow } from "@/features/settings/app/types/account";
 import { toast } from "@/lib/toast";
@@ -33,7 +33,6 @@ export function TenantMembersCard() {
   const { data: session } = useSession();
   const [memberToRemove, setMemberToRemove] = useState<TenantMemberRow | null>(null);
   const [memberToSetPassword, setMemberToSetPassword] = useState<TenantMemberRow | null>(null);
-  const [tenantNameFromApi, setTenantNameFromApi] = useState<string | null>(null);
   const {
     sessionStatus,
     currentUserId,
@@ -48,30 +47,14 @@ export function TenantMembersCard() {
     deleteMember,
   } = useTenantMembers();
 
-  useEffect(() => {
-    // Com o nome vindo da sessão o fallback da API nem é lido (ver `tenantName` abaixo),
-    // então não há o que resetar aqui.
-    const fromSession = session?.user?.tenantName?.trim();
-    if (fromSession) return;
-    if (sessionStatus !== "authenticated" || !canManage || !tenantId) {
-      return;
-    }
-    let cancelled = false;
-    void getTenantClinicSettings({ skipErrorToast: true })
-      .then((data) => {
-        const name = data.tenant.name?.trim();
-        if (!cancelled && name) setTenantNameFromApi(name);
-      })
-      .catch(() => {
-        if (!cancelled) setTenantNameFromApi(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.user?.tenantName, sessionStatus, canManage, tenantId]);
+  // Com o nome vindo da sessão o fallback da API nem é lido (ver `tenantName` abaixo).
+  const sessionTenantName = session?.user?.tenantName?.trim();
+  const tenantNameFromApi = useTenantNameFallback(
+    !sessionTenantName && sessionStatus === "authenticated" && canManage && Boolean(tenantId),
+  );
 
   const tenantName =
-    session?.user?.tenantName?.trim() || tenantNameFromApi || "—";
+    sessionTenantName || tenantNameFromApi || "—";
 
   async function handleRoleChange(memberUserId: string, value: string) {
     const member = sortedRows.find((row) => row.userId === memberUserId);

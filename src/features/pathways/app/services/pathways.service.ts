@@ -12,10 +12,13 @@ import type {
   UpdatePathwayDraftInput,
 } from "@/features/pathways/app/types/pathways";
 import type { PathwayPublishPreviewDto } from "@/types/api/pathways-v1";
+import type { RequestOptions } from "@/types/api/request-options";
 
-export async function listPathways(): Promise<PathwayListItem[]> {
+export async function listPathways(options?: RequestOptions): Promise<PathwayListItem[]> {
   try {
-    const res = await apiClient.get<ApiEnvelope<{ pathways: PathwayListItem[] }>>("/api/v1/pathways");
+    const res = await apiClient.get<ApiEnvelope<{ pathways: PathwayListItem[] }>>("/api/v1/pathways", {
+      signal: options?.signal,
+    });
     if (!res.data.success) {
       throw new Error(res.data.error.message);
     }
@@ -36,9 +39,11 @@ export async function patchPathway(pathwayId: string, body: PatchPathwayInput): 
   }
 }
 
-export async function getPathway(pathwayId: string): Promise<PathwayDetail> {
+export async function getPathway(pathwayId: string, options?: RequestOptions): Promise<PathwayDetail> {
   try {
-    const res = await apiClient.get<ApiEnvelope<{ pathway: PathwayDetail }>>(`/api/v1/pathways/${pathwayId}`);
+    const res = await apiClient.get<ApiEnvelope<{ pathway: PathwayDetail }>>(`/api/v1/pathways/${pathwayId}`, {
+      signal: options?.signal,
+    });
     if (!res.data.success) {
       throw new Error(res.data.error.message);
     }
@@ -60,10 +65,15 @@ export async function postPathway(body: CreatePathwayInput): Promise<CreatedPath
   }
 }
 
-export async function getPathwayVersion(pathwayId: string, versionId: string): Promise<PathwayVersionDetail> {
+export async function getPathwayVersion(
+  pathwayId: string,
+  versionId: string,
+  options?: RequestOptions,
+): Promise<PathwayVersionDetail> {
   try {
     const res = await apiClient.get<ApiEnvelope<{ version: PathwayVersionDetail }>>(
       `/api/v1/pathways/${pathwayId}/versions/${versionId}`,
+      { signal: options?.signal },
     );
     if (!res.data.success) {
       throw new Error(res.data.error.message);
@@ -128,11 +138,13 @@ export async function postPathwayPublishPreview(
   pathwayId: string,
   versionId: string,
   body: { graphJson?: unknown } = {},
+  options?: RequestOptions,
 ): Promise<PathwayPublishPreviewDto> {
   try {
     const res = await apiClient.post<ApiEnvelope<{ preview: PathwayPublishPreviewDto }>>(
       `/api/v1/pathways/${pathwayId}/versions/${versionId}/publish-preview`,
       body,
+      { signal: options?.signal },
     );
     if (!res.data.success) {
       throw new Error(res.data.error.message);

@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { settingsKeys } from "@/features/settings/app/hooks/query-keys";
 import {
   listOpmeSuppliers,
   listTenantMembersForPicker,
@@ -23,50 +25,53 @@ type OpmeSupplierPicker = {
   name: string;
 };
 
+type PickersData = {
+  members: TenantMemberPicker[];
+  suppliers: OpmeSupplierPicker[];
+};
+
 export function useTenantSettingsPickers({
   enabled = true,
   fallbackErrorMessage,
 }: UseTenantSettingsPickersOptions) {
-  const [members, setMembers] = useState<TenantMemberPicker[] | null>(null);
-  const [suppliers, setSuppliers] = useState<OpmeSupplierPicker[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: settingsKeys.pickers,
+    queryFn: async ({ signal }): Promise<PickersData> => {
+      const [memberResponse, supplierResponse] = await Promise.all([
+        listTenantMembersForPicker({ signal }),
+        listOpmeSuppliers({ limit: 100 }, { signal }),
+      ]);
+      return {
+        members: memberResponse.members,
+        suppliers: supplierResponse.data.map((supplier) => ({ id: supplier.id, name: supplier.name })),
+      };
+    },
+    enabled,
+  });
+  const { refetch } = query;
 
   const reload = useCallback(async () => {
     if (!enabled) return;
-    try {
-      const [memberResponse, supplierResponse] = await Promise.all([
-        listTenantMembersForPicker(),
-        listOpmeSuppliers({ limit: 100 }),
-      ]);
-      // Limpa o erro só com a resposta em mãos: zerar antes do await tornaria este
-      // `reload` um setState síncrono dentro do efeito que o chama.
-      setError(null);
-      setMembers(memberResponse.members);
-      setSuppliers(supplierResponse.data.map((supplier) => ({ id: supplier.id, name: supplier.name })));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : fallbackErrorMessage);
-      setMembers([]);
-      setSuppliers([]);
-    }
-  }, [enabled, fallbackErrorMessage]);
+    await refetch();
+  }, [enabled, refetch]);
 
-  useEffect(() => {
-    if (!enabled) return;
-    // O wrapper async deixa explícito que o efeito só aguarda a resposta: nenhum
-    // `setState` acontece antes do primeiro `await` de `reload`.
-    void (async () => {
-      await reload();
-    })();
-  }, [enabled, reload]);
+  const appendSupplier = useCallback(
+    (supplier: OpmeSupplierPicker) => {
+      queryClient.setQueryData<PickersData>(settingsKeys.pickers, (prev) =>
+        prev ? { ...prev, suppliers: [...prev.suppliers, supplier] } : prev,
+      );
+    },
+    [queryClient],
+  );
 
-  const appendSupplier = useCallback((supplier: OpmeSupplierPicker) => {
-    setSuppliers((prev) => [...(prev ?? []), supplier]);
-  }, []);
-
+  // Falha deixa as listas vazias (como antes), com a mensagem em `error`.
+  const failed = query.isError;
   return {
-    members,
-    suppliers,
-    error,
+    members: query.data?.members ?? (failed ? [] : null),
+    suppliers: query.data?.suppliers ?? (failed ? [] : null),
+    error: query.error ? query.error.message || fallbackErrorMessage : null,
     reload,
     appendSupplier,
   };

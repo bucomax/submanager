@@ -1,13 +1,15 @@
 "use client";
 
-import { Copy, Info, Loader2, Mail, RefreshCw, Trash2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { Info, Loader2, Mail, RefreshCw, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import {
   EmailEventsInfoCallout,
   EmailEventsInfoDialog,
 } from "@/features/settings/app/components/email-events-info-dialog";
+import { EmailDnsRecords } from "@/features/settings/app/components/email-dns-records";
+import { EmailVerifiedSenderPanel } from "@/features/settings/app/components/email-verified-sender-panel";
 import { useEmailDomainSettings } from "@/features/settings/app/hooks/use-email-domain-settings";
 import { TenantSmtpSettingsBlock } from "@/features/settings/app/components/tenant-smtp-settings-block";
 import { toast } from "@/lib/toast";
@@ -23,8 +25,6 @@ import {
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/shared/components/ui/field";
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Switch } from "@/shared/components/ui/switch";
-import { useSyncedDraft } from "@/shared/hooks/use-synced-draft";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 
@@ -34,9 +34,9 @@ function statusBadge(
 ) {
   const map: Record<string, { label: string; class: string }> = {
     none: { label: t("statusNone"), class: "bg-muted text-muted-foreground" },
-    pending: { label: t("statusPending"), class: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
-    not_started: { label: t("statusPending"), class: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
-    verified: { label: t("statusVerified"), class: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+    pending: { label: t("statusPending"), class: "bg-warning/15 text-warning" },
+    not_started: { label: t("statusPending"), class: "bg-warning/15 text-warning" },
+    verified: { label: t("statusVerified"), class: "bg-success/15 text-success" },
     failed: { label: t("statusFailed"), class: "bg-destructive/15 text-destructive" },
     temporary_failure: { label: t("statusFailed"), class: "bg-destructive/15 text-destructive" },
   };
@@ -49,7 +49,6 @@ function statusBadge(
 
 export function EmailSettingsCard() {
   const t = useTranslations("settings.email");
-  const tRoot = useTranslations("settings.whatsapp");
   const {
     sessionStatus,
     emailDomain: ed,
@@ -69,25 +68,6 @@ export function EmailSettingsCard() {
   const [fromName, setFromName] = useState("");
   const [localPart, setLocalPart] = useState("notificacoes");
   const [eventsInfoOpen, setEventsInfoOpen] = useState(false);
-
-  const serverSender = useMemo(
-    () => ({ address: ed.fromAddress ?? "", name: ed.fromName ?? "" }),
-    [ed.fromAddress, ed.fromName],
-  );
-  const [sender, setSender] = useSyncedDraft(serverSender);
-  const draftFrom = sender.address;
-  const draftName = sender.name;
-  const setDraftFrom = (value: string) => setSender((prev) => ({ ...prev, address: value }));
-  const setDraftName = (value: string) => setSender((prev) => ({ ...prev, name: value }));
-
-  const onCopy = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(tRoot("copied"));
-    } catch {
-      toast.error("Copy failed");
-    }
-  }, [tRoot]);
 
   const onSetup = useCallback(async () => {
     try {
@@ -132,21 +112,6 @@ export function EmailSettingsCard() {
     },
     [canEdit, ed.outboundMode, patch, t],
   );
-
-  const onSaveSender = useCallback(async () => {
-    const name = draftName.trim();
-    const addr = draftFrom.trim();
-    const p: { fromName?: string; fromAddress?: string } = {};
-    if (name !== (ed.fromName ?? "").trim()) p.fromName = name;
-    if (addr !== (ed.fromAddress ?? "").trim()) p.fromAddress = addr;
-    if (Object.keys(p).length === 0) return;
-    try {
-      await patch(p);
-      toast.success(t("saveSuccess"));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("loadError"));
-    }
-  }, [draftFrom, draftName, ed.fromAddress, ed.fromName, patch, t]);
 
   const hasDomainConfigured = ed.domainName && ed.status !== "none";
   const mode = ed.outboundMode;
@@ -249,11 +214,11 @@ export function EmailSettingsCard() {
             <Info className="size-4 shrink-0" aria-hidden />
             <AlertDescription className="min-w-0">
               <p className="text-foreground font-heading font-semibold leading-snug">{t("platformPanelTitle")}</p>
-              <p className="text-sky-950/90 dark:text-sky-50/90 mt-2 text-sm leading-relaxed">
+              <p className="text-info mt-2 text-sm leading-relaxed">
                 {t("outboundModePlatformBody")}
               </p>
               {!canEdit && (
-                <p className="text-muted-foreground border-sky-200/50 dark:border-sky-800/50 mt-3 border-t pt-3 text-xs leading-relaxed">
+                <p className="text-muted-foreground border-info/30 mt-3 border-t pt-3 text-xs leading-relaxed">
                   {t("outboundReadOnlyPlatform")}
                 </p>
               )}
@@ -294,101 +259,11 @@ export function EmailSettingsCard() {
         )}
 
         {mode === "resend_domain" && showDnsRecords && ed.dnsRecords && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
-              {ed.status === "verified" ? t("dnsReferenceTitle") : t("dnsTitle")}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {ed.status === "verified" ? t("dnsWhenVerified") : t("dnsHint")}
-            </p>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full min-w-[28rem] text-left text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="p-2 font-medium">Type</th>
-                    <th className="p-2 font-medium">Name</th>
-                    <th className="p-2 font-medium">Value</th>
-                    <th className="p-2 w-24" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {ed.dnsRecords.map((r, i) => {
-                    const row = `${r.type}\t${r.name}\t${r.value}`;
-                    return (
-                      <tr key={i} className="border-t">
-                        <td className="p-2 font-mono text-xs">{r.type}</td>
-                        <td className="max-w-[8rem] truncate p-2 font-mono text-xs" title={r.name}>
-                          {r.name}
-                        </td>
-                        <td className="max-w-[12rem] truncate p-2 font-mono text-xs" title={r.value}>
-                          {r.value}
-                        </td>
-                        <td className="p-2">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => void onCopy(row)}>
-                            <Copy className="size-4" />
-                            {t("copy")}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <EmailDnsRecords dnsRecords={ed.dnsRecords} status={ed.status} />
         )}
 
         {mode === "resend_domain" && ed.status === "verified" && canEdit && (
-          <div className="space-y-4 rounded-lg border p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">{t("enableCustom")}</p>
-                <p className="text-muted-foreground text-xs">
-                  {ed.fromAddress} — {ed.fromName}
-                </p>
-              </div>
-              <Switch
-                checked={ed.emailEnabled}
-                onCheckedChange={(v) => {
-                  void (async () => {
-                    try {
-                      await patch({ emailEnabled: v });
-                      toast.success(t("saveSuccess"));
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t("loadError"));
-                    }
-                  })();
-                }}
-                disabled={busy}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
-                <FieldLabel>{t("fromNameLabel")}</FieldLabel>
-                <FieldContent>
-                  <Input
-                    value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
-                    placeholder={t("fromNamePlaceholder")}
-                  />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel>{t("fromAddressLabel")}</FieldLabel>
-                <FieldContent>
-                  <Input
-                    type="email"
-                    value={draftFrom}
-                    onChange={(e) => setDraftFrom(e.target.value)}
-                  />
-                </FieldContent>
-                <FieldDescription>{t("localPartHint")}</FieldDescription>
-              </Field>
-            </div>
-            <Button type="button" size="sm" onClick={() => void onSaveSender()} disabled={busy}>
-              {t("saveSender")}
-            </Button>
-          </div>
+          <EmailVerifiedSenderPanel emailDomain={ed} busy={busy} patch={patch} />
         )}
 
         {mode === "resend_domain" && !hasDomainConfigured && canEdit && (

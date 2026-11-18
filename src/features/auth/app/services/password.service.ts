@@ -1,6 +1,7 @@
 import axios from "axios";
 import { apiClient } from "@/lib/api/http-client";
 import type { ApiEnvelope, ApiErrorEnvelope } from "@/shared/types/api/v1";
+import type { RequestOptions } from "@/types/api/request-options";
 import type { InvitePreviewResponseData, InviteSetPasswordPreviewDto } from "../types/api";
 import type { ResetPasswordRequest } from "../types/auth";
 
@@ -13,6 +14,7 @@ export type ResetPasswordResult =
  */
 export async function fetchInviteSetPasswordPreview(
   token: string,
+  options?: RequestOptions,
 ): Promise<InviteSetPasswordPreviewDto | null> {
   const trimmed = token.trim();
   if (!trimmed) {
@@ -21,7 +23,7 @@ export async function fetchInviteSetPasswordPreview(
   try {
     const { data: envelope } = await apiClient.get<ApiEnvelope<InvitePreviewResponseData>>(
       "/api/v1/auth/invite-preview",
-      { params: { token: trimmed }, skipErrorToast: true },
+      { params: { token: trimmed }, skipErrorToast: true, signal: options?.signal },
     );
     if (!envelope.success) {
       return null;
