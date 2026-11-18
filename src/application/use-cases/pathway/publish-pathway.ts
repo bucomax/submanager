@@ -1,11 +1,11 @@
 /**
- * Persistência da publicação de uma versão (transação Prisma).
+ * Persistência da publicação de uma versão (unit of work sobre `IPublishTx`).
  * Orquestração completa: {@link runPublishPathwayVersionFlow} em `execute-publish-pathway.ts`.
  */
 export {
   type DerivedPathwayStage,
   runPublishPathwayVersionTransaction,
-} from "@/infrastructure/pathway/publish-pathway-version-transaction";
+} from "./publish-pathway-version-transaction";
 
 export {
   type PublishPathwayVersionFlowErrorCode,

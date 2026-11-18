@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Actor } from "@/domain/auth/actor";
 
 import { patientPathwayPrismaRepository } from "@/infrastructure/repositories/patient-pathway.repository";
 
@@ -11,19 +11,19 @@ import {
  * `true` se o `PatientPathway` existe no tenant e o paciente está no escopo do usuário.
  * `false` cobre inexistente e fora de escopo (handler responde 404 sem vazar existência).
  */
-export async function isPatientPathwayVisibleToSession(
-  session: Session,
+export async function isPatientPathwayVisibleToActor(
+  actor: Actor,
   tenantId: string,
   patientPathwayId: string,
 ): Promise<boolean> {
   const scope = await loadTenantMembershipClientScope(
-    session.user.id,
+    actor.userId,
     tenantId,
-    session.user.globalRole,
+    actor.globalRole,
   );
   return patientPathwayPrismaRepository.existsWithClientWhere(
     tenantId,
     patientPathwayId,
-    mergeClientWhereWithVisibility({ tenantId }, scope, session.user.id),
+    mergeClientWhereWithVisibility({ tenantId }, scope, actor.userId),
   );
 }

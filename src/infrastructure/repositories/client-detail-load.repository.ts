@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import {
   clientDetailPatientPathwaySelect,
   MAX_COMPLETED_TRANSITIONS,
-} from "@/application/use-cases/client/serialize-client-detail";
+} from "@/infrastructure/repositories/client-query-shapes";
 import { prisma } from "@/infrastructure/database/prisma";
 
 const stageTransitionDetailInclude = {

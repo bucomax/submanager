@@ -1,4 +1,8 @@
-import type { Prisma } from "@prisma/client";
+import {
+  type ClientDetailPatientPathwayRow,
+  MAX_COMPLETED_TRANSITIONS,
+  clientDetailPatientPathwaySelect,
+} from "@/infrastructure/repositories/client-query-shapes";
 import { buildPagination } from "@/lib/api/pagination";
 import { computeSlaHealthStatus } from "@/domain/pathway/sla-health";
 import type {
@@ -11,83 +15,6 @@ import type {
 } from "@/types/api/clients-v1";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-/** Include usado na ficha do paciente (jornada ativa e histórico concluído). */
-export const clientDetailPatientPathwaySelect = {
-  id: true,
-  createdAt: true,
-  completedAt: true,
-  enteredStageAt: true,
-  pathway: { select: { id: true, name: true } },
-  pathwayVersion: {
-    select: {
-      id: true,
-      version: true,
-      stages: {
-        orderBy: { sortOrder: "asc" as const },
-        select: {
-          id: true,
-          name: true,
-          stageKey: true,
-          sortOrder: true,
-          patientMessage: true,
-          alertWarningDays: true,
-          alertCriticalDays: true,
-          defaultAssigneeUserId: true,
-          defaultAssigneeUserIds: true,
-          stageDocuments: {
-            orderBy: { sortOrder: "asc" as const },
-            select: {
-              id: true,
-              sortOrder: true,
-              fileAsset: {
-                select: { id: true, fileName: true, mimeType: true },
-              },
-            },
-          },
-          checklistItems: {
-            orderBy: { sortOrder: "asc" as const },
-            select: {
-              id: true,
-              label: true,
-              sortOrder: true,
-              requiredForTransition: true,
-            },
-          },
-          defaultAssigneeUser: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      },
-    },
-  },
-  currentStage: {
-    select: {
-      id: true,
-      name: true,
-      stageKey: true,
-      sortOrder: true,
-      patientMessage: true,
-      alertWarningDays: true,
-      alertCriticalDays: true,
-      defaultAssigneeUserId: true,
-    },
-  },
-  currentStageAssigneeUserId: true,
-  currentStageAssignee: {
-    select: { id: true, name: true, email: true },
-  },
-  checklistItems: {
-    select: {
-      checklistItemId: true,
-      completedAt: true,
-    },
-  },
-} satisfies Prisma.PatientPathwaySelect;
-
-export type ClientDetailPatientPathwayRow = Prisma.PatientPathwayGetPayload<{
-  select: typeof clientDetailPatientPathwaySelect;
-}>;
 
 export function collectPathwayStageDefaultAssigneeUserIds(pp: ClientDetailPatientPathwayRow): string[] {
   const set = new Set<string>();
@@ -321,8 +248,6 @@ function currentStageDetailDto(
   };
 }
 
-const MAX_COMPLETED_TRANSITIONS = 400;
-
 export function serializeCompletedTreatment(
   pp: ClientDetailPatientPathwayRow,
   transitionRows: ClientDetailStageTransitionRow[],
@@ -351,4 +276,5 @@ export function serializeCompletedTreatment(
   };
 }
 
-export { MAX_COMPLETED_TRANSITIONS };
+export { MAX_COMPLETED_TRANSITIONS, clientDetailPatientPathwaySelect };
+export type { ClientDetailPatientPathwayRow };

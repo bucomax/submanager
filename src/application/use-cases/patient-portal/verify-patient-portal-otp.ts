@@ -1,60 +1,19 @@
+import { defaultPatientPortalDeps } from "@/infrastructure/composition/patient-portal-deps";
 import {
-  PATIENT_PORTAL_OTP_MAX_ATTEMPTS,
-  PATIENT_PORTAL_SESSION_MAX_AGE_SEC,
-} from "@/lib/constants/patient-portal";
-import { patientPortalOtpPrismaRepository } from "@/infrastructure/repositories/patient-portal-otp.repository";
-import { portalPasswordVersionMs, type PatientPortalSessionPayload } from "@/lib/auth/patient-portal-session";
-import { hashPatientPortalOtpCode } from "@/lib/utils/patient-portal-otp";
-import { timingSafeEqualStrings } from "@/lib/utils/timing-safe-compare";
-import type { PortalClientForLogin } from "@/types/api/patient-portal-v1";
+  verifyPatientPortalOtp,
+  type VerifyPatientPortalOtpDeps,
+  type VerifyPatientPortalOtpResult,
+} from "@/application/use-cases/patient-portal/verify-patient-portal-otp.core";
 
-export type VerifyPatientPortalOtpResult =
-  | { ok: true; sessionPayload: PatientPortalSessionPayload }
-  | { ok: false; code: "invalid" };
+export type {
+  VerifyPatientPortalOtpDeps,
+  VerifyPatientPortalOtpResult,
+} from "@/application/use-cases/patient-portal/verify-patient-portal-otp.core";
 
-export async function runVerifyPatientPortalOtp(params: {
-  tenant: { id: string; slug: string };
-  client: PortalClientForLogin;
-  code: string;
-}): Promise<VerifyPatientPortalOtpResult> {
-  const { tenant, client, code } = params;
-
-  const challenge = await patientPortalOtpPrismaRepository.findLatestActiveChallenge(
-    client.id,
-    tenant.id,
-  );
-
-  if (!challenge) {
-    return { ok: false, code: "invalid" };
-  }
-
-  // Reserva a tentativa ANTES de comparar: palpites paralelos não escapam do limite.
-  const reserved = await patientPortalOtpPrismaRepository.reserveChallengeAttempt(
-    challenge.id,
-    PATIENT_PORTAL_OTP_MAX_ATTEMPTS,
-  );
-  if (!reserved) {
-    return { ok: false, code: "invalid" };
-  }
-
-  const expectedHash = hashPatientPortalOtpCode(code);
-  if (!timingSafeEqualStrings(expectedHash, challenge.codeHash)) {
-    return { ok: false, code: "invalid" };
-  }
-
-  const consumed = await patientPortalOtpPrismaRepository.consumeChallengeIfPending(challenge.id);
-  if (!consumed) {
-    return { ok: false, code: "invalid" };
-  }
-
-  const exp = Math.floor(Date.now() / 1000) + PATIENT_PORTAL_SESSION_MAX_AGE_SEC;
-  const sessionPayload: PatientPortalSessionPayload = {
-    clientId: client.id,
-    tenantId: tenant.id,
-    tenantSlug: tenant.slug,
-    exp,
-    pwdv: portalPasswordVersionMs(client.portalPasswordChangedAt),
-  };
-
-  return { ok: true, sessionPayload };
+/** Ponto de entrada de produção (usado pela rota); a lógica vive em `verify-patient-portal-otp.core.ts`. */
+export function runVerifyPatientPortalOtp(
+  params: Parameters<typeof verifyPatientPortalOtp>[0],
+  deps: VerifyPatientPortalOtpDeps = defaultPatientPortalDeps,
+): Promise<VerifyPatientPortalOtpResult> {
+  return verifyPatientPortalOtp(params, deps);
 }

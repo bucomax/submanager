@@ -1,9 +1,10 @@
+import { logger } from "@/lib/observability/logger";
 import { randomBytes } from "crypto";
 import { AuditEventType } from "@prisma/client";
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
 import { patientPortalLinkTokenPrismaRepository } from "@/infrastructure/repositories/patient-portal-link-token.repository";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
-import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases/notification/resolve-notification-targets";
+import { resolvePathwayNotificationTargetUserIds } from "@/infrastructure/notifications/resolve-notification-targets";
 import { getPatientPortalMagicLinkHtml } from "@/infrastructure/email/email-templates";
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
 import { resolveTenantSender } from "@/infrastructure/email/resolve-tenant-sender";
@@ -116,7 +117,7 @@ export async function runCreateClientPortalLink(params: {
           },
         })
         .catch((err) =>
-          console.error("[create-client-portal-link] in-app notification failed:", err),
+          logger.error("[create-client-portal-link] in-app notification failed", { err }),
         );
     }
   }

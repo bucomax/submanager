@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { AuditEventType, DispatchStatus } from "@prisma/client";
 
 import type {
@@ -88,10 +89,10 @@ export const whatsappDispatcher: IWhatsAppDispatcher = {
         status = DispatchStatus.FAILED;
         errorDetail =
           err instanceof Error ? err.message : "Unknown dispatch error";
-        console.error(
-          `[whatsapp] doc dispatch failed stageTransitionId=${input.stageTransitionId}:`,
+        logger.warn("[whatsapp] doc dispatch failed", {
+          stageTransitionId: input.stageTransitionId,
           errorDetail,
-        );
+        });
       }
 
       const dispatch = await prisma.channelDispatch.create({
@@ -165,7 +166,10 @@ export const whatsappDispatcher: IWhatsAppDispatcher = {
     } catch (err) {
       const errorDetail =
         err instanceof Error ? err.message : "Unknown error sending confirmation";
-      console.error("[whatsapp] confirmation message failed:", errorDetail);
+      logger.warn("[whatsapp] confirmation message failed", {
+        stageTransitionId: input.stageTransitionId,
+        errorDetail,
+      });
 
       const failedDispatch = await prisma.channelDispatch.create({
         data: {

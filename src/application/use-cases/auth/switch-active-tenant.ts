@@ -1,10 +1,9 @@
 import { AuditEventType } from "@prisma/client";
-import type { Session } from "next-auth";
 
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
 import { userPrismaRepository } from "@/infrastructure/repositories/user.repository";
-import { requireSuperAdmin } from "@/lib/auth/guards";
+import { isSuperAdminActor, type Actor } from "@/domain/auth/actor";
 
 export type SwitchActiveTenantResult =
   | {
@@ -15,11 +14,11 @@ export type SwitchActiveTenantResult =
   | { ok: false; code: "TENANT_NOT_FOUND" | "TENANT_INACTIVE" | "FORBIDDEN" };
 
 export async function runSwitchActiveTenant(params: {
-  session: Session;
+  actor: Actor;
   tenantId: string;
 }): Promise<SwitchActiveTenantResult> {
-  const { session, tenantId } = params;
-  const userId = session.user.id;
+  const { actor, tenantId } = params;
+  const userId = actor.userId;
 
   const tenant = await tenantPrismaRepository.findTenantSwitchStatus(tenantId);
   if (!tenant) {
@@ -31,7 +30,7 @@ export async function runSwitchActiveTenant(params: {
 
   const membershipRole = await userPrismaRepository.getTenantMembershipRole(tenantId, userId);
 
-  if (!membershipRole && !requireSuperAdmin(session)) {
+  if (!membershipRole && !isSuperAdminActor(actor)) {
     return { ok: false, code: "FORBIDDEN" };
   }
 

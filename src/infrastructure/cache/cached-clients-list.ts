@@ -1,12 +1,12 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import type { TenantMembershipClientScope } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { mergeClientWhereWithVisibility } from "@/application/use-cases/shared/load-client-visibility-scope";
+import type { TenantMembershipClientScope } from "@/domain/client/client-visibility";
+import { mergeClientWhereWithVisibility } from "@/infrastructure/visibility/client-visibility-where";
 import {
   buildClientsListBaseWhere,
   CLIENT_LIST_INCLUDE,
   reviveClientListRows,
   type ClientListRow,
-} from "@/application/use-cases/client/serialize-client-list";
+} from "@/infrastructure/repositories/client-query-shapes";
 
 type CachedClientsListArgs = {
   tenantId: string;

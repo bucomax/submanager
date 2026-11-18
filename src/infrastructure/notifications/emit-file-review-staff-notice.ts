@@ -1,5 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases/notification/resolve-notification-targets";
+import { resolvePathwayNotificationTargetUserIds } from "@/infrastructure/notifications/resolve-notification-targets";
 import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
 
 /**

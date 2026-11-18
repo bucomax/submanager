@@ -1,14 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-vi.mock("@/infrastructure/repositories/client.repository", () => ({ clientPrismaRepository: {} }));
-vi.mock("@/infrastructure/repositories/tenant.repository", () => ({ tenantPrismaRepository: {} }));
-vi.mock("@/infrastructure/repositories/user.repository", () => ({ userPrismaRepository: {} }));
-
-const {
+import {
   buildAgendaEventVisibilityWhereInput,
-  buildClientVisibilityFlatFilter,
   buildConversationVisibilityWhereInput,
-} = await import("./load-client-visibility-scope");
+} from "@/infrastructure/visibility/client-visibility-where";
 
 const VIEWER = "user-1";
 const admin = { role: "tenant_admin", restrictedToAssignedOnly: false, linkedOpmeSupplierId: null };
@@ -54,16 +49,5 @@ describe("buildAgendaEventVisibilityWhereInput", () => {
   it("should never expose ownerless-of-client events to OPME-linked users", () => {
     const where = buildAgendaEventVisibilityWhereInput(opme, VIEWER) as { OR: unknown[] };
     expect(where.OR).toHaveLength(2);
-  });
-});
-
-describe("buildClientVisibilityFlatFilter", () => {
-  it("should map scope to a flat filter", () => {
-    expect(buildClientVisibilityFlatFilter(admin, VIEWER)).toEqual({ opmeSupplierId: null, assignedToUserId: null });
-    expect(buildClientVisibilityFlatFilter(assignedOnly, VIEWER)).toEqual({
-      opmeSupplierId: null,
-      assignedToUserId: VIEWER,
-    });
-    expect(buildClientVisibilityFlatFilter(opme, VIEWER)).toEqual({ opmeSupplierId: "opme-1", assignedToUserId: null });
   });
 });

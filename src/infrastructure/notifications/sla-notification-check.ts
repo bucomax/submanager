@@ -1,6 +1,7 @@
+import { logger } from "@/lib/observability/logger";
 import type { NotificationType } from "@prisma/client";
 import { prisma } from "@/infrastructure/database/prisma";
-import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases/notification/resolve-notification-targets";
+import { resolvePathwayNotificationTargetUserIds } from "@/infrastructure/notifications/resolve-notification-targets";
 import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emitter";
 import { notificationEmitter } from "./notification-emitter";
 import { computeSlaHealthStatus } from "@/domain/pathway/sla-health";
@@ -113,7 +114,7 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
         daysInStage,
         slaDedupeKey: dedupeKey,
       },
-    }).catch((err) => console.error("[notification] sla emit failed:", err));
+    }).catch((err) => logger.error("[notification] sla emit failed", { err }));
 
     if (tenantRow.notifyCriticalAlerts && targetUserIds.length > 0) {
       const slaThresholdDays =
@@ -136,7 +137,7 @@ export async function checkAndEmitSlaNotifications(input: SlaCheckInput): Promis
           },
         },
         { jobId: `email|${input.tenantId}|${dedupeKey}`.replace(/:/g, "_") },
-      ).catch((err) => console.error("[email] sla alert enqueue failed:", err));
+      ).catch((err) => logger.error("[email] sla alert enqueue failed", { err }));
     }
   }
 }
@@ -188,7 +189,7 @@ export async function runSlaCheckForActiveTenants(options: {
       processed += 1;
     } catch (err) {
       failed += 1;
-      console.error("[sla-sweep] pathway check failed:", v.pathwayId, err);
+      logger.error("[sla-sweep] pathway check failed", { pathwayId: v.pathwayId, err });
     }
   }
 

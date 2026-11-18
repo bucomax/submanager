@@ -1,7 +1,7 @@
-import type { Session } from "next-auth";
+import type { Actor } from "@/domain/auth/actor";
 
 import {
-  findTenantClientVisibleToSession,
+  findTenantClientVisibleToActor,
   loadConversationVisibilityWhere,
 } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
@@ -17,17 +17,17 @@ export type AgendaEventRefsError =
  * estão no escopo de visibilidade do usuário. Retorna `null` quando tudo é válido.
  */
 export async function validateAgendaEventRefs(
-  session: Session,
+  actor: Actor,
   tenantId: string,
   refs: { conversationId?: string | null; clientId?: string | null; ownerUserId?: string },
 ): Promise<AgendaEventRefsError | null> {
   if (refs.conversationId) {
-    const visibility = await loadConversationVisibilityWhere(session, tenantId);
+    const visibility = await loadConversationVisibilityWhere(actor, tenantId);
     const exists = await conversationPrismaRepository.existsInTenant(tenantId, refs.conversationId, visibility);
     if (!exists) return "conversation_not_found";
   }
   if (refs.clientId) {
-    const client = await findTenantClientVisibleToSession(session, tenantId, refs.clientId, { id: true });
+    const client = await findTenantClientVisibleToActor(actor, tenantId, refs.clientId, { id: true });
     if (!client) return "patient_not_found";
   }
   if (refs.ownerUserId) {

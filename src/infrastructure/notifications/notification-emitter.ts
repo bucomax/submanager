@@ -1,12 +1,11 @@
+import { logger } from "@/lib/observability/logger";
 import type { NotificationType, Prisma } from "@prisma/client";
 import type { EmitNotificationInput, INotificationEmitter } from "@/application/ports/notification-emitter.port";
 import type { NotificationJobPayload } from "@/infrastructure/queue/notification-job-types";
 import { prisma } from "@/infrastructure/database/prisma";
 import { isQueueConsumerAvailable, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
-import {
-  filterUserIdsWhoCanViewClient,
-  getClientIdFromPlainMetadata,
-} from "@/application/use-cases/shared/load-client-visibility-scope";
+import { getClientIdFromPlainMetadata } from "@/domain/client/client-visibility";
+import { filterUserIdsWhoCanViewClient } from "@/infrastructure/visibility/client-visibility-scope";
 
 const TYPE_TO_TENANT_FLAG: Record<NotificationType, keyof Pick<
   Prisma.TenantSelect,
@@ -113,7 +112,7 @@ export const notificationEmitter: INotificationEmitter = {
           return;
         }
       } catch (e) {
-        console.warn("[notifications] Fila Redis indisponível; gravando notificações inline.", e);
+        logger.warn("[notifications] Fila Redis indisponível; gravando notificações inline.", { err: e });
         tripRedisCircuit();
       }
     }

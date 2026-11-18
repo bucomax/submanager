@@ -1,7 +1,6 @@
 import { AuditEventType } from "@prisma/client";
-import type { Session } from "next-auth";
-
-import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
+import type { Actor } from "@/domain/auth/actor";
+import { findTenantClientVisibleToActor } from "@/infrastructure/visibility/client-visibility-scope";
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
 import { fileAssetPrismaRepository } from "@/infrastructure/repositories/file-asset.repository";
 import { presignGetObject } from "@/infrastructure/storage/gcs-storage";
@@ -16,9 +15,9 @@ export async function runPresignStaffFileDownload(params: {
   tenantId: string;
   fileId: string;
   actorUserId: string;
-  session: Session;
+  actor: Actor;
 }): Promise<PresignStaffFileDownloadResult> {
-  const { tenantId, fileId, actorUserId, session } = params;
+  const { tenantId, fileId, actorUserId, actor } = params;
 
   const asset = await fileAssetPrismaRepository.findForStaffDownloadPresign(tenantId, fileId);
   if (!asset) {
@@ -26,7 +25,7 @@ export async function runPresignStaffFileDownload(params: {
   }
 
   if (asset.clientId) {
-    const visible = await findTenantClientVisibleToSession(session, tenantId, asset.clientId, { id: true });
+    const visible = await findTenantClientVisibleToActor(actor, tenantId, asset.clientId, { id: true });
     if (!visible) {
       return { ok: false, code: "NOT_FOUND" };
     }

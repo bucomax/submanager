@@ -1,8 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/infrastructure/database/prisma";
 import { tenantClientsListTag } from "@/infrastructure/cache/cache-tags";
-import type { TenantMembershipClientScope } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { mergeClientWhereWithVisibility } from "@/application/use-cases/shared/load-client-visibility-scope";
+import type { TenantMembershipClientScope } from "@/domain/client/client-visibility";
+import { mergeClientWhereWithVisibility } from "@/infrastructure/visibility/client-visibility-where";
 
 const TAKE = 200;
 

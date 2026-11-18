@@ -1,10 +1,9 @@
-import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
-import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emitter";
-import { enqueueWhatsAppDispatch } from "@/infrastructure/whatsapp/whatsapp-dispatch-emitter";
-import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
-import { getPublicAppUrl } from "@/lib/config/urls";
-import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases/notification/resolve-notification-targets";
-import type { StageDocumentBundleItem } from "@/application/use-cases/pathway/build-stage-dispatch";
+import { logger } from "@/lib/observability/logger";
+import type { INotificationEmitter } from "@/application/ports/notification-emitter.port";
+import type { IEmailDispatchQueue, IWhatsAppDispatchQueue } from "@/application/ports/dispatch-queues.port";
+import type { INotificationTargetResolver } from "@/application/ports/notification-target-resolver.port";
+import type { ITenantProfileReader } from "@/application/ports/tenant-profile-reader.port";
+import type { StageDocumentBundleItem } from "@/domain/pathway/stage-document-bundle";
 
 export type TransitionPostCommitContext = {
   tenantId: string;
@@ -17,13 +16,26 @@ export type TransitionPostCommitContext = {
   documents: StageDocumentBundleItem[];
 };
 
-async function notifyStaff(ctx: TransitionPostCommitContext): Promise<void> {
-  const targetUserIds = await resolvePathwayNotificationTargetUserIds({
+export type TransitionPostCommitDeps = {
+  notificationTargets: INotificationTargetResolver;
+  notifications: INotificationEmitter;
+  tenants: ITenantProfileReader;
+  emailQueue: IEmailDispatchQueue;
+  whatsappQueue: IWhatsAppDispatchQueue;
+  /** URL pública da aplicação (portal do paciente). */
+  getPublicAppUrl: () => string;
+};
+
+async function notifyStaff(
+  ctx: TransitionPostCommitContext,
+  deps: TransitionPostCommitDeps,
+): Promise<void> {
+  const targetUserIds = await deps.notificationTargets.resolveForPathway({
     tenantId: ctx.tenantId,
     type: "stage_transition",
     currentStageAssigneeUserId: ctx.currentStageAssigneeUserId,
   });
-  await notificationEmitter.emit({
+  await deps.notifications.emit({
     tenantId: ctx.tenantId,
     type: "stage_transition",
     title: `${ctx.client.name} avançou para ${ctx.toStage.name}`,
@@ -39,40 +51,41 @@ async function notifyStaff(ctx: TransitionPostCommitContext): Promise<void> {
   });
 }
 
-async function emailPatient(ctx: TransitionPostCommitContext): Promise<void> {
+async function emailPatient(
+  ctx: TransitionPostCommitContext,
+  deps: TransitionPostCommitDeps,
+): Promise<void> {
   const clientEmail = ctx.client.email?.trim();
   if (!clientEmail) return;
-  const tenantRow = await tenantPrismaRepository.findTenantNameAndSlugById(ctx.tenantId);
+  const tenantRow = await deps.tenants.findNameAndSlug(ctx.tenantId);
   const slug = tenantRow?.slug?.trim() ?? "";
   if (!slug) return;
-  const portalUrl = `${getPublicAppUrl()}/${encodeURIComponent(slug)}/patient/login`;
-  await enqueueEmailDispatch(
-    {
-      kind: "stage_transition_patient",
-      tenantId: ctx.tenantId,
-      to: clientEmail,
-      data: {
-        patientName: ctx.client.name,
-        stageName: ctx.toStage.name,
-        patientMessage: ctx.toStage.patientMessage,
-        documents: ctx.documents.map((d) => ({ fileName: d.file.fileName })),
-        portalUrl,
-        clinicName: tenantRow?.name?.trim() || "Clínica",
-      },
+  const portalUrl = `${deps.getPublicAppUrl()}/${encodeURIComponent(slug)}/patient/login`;
+  await deps.emailQueue.enqueueStageTransitionPatientEmail({
+    tenantId: ctx.tenantId,
+    to: clientEmail,
+    data: {
+      patientName: ctx.client.name,
+      stageName: ctx.toStage.name,
+      patientMessage: ctx.toStage.patientMessage,
+      documents: ctx.documents.map((d) => ({ fileName: d.file.fileName })),
+      portalUrl,
+      clinicName: tenantRow?.name?.trim() || "Clínica",
     },
     // O id da transição evita que reentrar numa etapa já visitada seja deduplicado.
-    {
-      jobId: `email|st|${ctx.tenantId}|${ctx.patientPathwayId}|${ctx.toStage.id}|${ctx.transitionId}`.replace(
-        /:/g,
-        "_",
-      ),
-    },
-  );
+    jobId: `email|st|${ctx.tenantId}|${ctx.patientPathwayId}|${ctx.toStage.id}|${ctx.transitionId}`.replace(
+      /:/g,
+      "_",
+    ),
+  });
 }
 
-async function whatsAppPatient(ctx: TransitionPostCommitContext): Promise<void> {
+async function whatsAppPatient(
+  ctx: TransitionPostCommitContext,
+  deps: TransitionPostCommitDeps,
+): Promise<void> {
   if (ctx.documents.length === 0 || !ctx.client.phone) return;
-  await enqueueWhatsAppDispatch({
+  await deps.whatsappQueue.enqueue({
     tenantId: ctx.tenantId,
     stageTransitionId: ctx.transitionId,
     clientId: ctx.client.id,
@@ -90,16 +103,19 @@ async function whatsAppPatient(ctx: TransitionPostCommitContext): Promise<void> 
  * Efeitos pós-commit (notificação, e-mail, WhatsApp). Cada canal falha isoladamente e é logado.
  * O chamador decide como executar (a rota usa `after()` para sobreviver ao fim da resposta em serverless).
  */
-export async function runTransitionPostCommit(ctx: TransitionPostCommitContext): Promise<void> {
+export async function runTransitionPostCommit(
+  ctx: TransitionPostCommitContext,
+  deps: TransitionPostCommitDeps,
+): Promise<void> {
   const channels = [
     ["notification", notifyStaff],
     ["email", emailPatient],
     ["whatsapp", whatsAppPatient],
   ] as const;
-  const results = await Promise.allSettled(channels.map(([, run]) => run(ctx)));
+  const results = await Promise.allSettled(channels.map(([, run]) => run(ctx, deps)));
   results.forEach((result, i) => {
     if (result.status === "rejected") {
-      console.error(`[transition] post-commit ${channels[i]![0]} failed:`, result.reason);
+      logger.error(`[transition] post-commit ${channels[i]![0]} failed`, { err: result.reason });
     }
   });
 }

@@ -1,5 +1,6 @@
+import { logger } from "@/lib/observability/logger";
 import { AuditEventType } from "@prisma/client";
-import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases/notification/resolve-notification-targets";
+import { resolvePathwayNotificationTargetUserIds } from "@/infrastructure/notifications/resolve-notification-targets";
 import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emitter";
 import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
@@ -112,7 +113,7 @@ export async function runPatchPatientChecklistItem(params: {
                 requiredItemsCompleted: requiredCount,
               },
             })
-            .catch((err) => console.error("[notification] checklist_complete emit failed:", err));
+            .catch((err) => logger.error("[notification] checklist_complete emit failed", { err }));
 
           const tenant = await tenantPrismaRepository.findTenantNameAndSlugById(tenantId);
           const clinicName = tenant?.name?.trim() || "Clínica";
@@ -132,7 +133,7 @@ export async function runPatchPatientChecklistItem(params: {
               },
               { jobId: `email|cl|${tenantId}|${patientPathway.id}|${patientPathway.currentStageId}`.replace(/:/g, "_") },
             ).catch((err) =>
-              console.error("[email] checklist_complete staff enqueue failed:", err),
+              logger.error("[email] checklist_complete staff enqueue failed", { err }),
             );
           }
         }

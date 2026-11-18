@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { AuditEventType, Prisma, type PatientPortalFileReviewStatus } from "@prisma/client";
 
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
@@ -5,7 +6,7 @@ import { clientPrismaRepository } from "@/infrastructure/repositories/client.rep
 import { fileAssetPrismaRepository } from "@/infrastructure/repositories/file-asset.repository";
 import { patientPathwayPrismaRepository } from "@/infrastructure/repositories/patient-pathway.repository";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
-import { resolvePathwayNotificationTargetUserIds } from "@/application/use-cases/notification/resolve-notification-targets";
+import { resolvePathwayNotificationTargetUserIds } from "@/infrastructure/notifications/resolve-notification-targets";
 import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emitter";
 import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
 import {
@@ -62,7 +63,7 @@ export async function runRegisterPatientPortalFile(params: {
   }
   if (actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
     await deleteObjectFromBucket(data.key).catch((err) =>
-      console.error("[registerPatientPortalFile] oversize object cleanup failed:", err),
+      logger.error("[registerPatientPortalFile] oversize object cleanup failed", { err }),
     );
     return { ok: false, code: "FILE_TOO_LARGE" };
   }
@@ -142,7 +143,7 @@ export async function runRegisterPatientPortalFile(params: {
         },
         correlationId: asset.id,
       })
-      .catch((err) => console.error("[registerPatientPortalFile] notification emit failed:", err));
+      .catch((err) => logger.error("[registerPatientPortalFile] notification emit failed", { err }));
 
     if (targetUserIds.length > 0) {
       enqueueEmailDispatch(
@@ -160,7 +161,7 @@ export async function runRegisterPatientPortalFile(params: {
         },
         { jobId: `email|fpr|${tenantId}|${asset.id}`.replace(/:/g, "_") },
       ).catch((err) =>
-        console.error("[registerPatientPortalFile] staff email enqueue failed:", err),
+        logger.error("[registerPatientPortalFile] staff email enqueue failed", { err }),
       );
     }
 
@@ -178,7 +179,7 @@ export async function runRegisterPatientPortalFile(params: {
       },
     };
   } catch (e) {
-    console.error("[registerPatientPortalFile]", e);
+    logger.error("[registerPatientPortalFile]", { err: e });
     return { ok: false, code: "INTERNAL" };
   }
 }

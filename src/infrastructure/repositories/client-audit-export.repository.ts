@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-import type { ClientAuditExportSources } from "@/application/use-cases/client/export-client-audit-csv";
+import type { ClientAuditExportSources } from "@/application/ports/client-audit-export.port";
 import { prisma } from "@/infrastructure/database/prisma";
 
 const EXPORT_AUDIT_TAKE = 12000;

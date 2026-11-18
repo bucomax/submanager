@@ -1,6 +1,6 @@
+import type { IPublishPreflightReader } from "@/application/ports/pathway-publish.port";
 import { deriveStagesFromGraph } from "@/domain/pathway/graph-normalizer";
-import { assertStageDefaultAssigneesInTenant } from "@/application/use-cases/shared/validate-tenant-members";
-import { prisma } from "@/infrastructure/database/prisma";
+import { analyzeStageRemoval } from "@/domain/pathway/stage-removal";
 
 export type PathwayPublishPreflightIssue = {
   code: "GRAPH_EMPTY" | "INVALID_ASSIGNEES" | "REMOVED_STAGES_WITH_PATIENTS";
@@ -26,77 +26,65 @@ export type PathwayPublishPreflightResult = {
 
 type ApiT = (key: string, params?: Record<string, string>) => string;
 
+async function allAssigneesBelongToTenant(
+  reader: IPublishPreflightReader,
+  tenantId: string,
+  assigneeUserIds: string[],
+): Promise<boolean> {
+  const unique = [...new Set(assigneeUserIds.filter((id) => id.length > 0))];
+  if (unique.length === 0) return true;
+  const members = new Set(await reader.findTenantMemberUserIds(tenantId, unique));
+  return unique.every((id) => members.has(id));
+}
+
 /**
  * Validação compartilhada entre `POST …/publish` e `POST …/publish-preview`.
  * Não grava no banco.
  */
-export async function runPathwayPublishPreflight(params: {
-  tenantId: string;
-  pathwayId: string;
-  versionId: string;
-  graphJson: unknown;
-  apiT: ApiT;
-}): Promise<PathwayPublishPreflightResult> {
+export async function runPathwayPublishPreflight(
+  params: {
+    tenantId: string;
+    pathwayId: string;
+    versionId: string;
+    graphJson: unknown;
+    apiT: ApiT;
+  },
+  reader: IPublishPreflightReader,
+): Promise<PathwayPublishPreflightResult> {
   const { tenantId, pathwayId, versionId, graphJson, apiT } = params;
   const stages = deriveStagesFromGraph(graphJson);
   const issues: PathwayPublishPreflightIssue[] = [];
 
   const newStageKeys = new Set(stages.map((s) => s.stageKey));
-  const proposedStageKeys = [...newStageKeys];
+  const oldPublished = await reader.findOtherPublishedVersion(pathwayId, versionId);
+  const oldStages = oldPublished?.stages ?? [];
 
-  const oldPublished = await prisma.pathwayVersion.findFirst({
-    where: { pathwayId, published: true, NOT: { id: versionId } },
-    include: {
-      stages: {
-        include: {
-          _count: { select: { currentPatients: true } },
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
-
-  const publishedStagePatientCounts: PublishedStagePatientCountRow[] =
-    oldPublished?.stages.map((s) => ({
-      stageKey: s.stageKey,
-      name: s.name,
-      patientCount: s._count.currentPatients,
-    })) ?? [];
-
-  const oldKeys = new Set(oldPublished?.stages.map((s) => s.stageKey) ?? []);
-  const removedStageKeys = [...oldKeys].filter((k) => !newStageKeys.has(k));
-
-  const removedStagesWithPatients: PublishedStagePatientCountRow[] =
-    oldPublished?.stages
-      .filter((s) => !newStageKeys.has(s.stageKey) && s._count.currentPatients > 0)
-      .map((s) => ({
-        stageKey: s.stageKey,
-        name: s.name,
-        patientCount: s._count.currentPatients,
-      })) ?? [];
-
-  const removedStagesWithoutPatients =
-    oldPublished?.stages
-      .filter((s) => !newStageKeys.has(s.stageKey) && s._count.currentPatients === 0)
-      .map((s) => ({ stageKey: s.stageKey, name: s.name })) ?? [];
+  const publishedStagePatientCounts: PublishedStagePatientCountRow[] = oldStages.map((s) => ({
+    stageKey: s.stageKey,
+    name: s.name,
+    patientCount: s.currentPatients,
+  }));
+  const { removedStageKeys, removedWithPatients, removedWithoutPatients } = analyzeStageRemoval(
+    oldStages,
+    newStageKeys,
+  );
+  const removedStagesWithPatients: PublishedStagePatientCountRow[] = removedWithPatients.map((s) => ({
+    stageKey: s.stageKey,
+    name: s.name,
+    patientCount: s.currentPatients,
+  }));
 
   if (stages.length === 0) {
-    issues.push({
-      code: "GRAPH_EMPTY",
-      message: apiT("errors.graphNeedsAtLeastOneNode"),
-    });
+    issues.push({ code: "GRAPH_EMPTY", message: apiT("errors.graphNeedsAtLeastOneNode") });
   }
 
-  const assigneeCheck = await assertStageDefaultAssigneesInTenant(
-    prisma,
+  const assigneesOk = await allAssigneesBelongToTenant(
+    reader,
     tenantId,
     stages.flatMap((s) => s.defaultAssigneeUserIds),
   );
-  if (!assigneeCheck.ok) {
-    issues.push({
-      code: "INVALID_ASSIGNEES",
-      message: apiT("errors.invalidAssigneeForTenant"),
-    });
+  if (!assigneesOk) {
+    issues.push({ code: "INVALID_ASSIGNEES", message: apiT("errors.invalidAssigneeForTenant") });
   }
 
   if (removedStagesWithPatients.length > 0) {
@@ -112,10 +100,13 @@ export async function runPathwayPublishPreflight(params: {
     canPublish: issues.length === 0,
     issues,
     publishedStagePatientCounts,
-    proposedStageKeys,
+    proposedStageKeys: [...newStageKeys],
     removedStageKeys,
     removedStagesWithPatients,
-    removedStagesWithoutPatients,
+    removedStagesWithoutPatients: removedWithoutPatients.map((s) => ({
+      stageKey: s.stageKey,
+      name: s.name,
+    })),
   };
 }
 

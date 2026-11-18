@@ -1,33 +1,16 @@
-import type { GuardianRelationship, PatientPreferredChannel, Prisma } from "@prisma/client";
+import type { GuardianRelationship, PatientPreferredChannel } from "@prisma/client";
 import { computeSlaHealthStatus } from "@/domain/pathway/sla-health";
+import {
+  type ClientListRow,
+  CLIENT_LIST_INCLUDE,
+  buildClientsListBaseWhere,
+  clientSearchWhere,
+  reviveClientListRows,
+} from "@/infrastructure/repositories/client-query-shapes";
 import type { ClientDto } from "@/types/api/clients-v1";
 
-/** Include alinhado a `GET /api/v1/clients` (listagem). */
-export const CLIENT_LIST_INCLUDE = {
-  assignedTo: { select: { id: true, name: true, email: true } },
-  opmeSupplier: { select: { id: true, name: true } },
-  patientPathways: {
-    orderBy: { updatedAt: "desc" as const },
-    take: 1,
-    select: {
-      id: true,
-      completedAt: true,
-      pathwayId: true,
-      enteredStageAt: true,
-      pathway: { select: { name: true } },
-      currentStage: {
-        select: {
-          id: true,
-          name: true,
-          alertWarningDays: true,
-          alertCriticalDays: true,
-        },
-      },
-    },
-  },
-} satisfies Prisma.ClientInclude;
-
-export type ClientListRow = Prisma.ClientGetPayload<{ include: typeof CLIENT_LIST_INCLUDE }>;
+export { CLIENT_LIST_INCLUDE, buildClientsListBaseWhere, clientSearchWhere, reviveClientListRows };
+export type { ClientListRow };
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -44,38 +27,6 @@ function toIsoSafe(d: Date): string {
 export function formatClientBirthDateIso(d: Date | null | undefined): string | null {
   if (!isValidDate(d)) return null;
   return d.toISOString().slice(0, 10);
-}
-
-export function clientSearchWhere(q: string): Prisma.ClientWhereInput {
-  const qDigits = q.replace(/\D/g, "");
-  const or: Prisma.ClientWhereInput[] = [
-    { name: { contains: q, mode: "insensitive" } },
-    { phone: { contains: q, mode: "insensitive" } },
-    { email: { contains: q, mode: "insensitive" } },
-  ];
-  if (qDigits.length > 0) {
-    or.push({ documentId: { contains: qDigits, mode: "insensitive" } });
-  }
-  return { OR: or };
-}
-
-export function buildClientsListBaseWhere(input: {
-  tenantId: string;
-  q?: string;
-  pathwayId?: string;
-  stageId?: string;
-}): Prisma.ClientWhereInput {
-  const { tenantId, q, pathwayId, stageId } = input;
-  const ppFilter: Prisma.PatientPathwayWhereInput = { tenantId };
-  if (pathwayId) ppFilter.pathwayId = pathwayId;
-  if (stageId) ppFilter.currentStageId = stageId;
-  const hasPpFilter = Boolean(pathwayId || stageId);
-  return {
-    tenantId,
-    deletedAt: null,
-    ...(q ? clientSearchWhere(q) : {}),
-    ...(hasPpFilter ? { patientPathways: { some: ppFilter } } : {}),
-  };
 }
 
 function baseClientFields(c: ClientListRow) {
@@ -263,49 +214,4 @@ export function serializeClientListItem(c: ClientListRow, now: Date) {
     slaStatus,
     journeyCompletedAt: null,
   };
-}
-
-/** Após `unstable_cache`, o Next serializa `Date` como string — reidrata para o SLA usar `now` atual. */
-export function reviveClientListRows(raw: unknown): ClientListRow[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map(reviveClientListRow);
-}
-
-function reviveClientListRow(raw: unknown): ClientListRow {
-  const c = raw as Record<string, unknown>;
-  const ppsRaw = c.patientPathways;
-  const patientPathways = Array.isArray(ppsRaw)
-    ? ppsRaw.map((pp) => {
-        const row = pp as Record<string, unknown>;
-        const cs = row.currentStage as Record<string, unknown> | null;
-        return {
-          ...row,
-          enteredStageAt: toDate(row.enteredStageAt),
-          completedAt: row.completedAt ? toDate(row.completedAt) : null,
-          pathway: row.pathway,
-          currentStage: cs
-            ? {
-                ...cs,
-                alertWarningDays: Number(cs.alertWarningDays),
-                alertCriticalDays: Number(cs.alertCriticalDays),
-              }
-            : null,
-        };
-      })
-    : [];
-
-  return {
-    ...c,
-    createdAt: toDate(c.createdAt),
-    updatedAt: toDate(c.updatedAt),
-    assignedTo: c.assignedTo,
-    opmeSupplier: c.opmeSupplier,
-    patientPathways,
-  } as ClientListRow;
-}
-
-function toDate(v: unknown): Date {
-  if (v instanceof Date) return v;
-  if (typeof v === "string" || typeof v === "number") return new Date(v);
-  return new Date(NaN);
 }

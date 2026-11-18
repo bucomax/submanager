@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import type { ClientListFilters, ClientUpsertInput, IClientRepository } from "@/application/ports/client-repository.port";
-import { CLIENT_LIST_INCLUDE } from "@/application/use-cases/client/serialize-client-list";
+import { CLIENT_LIST_INCLUDE } from "@/infrastructure/repositories/client-query-shapes";
 import type { ParsedPortalLogin } from "@/domain/auth/patient-portal-login-identifier";
 import { prisma } from "@/infrastructure/database/prisma";
 import type { PatientPortalOverviewResponse, PortalClientForLogin } from "@/types/api/patient-portal-v1";

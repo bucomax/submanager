@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Actor } from "@/domain/auth/actor";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/application/use-cases/shared/load-client-visibility-scope", () => ({
-  findTenantClientVisibleToSession: mocks.findClient,
+  findTenantClientVisibleToActor: mocks.findClient,
   loadConversationVisibilityWhere: async () => mocks.visibility,
 }));
 vi.mock("@/infrastructure/repositories/conversation.repository", () => ({
@@ -20,7 +20,7 @@ vi.mock("@/infrastructure/repositories/user.repository", () => ({
 }));
 
 const { validateAgendaEventRefs } = await import("./validate-agenda-event-references");
-const session = { user: { id: "u1", globalRole: "user" } } as Session;
+const actor: Actor = { userId: "u1", globalRole: "user", tenantId: "t1", tenantRole: "tenant_user" };
 
 describe("validateAgendaEventRefs", () => {
   beforeEach(() => {
@@ -30,22 +30,22 @@ describe("validateAgendaEventRefs", () => {
   });
 
   it("should return null when every reference is valid", async () => {
-    expect(await validateAgendaEventRefs(session, "t1", { conversationId: "cv", clientId: "c1", ownerUserId: "u1" })).toBeNull();
+    expect(await validateAgendaEventRefs(actor, "t1", { conversationId: "cv", clientId: "c1", ownerUserId: "u1" })).toBeNull();
   });
 
   it("should check the conversation against the visibility scope", async () => {
     mocks.existsInTenant.mockResolvedValue(false);
-    expect(await validateAgendaEventRefs(session, "t1", { conversationId: "cv" })).toBe("conversation_not_found");
+    expect(await validateAgendaEventRefs(actor, "t1", { conversationId: "cv" })).toBe("conversation_not_found");
     expect(mocks.existsInTenant).toHaveBeenCalledWith("t1", "cv", mocks.visibility);
   });
 
   it("should reject a client outside the user scope", async () => {
     mocks.findClient.mockResolvedValue(null);
-    expect(await validateAgendaEventRefs(session, "t1", { clientId: "c9" })).toBe("patient_not_found");
+    expect(await validateAgendaEventRefs(actor, "t1", { clientId: "c9" })).toBe("patient_not_found");
   });
 
   it("should reject an owner that is not a tenant member", async () => {
     mocks.findOwner.mockResolvedValue(null);
-    expect(await validateAgendaEventRefs(session, "t1", { ownerUserId: "x" })).toBe("invalid_assignee");
+    expect(await validateAgendaEventRefs(actor, "t1", { ownerUserId: "x" })).toBe("invalid_assignee");
   });
 });

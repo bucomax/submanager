@@ -1,24 +1,9 @@
-import { AuditEventType, type Prisma } from "@prisma/client";
+import { AuditEventType } from "@prisma/client";
+import type { ClientAuditExportSources, StageTransitionTimelineRow } from "@/application/ports/client-audit-export.port";
 import { auditEventTypeToCategory } from "@/domain/audit/event-category-mapper";
 import type { ClientTimelineEventCategory, ClientTimelineItemDto } from "@/types/api/clients-v1";
 
 const EXPORT_ROW_CAP = 10000;
-
-type StageTransitionTimelineRow = Prisma.StageTransitionGetPayload<{
-  include: {
-    fromStage: { select: { id: true; name: true; stageKey: true } };
-    toStage: { select: { id: true; name: true; stageKey: true } };
-    actor: { select: { id: true; name: true; email: true } };
-    forcedByUser: { select: { id: true; name: true; email: true } };
-  };
-}>;
-
-export type ClientAuditExportSources = {
-  audits: Prisma.AuditEventGetPayload<{
-    include: { actor: { select: { id: true; name: true; email: true } } };
-  }>[];
-  transitions: StageTransitionTimelineRow[];
-};
 
 function transitionIdFromAuditPayload(payload: unknown): string | null {
   if (payload == null || typeof payload !== "object") return null;
