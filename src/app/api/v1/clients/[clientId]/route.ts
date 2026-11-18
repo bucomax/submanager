@@ -1,13 +1,11 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { CLIENT_DELETE_ERRORS, CLIENT_REFERENCE_ERRORS } from "@/lib/api/error-tables/client";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
-import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+import { findTenantClientVisibleToActor } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { loadClientDetailResponseData } from "@/application/use-cases/client/load-client-detail";
 import { validateClientOptionalRefs } from "@/application/use-cases/client/validate-client-references";
 import { runDeleteClient } from "@/application/use-cases/client/delete-client";
@@ -16,18 +14,7 @@ import { clientDetailQuerySchema } from "@/lib/validators/client-detail-query";
 
 export const dynamic = "force-dynamic";
 
-import type { RouteCtx } from "@/types/api/route-context";
-
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
+export const GET = withTenantRoute(async ({ request, session, tenantId, apiT, params }) => {
   const url = new URL(request.url);
   const parsedQ = clientDetailQuerySchema.safeParse({
     page: url.searchParams.get("page") ?? undefined,
@@ -38,9 +25,9 @@ export async function GET(request: Request, ctx: RouteCtx) {
   }
   const { page, limit } = parsedQ.data;
 
-  const { clientId } = await ctx.params;
+  const { clientId } = params;
 
-  const row = await findTenantClientVisibleToSession(auth.session!, tenantCtx.tenantId, clientId, {
+  const row = await findTenantClientVisibleToActor(actorFromSession(session), tenantId, clientId, {
     id: true,
     name: true,
     phone: true,
@@ -76,22 +63,13 @@ export async function GET(request: Request, ctx: RouteCtx) {
     return jsonError("NOT_FOUND", apiT("errors.patientNotFound"), 404);
   }
 
-  const payload = await loadClientDetailResponseData(tenantCtx.tenantId, row, page, limit);
+  const payload = await loadClientDetailResponseData(tenantId, row, page, limit);
   return jsonSuccess(payload);
-}
+});
 
-export async function PATCH(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { clientId } = await ctx.params;
-  const existing = await findTenantClientVisibleToSession(auth.session!, tenantCtx.tenantId, clientId, {
+export const PATCH = withTenantRoute(async ({ request, session, tenantId, apiT, params }) => {
+  const { clientId } = params;
+  const existing = await findTenantClientVisibleToActor(actorFromSession(session), tenantId, clientId, {
     id: true,
     tenantId: true,
   });
@@ -99,35 +77,21 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
     return jsonError("NOT_FOUND", apiT("errors.patientNotFound"), 404);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patchClientBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError(
-      "VALIDATION_ERROR",
-      joinTranslatedZodIssues(parsed.error, apiT as (key: string) => string),
-      422,
-    );
-  }
+  const parsed = await parseJsonBody(request, patchClientBodySchema, apiT);
+  if (parsed.response) return parsed.response;
 
   const refErr = await validateClientOptionalRefs(
-    tenantCtx.tenantId,
+    tenantId,
     {
       assignedToUserId: parsed.data.assignedToUserId === undefined ? undefined : parsed.data.assignedToUserId,
       opmeSupplierId: parsed.data.opmeSupplierId === undefined ? undefined : parsed.data.opmeSupplierId,
     },
-    apiT,
   );
-  if (refErr) return refErr;
+  if (refErr) return mapUseCaseError(refErr, CLIENT_REFERENCE_ERRORS, apiT);
 
   const updated = await runUpdateClient({
-    tenantId: tenantCtx.tenantId,
-    actorUserId: auth.session!.user.id,
+    tenantId,
+    actorUserId: session.user.id,
     clientDbId: existing.id,
     patch: parsed.data,
   });
@@ -139,20 +103,11 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
   return jsonSuccess({
     client: updated.client,
   });
-}
+});
 
-export async function DELETE(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { clientId } = await ctx.params;
-  const existing = await findTenantClientVisibleToSession(auth.session!, tenantCtx.tenantId, clientId, {
+export const DELETE = withTenantRoute(async ({ session, tenantId, apiT, params }) => {
+  const { clientId } = params;
+  const existing = await findTenantClientVisibleToActor(actorFromSession(session), tenantId, clientId, {
     id: true,
   });
   if (!existing) {
@@ -160,18 +115,15 @@ export async function DELETE(request: Request, ctx: RouteCtx) {
   }
 
   const deleted = await runDeleteClient({
-    tenantId: tenantCtx.tenantId,
-    actorUserId: auth.session!.user.id,
+    tenantId,
+    actorUserId: session.user.id,
     clientDbId: existing.id,
-    isSuperAdmin: auth.session!.user.globalRole === "super_admin",
+    isSuperAdmin: session.user.globalRole === "super_admin",
   });
 
   if (!deleted.ok) {
-    if (deleted.code === "FORBIDDEN") {
-      return jsonError("FORBIDDEN", apiT("errors.deletePatientForbidden"), 403);
-    }
-    return jsonError("NOT_FOUND", apiT("errors.patientNotFound"), 404);
+    return mapUseCaseError(deleted.code, CLIENT_DELETE_ERRORS, apiT);
   }
 
   return jsonSuccess({ message: apiT("success.clientRemoved") });
-}
+});

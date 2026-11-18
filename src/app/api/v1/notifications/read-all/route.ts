@@ -1,23 +1,15 @@
-import { getApiT } from "@/lib/api/i18n";
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { jsonSuccess } from "@/lib/api-response";
-import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
 import { markAllUnreadNotificationsReadWithClientScope } from "@/application/use-cases/notification/list-notifications-with-scope";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const updated = await markAllUnreadNotificationsReadWithClientScope(
-    auth.session!,
-    tenantCtx.tenantId,
-    auth.session!.user.id,
+export const POST = withTenantRoute(async ({ session, tenantId }) => {
+  const updated = await markAllUnreadNotificationsReadWithClientScope(actorFromSession(session),
+    tenantId,
+    session.user.id,
   );
 
   return jsonSuccess({ updated });
-}
+});

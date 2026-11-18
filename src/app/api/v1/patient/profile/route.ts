@@ -1,5 +1,5 @@
 import { getApiT } from "@/lib/api/i18n";
-import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { requireActivePatientPortalClient } from "@/lib/auth/patient-portal-request";
 import { runPatchPatientPortalProfile } from "@/application/use-cases/patient-portal/patch-patient-portal-profile";
@@ -13,21 +13,8 @@ export async function PATCH(request: Request) {
   if (!portalCtx.ok) return portalCtx.response;
   const portal = portalCtx.data.portal;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patchPatientPortalProfileBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError(
-      "VALIDATION_ERROR",
-      joinTranslatedZodIssues(parsed.error, apiT as (key: string) => string),
-      422,
-    );
-  }
+  const parsed = await parseJsonBody(request, patchPatientPortalProfileBodySchema, apiT);
+  if (parsed.response) return parsed.response;
 
   const result = await runPatchPatientPortalProfile({
     tenantId: portal.tenantId,

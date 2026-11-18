@@ -1,4 +1,4 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { hashRateLimitKey, rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -30,17 +30,8 @@ export async function POST(request: Request, ctx: RouteCtx) {
     return jsonSuccessOpaque();
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postPatientPortalOtpRequestBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, postPatientPortalOtpRequestBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const identifier = parsePortalLoginInput(parsed.data.login);
   if (!identifier) {

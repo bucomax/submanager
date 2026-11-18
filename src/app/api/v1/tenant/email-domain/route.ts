@@ -1,11 +1,12 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
-import { jsonError, jsonSuccess } from "@/lib/api-response";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
 import {
-  assertTenantAdminOrSuper,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+  EMAIL_DOMAIN_PATCH_ERRORS,
+  EMAIL_DOMAIN_REMOVE_ERRORS,
+  EMAIL_DOMAIN_SETUP_ERRORS,
+} from "@/lib/api/error-tables/tenant-settings";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
+import { jsonError, jsonSuccess } from "@/lib/api-response";
 import {
   patchTenantEmailDomainBodySchema,
   postSetupTenantEmailDomainBodySchema,
@@ -19,133 +20,54 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (adminBlock) return adminBlock;
-
-  const dto = await getTenantEmailDomainState(tenantCtx.tenantId);
+export const GET = withTenantRoute(async ({ tenantId, apiT }) => {
+  const dto = await getTenantEmailDomainState(tenantId);
   if (!dto) {
     return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
   }
   return jsonSuccess({ emailDomain: dto });
-}
+}, { role: "admin" });
 
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (adminBlock) return adminBlock;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postSetupTenantEmailDomainBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const POST = withTenantRoute(async ({ request, session, tenantId, apiT }) => {
+  const parsed = await parseJsonBody(request, postSetupTenantEmailDomainBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await setupTenantEmailDomain({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     body: parsed.data,
-    actorUserId: auth.session!.user.id,
+    actorUserId: session.user.id,
   });
 
   if (!result.ok) {
-    if (result.code === "RESEND_NOT_CONFIGURED") {
-      return jsonError("SERVICE_UNAVAILABLE", apiT("errors.emailResendNotConfigured"), 503);
-    }
-    if (result.code === "ALREADY_HAS_DOMAIN") {
-      return jsonError("CONFLICT", apiT("errors.emailDomainAlreadyConfigured"), 409);
-    }
-    if (result.code === "RESEND_DUPLICATE") {
-      return jsonError("CONFLICT", result.errorMessage ?? "Domínio já existe no Resend.", 409);
-    }
-    if (result.code === "RESEND_ERROR") {
-      return jsonError("BAD_GATEWAY", result.errorMessage ?? "Falha ao criar domínio no Resend.", 502);
-    }
-    return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
+    return mapUseCaseError(result.code, EMAIL_DOMAIN_SETUP_ERRORS, apiT, { message: result.errorMessage });
   }
 
   return jsonSuccess({ emailDomain: result.dto });
-}
+}, { role: "admin" });
 
-export async function PATCH(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (adminBlock) return adminBlock;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patchTenantEmailDomainBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const PATCH = withTenantRoute(async ({ request, tenantId, apiT }) => {
+  const parsed = await parseJsonBody(request, patchTenantEmailDomainBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await patchTenantEmailDomainInput({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     body: parsed.data,
   });
 
   if (!result.ok) {
-    if (result.code === "DOMAIN_NOT_VERIFIED") {
-      return jsonError("PRECONDITION_FAILED", apiT("errors.emailDomainNotVerified"), 412);
-    }
-    if (result.code === "VALIDATION") {
-      return jsonError("VALIDATION_ERROR", apiT("errors.emailFromAddressMustMatchDomain"), 422);
-    }
-    return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
+    return mapUseCaseError(result.code, EMAIL_DOMAIN_PATCH_ERRORS, apiT);
   }
   return jsonSuccess({ emailDomain: result.dto });
-}
+}, { role: "admin" });
 
-export async function DELETE(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (adminBlock) return adminBlock;
-
+export const DELETE = withTenantRoute(async ({ session, tenantId, apiT }) => {
   const result = await removeTenantEmailDomain({
-    tenantId: tenantCtx.tenantId,
-    actorUserId: auth.session!.user.id,
+    tenantId,
+    actorUserId: session.user.id,
   });
 
   if (!result.ok) {
-    if (result.code === "RESEND_ERROR") {
-      return jsonError("BAD_GATEWAY", "Falha ao remover domínio no Resend.", 502);
-    }
-    return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
+    return mapUseCaseError(result.code, EMAIL_DOMAIN_REMOVE_ERRORS, apiT);
   }
   return jsonSuccess({ emailDomain: result.dto });
-}
+}, { role: "admin" });

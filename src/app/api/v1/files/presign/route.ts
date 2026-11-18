@@ -1,4 +1,5 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { actorFromSession } from "@/lib/auth/actor";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import {
   buildUploadObjectKey,
   isGcsConfigured,
@@ -8,7 +9,7 @@ import {
 import { rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
+import { findTenantClientVisibleToActor } from "@/application/use-cases/shared/load-client-visibility-scope";
 import {
   assertActiveTenantMembership,
   getActiveTenantIdOr400,
@@ -37,20 +38,11 @@ export async function POST(request: Request) {
   const limited = await rateLimit("filePresign", `presign:${tenantId}:${auth.session!.user.id}`);
   if (limited) return limited;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postFilePresignBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, postFilePresignBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   if (parsed.data.clientId) {
-    const c = await findTenantClientVisibleToSession(auth.session!, tenantId, parsed.data.clientId, {
+    const c = await findTenantClientVisibleToActor(actorFromSession(auth.session!), tenantId, parsed.data.clientId, {
       id: true,
     });
     if (!c) {

@@ -1,19 +1,15 @@
+import { logger } from "@/lib/observability/logger";
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { resolvePublishedPathwayVersion } from "@/infrastructure/database/pathway-published";
 import { checkAndEmitSlaNotifications } from "@/infrastructure/notifications/sla-notification-check";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { buildKanbanClientWhereForSession } from "@/application/use-cases/shared/load-client-visibility-scope";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+import { buildKanbanClientWhereForActor } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { dashboardPathwayOpmeQuerySchema } from "@/lib/validators/kanban";
 import { loadDashboardPathwayAlerts } from "@/application/use-cases/pathway/load-dashboard-pathway-alerts";
 import { after } from "next/server";
 import { z } from "zod";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +18,8 @@ const querySchema = dashboardPathwayOpmeQuerySchema.extend({
 });
 
 /** Alertas MVP: pacientes em estado **danger** (SLA crítico), ordenados por dias na etapa (piores primeiro). */
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { pathwayId } = await ctx.params;
+export const GET = withTenantRoute(async ({ request, session, tenantId, apiT, params }) => {
+  const { pathwayId } = params;
 
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({
@@ -44,7 +31,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
   }
   const { limit, opmeSupplierId } = parsed.data;
 
-  const resolved = await resolvePublishedPathwayVersion(tenantCtx.tenantId, pathwayId);
+  const resolved = await resolvePublishedPathwayVersion(tenantId, pathwayId);
   if (resolved.outcome === "PATHWAY_NOT_FOUND") {
     return jsonError("NOT_FOUND", apiT("errors.pathwayNotFound"), 404);
   }
@@ -59,29 +46,28 @@ export async function GET(request: Request, ctx: RouteCtx) {
   if (canRun) {
     after(() =>
       checkAndEmitSlaNotifications({
-        tenantId: tenantCtx.tenantId,
+        tenantId,
         pathwayId,
         versionId: version.id,
       }).catch((err: unknown) => {
-        console.error("[sla-check] emit failed", {
-          tenantId: tenantCtx.tenantId,
+        logger.error("[sla-check] emit failed", {
+          tenantId,
           pathwayId,
           versionId: version.id,
-          error: err instanceof Error ? err.message : String(err),
+          err,
         });
       }),
     );
   }
 
-  const clientWhere = await buildKanbanClientWhereForSession(
-    auth.session!,
-    tenantCtx.tenantId,
+  const clientWhere = await buildKanbanClientWhereForActor(actorFromSession(session),
+    tenantId,
     "",
     opmeSupplierId,
   );
 
   const alerts = await loadDashboardPathwayAlerts({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     pathwayId,
     version,
     clientWhere,
@@ -93,4 +79,4 @@ export async function GET(request: Request, ctx: RouteCtx) {
     data: alerts.data,
     pagination: alerts.pagination,
   });
-}
+});

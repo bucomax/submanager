@@ -1,4 +1,4 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import {
   buildUploadObjectKey,
   isGcsConfigured,
@@ -27,17 +27,8 @@ export async function POST(request: Request) {
   const limited = await rateLimit("filePresign", `presign-patient:${tenantId}:${clientId}`);
   if (limited) return limited;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patientPortalFilePresignBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, patientPortalFilePresignBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const key = buildUploadObjectKey({
     tenantId,

@@ -1,12 +1,8 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { PATHWAY_DELETE_ERRORS, PATHWAY_UPDATE_ERRORS } from "@/lib/api/error-tables/pathway";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  assertTenantAdminOrSuper,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { patchPathwayBodySchema } from "@/lib/validators/pathway";
 import {
   getCarePathwayDetail,
@@ -16,20 +12,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-import type { RouteCtx } from "@/types/api/route-context";
-
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { pathwayId } = await ctx.params;
-  const row = await getCarePathwayDetail(tenantCtx.tenantId, pathwayId);
+export const GET = withTenantRoute(async ({ tenantId, apiT, params }) => {
+  const { pathwayId } = params;
+  const row = await getCarePathwayDetail(tenantId, pathwayId);
   if (!row) {
     return jsonError("NOT_FOUND", apiT("errors.pathwayNotFound"), 404);
   }
@@ -44,39 +29,13 @@ export async function GET(request: Request, ctx: RouteCtx) {
       updatedAt: row.updatedAt,
     },
   });
-}
+});
 
-export async function PATCH(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withTenantRoute(async ({ request, tenantId, apiT, params }) => {
+  const { pathwayId } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-  const adminErr = await assertTenantAdminOrSuper(
-    auth.session!,
-    tenantCtx.tenantId,
-    request,
-    apiT,
-    "errors.managePathwaysPermissionDenied",
-  );
-  if (adminErr) return adminErr;
-
-  const { pathwayId } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patchPathwayBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, patchPathwayBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const data: { name?: string; description?: string | null } = {};
   if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
@@ -89,50 +48,27 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
   }
 
   const result = await runPatchCarePathway({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     pathwayId,
     patch: data,
   });
 
   if (!result.ok) {
-    if (result.code === "NOT_FOUND") {
-      return jsonError("NOT_FOUND", apiT("errors.pathwayNotFound"), 404);
-    }
-    return jsonError("VALIDATION_ERROR", apiT("errors.noFieldsToUpdate"), 422);
+    return mapUseCaseError(result.code, PATHWAY_UPDATE_ERRORS, apiT);
   }
 
   return jsonSuccess({
     pathway: result.pathway,
   });
-}
+}, { role: "admin", forbiddenMessageKey: "errors.managePathwaysPermissionDenied" });
 
-export async function DELETE(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-  const adminErr = await assertTenantAdminOrSuper(
-    auth.session!,
-    tenantCtx.tenantId,
-    request,
-    apiT,
-    "errors.managePathwaysPermissionDenied",
-  );
-  if (adminErr) return adminErr;
-
-  const { pathwayId } = await ctx.params;
-  const result = await runDeleteCarePathway(tenantCtx.tenantId, pathwayId);
+export const DELETE = withTenantRoute(async ({ tenantId, apiT, params }) => {
+  const { pathwayId } = params;
+  const result = await runDeleteCarePathway(tenantId, pathwayId);
 
   if (!result.ok) {
-    if (result.code === "NOT_FOUND") {
-      return jsonError("NOT_FOUND", apiT("errors.pathwayNotFound"), 404);
-    }
-    return jsonError("CONFLICT", apiT("errors.pathwayPatientsBlockDelete"), 409);
+    return mapUseCaseError(result.code, PATHWAY_DELETE_ERRORS, apiT);
   }
 
   return jsonSuccess({ message: apiT("success.pathwayDeleted") });
-}
+}, { role: "admin", forbiddenMessageKey: "errors.managePathwaysPermissionDenied" });

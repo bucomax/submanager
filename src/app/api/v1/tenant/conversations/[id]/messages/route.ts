@@ -1,51 +1,27 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { formatZodIssues } from "@/lib/api/zod-error";
 import { sendConversationMessage } from "@/application/use-cases/conversations/send-conversation-message";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { sendMessageBodySchema } from "@/lib/validators/contacts";
 import type { MessageDto } from "@/types/api/contacts-v1";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
 /** Envia uma mensagem outbound na conversa (real, via WhatsApp Cloud API quando o tenant estiver configurado). */
-export async function POST(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const POST = withTenantRoute<{ id: string }>(async ({ request, session, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = sendMessageBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, sendMessageBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await sendConversationMessage({
-    tenantId: tenantCtx.tenantId!,
+    tenantId,
     conversationId: id,
-    actorUserId: auth.session!.user.id,
+    actorUserId: session.user.id,
     body: parsed.data.body,
-    visibility: await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!),
+    visibility: await loadConversationVisibilityWhere(actorFromSession(session), tenantId),
   });
 
   if (!result.ok) {
@@ -62,4 +38,4 @@ export async function POST(request: Request, ctx: RouteCtx<{ id: string }>) {
   };
 
   return jsonSuccess(dto, { status: 201 });
-}
+});

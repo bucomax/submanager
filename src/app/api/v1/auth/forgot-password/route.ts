@@ -1,6 +1,8 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { FORGOT_PASSWORD_ERRORS } from "@/lib/api/error-tables/auth";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { getApiT } from "@/lib/api/i18n";
-import { jsonError, jsonSuccess } from "@/lib/api-response";
+import { jsonSuccess } from "@/lib/api-response";
 import { forgotPasswordSchema } from "@/lib/validators/auth";
 import { runForgotPassword } from "@/application/use-cases/auth/forgot-password";
 
@@ -13,25 +15,13 @@ export async function POST(request: Request) {
 
   const apiT = await getApiT(request);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = forgotPasswordSchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, forgotPasswordSchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await runForgotPassword(parsed.data.email);
 
   if (!result.ok) {
-    if (result.code === "EMAIL_NOT_CONFIGURED") {
-      return jsonError("SERVICE_UNAVAILABLE", apiT("errors.passwordResetNotConfigured"), 503);
-    }
-    return jsonError("EMAIL_SEND_FAILED", apiT("errors.emailSendFailedGeneric"), 500);
+    return mapUseCaseError(result.code, FORGOT_PASSWORD_ERRORS, apiT);
   }
 
   return jsonSuccess({

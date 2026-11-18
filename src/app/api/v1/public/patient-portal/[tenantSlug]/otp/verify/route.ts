@@ -1,4 +1,5 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { logger } from "@/lib/observability/logger";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { createApiMeta } from "@/lib/api/envelope";
 import { hashRateLimitKey, rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
@@ -33,17 +34,8 @@ export async function POST(request: Request, ctx: RouteCtx) {
     return jsonError("UNAUTHORIZED", apiT("errors.patientPortalOtpInvalid"), 401);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postPatientPortalOtpVerifyBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, postPatientPortalOtpVerifyBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const identifier = parsePortalLoginInput(parsed.data.login);
   if (!identifier) {
@@ -88,7 +80,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
     });
     return res;
   } catch (e) {
-    console.error("[patient-portal] OTP session cookie signing failed:", e);
+    logger.error("[patient-portal] OTP session cookie signing failed", { err: e });
     return jsonError(
       "SERVICE_UNAVAILABLE",
       apiT("errors.patientPortalMisconfigured"),

@@ -1,18 +1,12 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import {
   isUniqueConstraintError,
   quickPhrasePrismaRepository,
 } from "@/infrastructure/repositories/quick-phrase.repository";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { upsertQuickPhraseBodySchema } from "@/lib/validators/contacts";
 import type { QuickPhraseDto } from "@/types/api/contacts-v1";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
@@ -38,33 +32,14 @@ function toDto(row: {
   };
 }
 
-export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withTenantRoute<{ id: string }>(async ({ request, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = upsertQuickPhraseBodySchema.partial().safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, upsertQuickPhraseBodySchema.partial(), apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   try {
-    const row = await quickPhrasePrismaRepository.update(tenantCtx.tenantId!, id, parsed.data);
+    const row = await quickPhrasePrismaRepository.update(tenantId, id, parsed.data);
     if (!row) {
       return jsonError("NOT_FOUND", apiT("errors.quickPhraseNotFound"), 404);
     }
@@ -75,25 +50,15 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
     }
     throw err;
   }
-}
+});
 
-export async function DELETE(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const DELETE = withTenantRoute<{ id: string }>(async ({ tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  const removed = await quickPhrasePrismaRepository.remove(tenantCtx.tenantId!, id);
+  const removed = await quickPhrasePrismaRepository.remove(tenantId, id);
   if (!removed) {
     return jsonError("NOT_FOUND", apiT("errors.quickPhraseNotFound"), 404);
   }
 
   return jsonSuccess({ id });
-}
+});

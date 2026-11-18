@@ -1,7 +1,9 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
-import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { requireSessionOr401 } from "@/lib/auth/guards";
+import { actorFromSession } from "@/lib/auth/actor";
+import { withSessionRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { SWITCH_ACTIVE_TENANT_ERRORS } from "@/lib/api/error-tables/auth";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
+import { jsonSuccess } from "@/lib/api-response";
 import { getSession } from "@/lib/auth/session";
 import { postAuthContextBodySchema } from "@/lib/validators/tenant";
 import { runSwitchActiveTenant } from "@/application/use-cases/auth/switch-active-tenant";
@@ -9,36 +11,17 @@ import { runSwitchActiveTenant } from "@/application/use-cases/auth/switch-activ
 export const dynamic = "force-dynamic";
 
 /** Define o tenant ativo (`User.activeTenantId`). Exige membership ou `super_admin`. */
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postAuthContextBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const POST = withSessionRoute(async ({ request, session, apiT }) => {
+  const parsed = await parseJsonBody(request, postAuthContextBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await runSwitchActiveTenant({
-    session: auth.session!,
+    actor: actorFromSession(session),
     tenantId: parsed.data.tenantId,
   });
 
   if (!result.ok) {
-    if (result.code === "TENANT_NOT_FOUND") {
-      return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
-    }
-    if (result.code === "TENANT_INACTIVE") {
-      return jsonError("TENANT_INACTIVE", apiT("errors.tenantInactive"), 403);
-    }
-    return jsonError("FORBIDDEN", apiT("errors.forbiddenTenantAccess"), 403);
+    return mapUseCaseError(result.code, SWITCH_ACTIVE_TENANT_ERRORS, apiT);
   }
 
   const fresh = await getSession();
@@ -56,4 +39,4 @@ export async function POST(request: Request) {
         }
       : undefined,
   });
-}
+});

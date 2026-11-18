@@ -1,7 +1,7 @@
 import { after } from "next/server";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 
 import { getApiT } from "@/lib/api/i18n";
-import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import {
   loadPatientSelfRegisterInvitePreview,
@@ -40,21 +40,8 @@ export async function POST(request: Request) {
 
   const apiT = await getApiT(request);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = publicPatientSelfRegisterBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError(
-      "VALIDATION_ERROR",
-      joinTranslatedZodIssues(parsed.error, apiT as (key: string) => string),
-      422,
-    );
-  }
+  const parsed = await parseJsonBody(request, publicPatientSelfRegisterBodySchema, apiT);
+  if (parsed.response) return parsed.response;
 
   const outcome = await runCompletePatientSelfRegister(request, parsed.data);
 

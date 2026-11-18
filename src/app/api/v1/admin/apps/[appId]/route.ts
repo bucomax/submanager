@@ -1,7 +1,7 @@
+import { withSessionRoute } from "@/lib/api/route-handler";
+import { readJsonBody } from "@/lib/api/parse-json-body";
 import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { requireSessionOr401, superAdminOr403 } from "@/lib/auth/guards";
 import { updateAppBodySchema, publishAppBodySchema } from "@/lib/validators/app";
 import { runUpdateApp } from "@/application/use-cases/admin/apps/update-app";
 import { runDeleteApp } from "@/application/use-cases/admin/apps/delete-app";
@@ -11,41 +11,22 @@ import { appPrismaRepository } from "@/infrastructure/repositories/app.repositor
 
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ appId: string }> };
-
 /** Detalhe de um app (apenas super_admin). */
-export async function GET(request: Request, context: RouteContext) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const forbidden = await superAdminOr403(auth.session!, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { appId } = await context.params;
+export const GET = withSessionRoute<{ appId: string }>(async ({ apiT, params }) => {
+  const { appId } = params;
   const app = await appPrismaRepository.findById(appId);
-  if (!app) return jsonError("NOT_FOUND", "App não encontrado.", 404);
+  if (!app) return jsonError("NOT_FOUND", apiT("errors.appNotFound"), 404);
 
   return jsonSuccess({ app: mapAppToDto(app) });
-}
+}, { role: "super_admin" });
 
 /** Atualiza dados de um app (apenas super_admin). */
-export async function PATCH(request: Request, context: RouteContext) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withSessionRoute<{ appId: string }>(async ({ request, apiT, params }) => {
+  const { appId } = params;
 
-  const forbidden = await superAdminOr403(auth.session!, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { appId } = await context.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
+  const raw = await readJsonBody(request, apiT);
+  if (raw.response) return raw.response;
+  const body = raw.data;
 
   // Detecta se é publish/unpublish
   const publishParsed = publishAppBodySchema.safeParse(body);
@@ -61,27 +42,16 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const app = await runUpdateApp(appId, parsed.data);
   return jsonSuccess({ app: mapAppToDto(app) });
-}
+}, { role: "super_admin" });
 
 /** Remove um app do catálogo (apenas super_admin). */
-export async function DELETE(request: Request, context: RouteContext) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const forbidden = await superAdminOr403(auth.session!, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { appId } = await context.params;
+export const DELETE = withSessionRoute<{ appId: string }>(async ({ apiT, params }) => {
+  const { appId } = params;
   const result = await runDeleteApp(appId);
 
   if (!result.ok) {
-    return jsonError(
-      "CONFLICT",
-      "Não é possível excluir um app que possui ativações em tenants. Desative primeiro.",
-      409,
-    );
+    return jsonError("CONFLICT", apiT("errors.appDeleteHasActivations"), 409);
   }
 
   return jsonSuccess({ deleted: true });
-}
+}, { role: "super_admin" });

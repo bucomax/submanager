@@ -1,31 +1,17 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { resolvePublishedPathwayVersion } from "@/infrastructure/database/pathway-published";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { buildKanbanClientWhereForSession } from "@/application/use-cases/shared/load-client-visibility-scope";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+import { buildKanbanClientWhereForActor } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { kanbanQuerySchema } from "@/lib/validators/kanban";
 import { loadKanbanBoard } from "@/application/use-cases/pathway/load-kanban-board";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
 /** Fase 2: colunas + pacientes por etapa, com busca, filtro de status SLA e paginação por coluna (primeira página). */
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { pathwayId } = await ctx.params;
+export const GET = withTenantRoute(async ({ request, session, tenantId, apiT, params }) => {
+  const { pathwayId } = params;
 
   const url = new URL(request.url);
   const parsed = kanbanQuerySchema.safeParse({
@@ -40,7 +26,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
   const { search: searchRaw, status: statusFilter, limit, opmeSupplierId } = parsed.data;
   const search = searchRaw ?? "";
 
-  const resolved = await resolvePublishedPathwayVersion(tenantCtx.tenantId, pathwayId);
+  const resolved = await resolvePublishedPathwayVersion(tenantId, pathwayId);
   if (resolved.outcome === "PATHWAY_NOT_FOUND") {
     return jsonError("NOT_FOUND", apiT("errors.pathwayNotFound"), 404);
   }
@@ -49,15 +35,14 @@ export async function GET(request: Request, ctx: RouteCtx) {
   }
   const { version } = resolved;
 
-  const clientWhere = await buildKanbanClientWhereForSession(
-    auth.session!,
-    tenantCtx.tenantId,
+  const clientWhere = await buildKanbanClientWhereForActor(actorFromSession(session),
+    tenantId,
     search,
     opmeSupplierId,
   );
 
   const board = await loadKanbanBoard({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     pathwayId,
     version,
     clientWhere,
@@ -77,4 +62,4 @@ export async function GET(request: Request, ctx: RouteCtx) {
     columns: board.columns,
     query: board.query,
   });
-}
+});

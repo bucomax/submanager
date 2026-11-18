@@ -1,7 +1,8 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
-import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { requireSessionOr401, superAdminOr403 } from "@/lib/auth/guards";
+import { withSessionRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { CREATE_TENANT_ERRORS } from "@/lib/api/error-tables/admin";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
+import { jsonSuccess } from "@/lib/api-response";
 import { postAdminTenantBodySchema } from "@/lib/validators/tenant";
 import { listAllTenantsForSuperAdmin } from "@/application/use-cases/admin/list-tenants";
 import { runCreateTenant } from "@/application/use-cases/admin/create-tenant";
@@ -9,39 +10,16 @@ import { runCreateTenant } from "@/application/use-cases/admin/create-tenant";
 export const dynamic = "force-dynamic";
 
 /** Lista todos os tenants com flags de gestão (apenas `super_admin`). */
-export async function GET(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const forbidden = await superAdminOr403(auth.session!, request, apiT);
-  if (forbidden) return forbidden;
-
+export const GET = withSessionRoute(async () => {
   const rows = await listAllTenantsForSuperAdmin();
 
   return jsonSuccess({ tenants: rows });
-}
+}, { role: "super_admin" });
 
 /** Cria tenant (apenas `super_admin`). */
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const forbidden = await superAdminOr403(auth.session!, request, apiT);
-  if (forbidden) return forbidden;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postAdminTenantBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const POST = withSessionRoute(async ({ request, apiT }) => {
+  const parsed = await parseJsonBody(request, postAdminTenantBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await runCreateTenant({
     name: parsed.data.name,
@@ -55,20 +33,7 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
-    switch (result.code) {
-      case "SLUG_CONFLICT":
-        return jsonError("CONFLICT", apiT("errors.tenantSlugConflict"), 409);
-      case "EMAIL_NOT_CONFIGURED":
-        return jsonError("SERVICE_UNAVAILABLE", apiT("errors.invitesNotConfigured"), 503);
-      case "EMAIL_DISABLED_ACCOUNT":
-        return jsonError("CONFLICT", apiT("errors.emailDisabledAccount"), 409);
-      case "USER_ALREADY_MEMBER":
-        return jsonError("CONFLICT", apiT("errors.userAlreadyMember"), 409);
-      case "TENANT_NOT_FOUND":
-        return jsonError("INTERNAL_ERROR", apiT("errors.internalError"), 500);
-      default:
-        return jsonError("INTERNAL_ERROR", apiT("errors.internalError"), 500);
-    }
+    return mapUseCaseError(result.code, CREATE_TENANT_ERRORS, apiT);
   }
 
   return jsonSuccess(
@@ -82,4 +47,4 @@ export async function POST(request: Request) {
     },
     { status: 201 },
   );
-}
+}, { role: "super_admin" });

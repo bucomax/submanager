@@ -1,4 +1,4 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { isGcsConfigured } from "@/infrastructure/storage/gcs-storage";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -17,17 +17,8 @@ export async function POST(request: Request) {
   const portalCtx = await requireActivePatientPortalClient(request, apiT);
   if (!portalCtx.ok) return portalCtx.response;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patientPortalFileDownloadPresignBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, patientPortalFileDownloadPresignBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const { tenantId, clientId } = portalCtx.data.portal;
 

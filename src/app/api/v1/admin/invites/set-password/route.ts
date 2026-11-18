@@ -1,8 +1,10 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
-import { jsonError, jsonSuccess } from "@/lib/api-response";
+import { withSessionRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { SET_INVITEE_PASSWORD_ERRORS } from "@/lib/api/error-tables/admin";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
+import { jsonSuccess } from "@/lib/api-response";
 import { rateLimit } from "@/lib/api/rate-limit";
-import { assertTenantInvitePermission, requireSessionOr401 } from "@/lib/auth/guards";
+import { assertTenantInvitePermission } from "@/lib/auth/guards";
 import { adminSetInviteePasswordSchema } from "@/lib/validators/auth";
 import { runAdminSetInviteePassword } from "@/application/use-cases/admin/set-invitee-password";
 
@@ -14,25 +16,9 @@ export const dynamic = "force-dynamic";
  * Requer: super_admin ou tenant_admin do tenant informado.
  * O actor não pode redefinir a própria senha por esta rota.
  */
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const session = auth.session!;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = adminSetInviteePasswordSchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const POST = withSessionRoute(async ({ request, session, apiT }) => {
+  const parsed = await parseJsonBody(request, adminSetInviteePasswordSchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const { userId, tenantId, password } = parsed.data;
 
@@ -50,17 +36,8 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
-    switch (result.code) {
-      case "USER_NOT_FOUND":
-        return jsonError("NOT_FOUND", apiT("errors.userNotFound"), 404);
-      case "MEMBERSHIP_MISSING":
-        return jsonError("NOT_FOUND", apiT("errors.membershipNotFound"), 404);
-      case "SELF_NOT_ALLOWED":
-        return jsonError("FORBIDDEN", apiT("errors.cannotResetOwnPassword"), 403);
-      case "USER_NOT_ELIGIBLE":
-        return jsonError("FORBIDDEN", apiT("errors.cannotSetPasswordForActiveUser"), 403);
-    }
+    return mapUseCaseError(result.code, SET_INVITEE_PASSWORD_ERRORS, apiT);
   }
 
   return jsonSuccess({ userId: result.userId });
-}
+});

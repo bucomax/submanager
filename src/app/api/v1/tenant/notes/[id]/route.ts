@@ -1,16 +1,11 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { formatZodIssues } from "@/lib/api/zod-error";
 import { leadNotePrismaRepository } from "@/infrastructure/repositories/lead-note.repository";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { upsertLeadNoteBodySchema } from "@/lib/validators/contacts";
 import type { LeadNoteColor, LeadNoteDto } from "@/types/api/contacts-v1";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
@@ -38,58 +33,29 @@ function toDto(row: {
   };
 }
 
-export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withTenantRoute<{ id: string }>(async ({ request, session, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
+  const parsed = await parseJsonBody(request, upsertLeadNoteBodySchema.partial(), apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = upsertLeadNoteBodySchema.partial().safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
-
-  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
-  const row = await leadNotePrismaRepository.update(tenantCtx.tenantId!, id, parsed.data, visibility);
+  const visibility = await loadConversationVisibilityWhere(actorFromSession(session), tenantId);
+  const row = await leadNotePrismaRepository.update(tenantId, id, parsed.data, visibility);
   if (!row) {
     return jsonError("NOT_FOUND", apiT("errors.leadNoteNotFound"), 404);
   }
 
   return jsonSuccess(toDto(row));
-}
+});
 
-export async function DELETE(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const DELETE = withTenantRoute<{ id: string }>(async ({ session, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
-  const removed = await leadNotePrismaRepository.remove(tenantCtx.tenantId!, id, visibility);
+  const visibility = await loadConversationVisibilityWhere(actorFromSession(session), tenantId);
+  const removed = await leadNotePrismaRepository.remove(tenantId, id, visibility);
   if (!removed) {
     return jsonError("NOT_FOUND", apiT("errors.leadNoteNotFound"), 404);
   }
 
   return jsonSuccess({ id });
-}
+});

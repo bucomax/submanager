@@ -1,3 +1,4 @@
+import { actorFromSession } from "@/lib/auth/actor";
 import { getApiT } from "@/lib/api/i18n";
 import { rateLimit } from "@/lib/api/rate-limit";
 import { getActiveTenantIdOr400, requireSessionOr401 } from "@/lib/auth/guards";
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
   // Sem worker que publique no pub/sub (modo inline/Vercel) o stream nunca receberia eventos:
   // avisa o cliente para usar polling e encerra, em vez de segurar a função.
   if (!isQueueConsumerAvailable()) {
-    const count = await countUnreadNotificationsWithClientScope(session, tenantId, userId);
+    const count = await countUnreadNotificationsWithClientScope(actorFromSession(session), tenantId, userId);
     const body =
       `event: unread-count\ndata: ${JSON.stringify({ count })}\n\n` +
       `event: mode\ndata: ${JSON.stringify({ mode: "polling" })}\n\n`;
@@ -105,7 +106,7 @@ export async function GET(request: Request) {
         }
       }
 
-      const initialCount = await countUnreadNotificationsWithClientScope(session, tenantId, userId);
+      const initialCount = await countUnreadNotificationsWithClientScope(actorFromSession(session), tenantId, userId);
       send("unread-count", { count: initialCount });
 
       subscriber = createSubscriberConnection();

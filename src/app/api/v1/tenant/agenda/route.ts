@@ -1,4 +1,6 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { validateAgendaEventRefs } from "@/application/use-cases/agenda/validate-agenda-event-references";
 import {
   loadAgendaEventVisibilityWhere,
@@ -6,13 +8,7 @@ import {
 } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { sendConversationMessage } from "@/application/use-cases/conversations/send-conversation-message";
 import { agendaEventPrismaRepository } from "@/infrastructure/repositories/agenda-event.repository";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { createAgendaEventBodySchema } from "@/lib/validators/agenda";
 import type { AgendaEventDto, AgendaEventType, AgendaListResponseData } from "@/types/api/agenda-v1";
 import { EVENT_TYPE_LABEL_PT_BR } from "@/lib/constants/agenda";
@@ -60,17 +56,7 @@ function formatConfirmationDateTime(date: Date): { date: string; time: string } 
 }
 
 /** Compromissos do tenant num intervalo — usado pelas grades de Semana/Mês. */
-export async function GET(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
+export const GET = withTenantRoute(async ({ request, session, tenantId, apiT }) => {
   const url = new URL(request.url);
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
@@ -81,43 +67,23 @@ export async function GET(request: Request) {
     return jsonError("VALIDATION_ERROR", apiT("errors.agendaRangeRequired"), 400);
   }
 
-  const visibility = await loadAgendaEventVisibilityWhere(auth.session!, tenantCtx.tenantId!);
-  const rows = await agendaEventPrismaRepository.listByRange(tenantCtx.tenantId!, from, to, visibility);
+  const visibility = await loadAgendaEventVisibilityWhere(actorFromSession(session), tenantId);
+  const rows = await agendaEventPrismaRepository.listByRange(tenantId, from, to, visibility);
   const payload: AgendaListResponseData = { data: rows.map(toDto) };
   return jsonSuccess(payload);
-}
+});
 
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = createAgendaEventBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const POST = withTenantRoute(async ({ request, session, tenantId, apiT }) => {
+  const parsed = await parseJsonBody(request, createAgendaEventBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const startsAt = new Date(parsed.data.startsAt);
   if (Number.isNaN(startsAt.getTime())) {
     return jsonError("VALIDATION_ERROR", apiT("errors.agendaRangeRequired"), 422);
   }
 
-  const refsErr = await validateAgendaEventRefs(
-    auth.session!,
-    tenantCtx.tenantId!,
+  const refsErr = await validateAgendaEventRefs(actorFromSession(session),
+    tenantId,
     {
       conversationId: parsed.data.conversationId,
       clientId: parsed.data.clientId,
@@ -126,7 +92,7 @@ export async function POST(request: Request) {
   );
   if (refsErr) return agendaRefsErrorResponse(refsErr, apiT);
 
-  const row = await agendaEventPrismaRepository.create(tenantCtx.tenantId!, {
+  const row = await agendaEventPrismaRepository.create(tenantId, {
     conversationId: parsed.data.conversationId,
     clientId: parsed.data.clientId,
     title: parsed.data.title,
@@ -142,13 +108,13 @@ export async function POST(request: Request) {
     const typeLabel = EVENT_TYPE_LABEL_PT_BR[row.type as AgendaEventType] ?? row.title;
     const confirmationText = `Agendamento confirmado: ${row.title} (${typeLabel}) em ${date} às ${time} com ${row.owner.name ?? "nossa equipe"}. Chegue 15 minutos antes 🙂`;
     await sendConversationMessage({
-      tenantId: tenantCtx.tenantId!,
+      tenantId,
       conversationId: row.conversationId,
-      actorUserId: auth.session!.user.id,
+      actorUserId: session.user.id,
       body: confirmationText,
-      visibility: await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!),
+      visibility: await loadConversationVisibilityWhere(actorFromSession(session), tenantId),
     });
   }
 
   return jsonSuccess(toDto(row), { status: 201 });
-}
+});

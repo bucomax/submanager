@@ -1,17 +1,12 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { formatZodIssues } from "@/lib/api/zod-error";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
 import { leadNotePrismaRepository } from "@/infrastructure/repositories/lead-note.repository";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { upsertLeadNoteBodySchema } from "@/lib/validators/contacts";
 import type { LeadNoteColor, LeadNoteDto, LeadNotesResponseData } from "@/types/api/contacts-v1";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
@@ -40,63 +35,34 @@ function toDto(row: {
 }
 
 /** Notas internas de um lead (nunca enviadas ao contato). */
-export async function GET(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const GET = withTenantRoute<{ id: string }>(async ({ session, tenantId, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
-  const rows = await leadNotePrismaRepository.listByConversation(tenantCtx.tenantId!, id, visibility);
+  const visibility = await loadConversationVisibilityWhere(actorFromSession(session), tenantId);
+  const rows = await leadNotePrismaRepository.listByConversation(tenantId, id, visibility);
   const payload: LeadNotesResponseData = { data: rows.map(toDto) };
   return jsonSuccess(payload);
-}
+});
 
-export async function POST(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const POST = withTenantRoute<{ id: string }>(async ({ request, session, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
+  const parsed = await parseJsonBody(request, upsertLeadNoteBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = upsertLeadNoteBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
-
-  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
-  const conversation = await conversationPrismaRepository.findVisibleLink(tenantCtx.tenantId!, id, visibility);
+  const visibility = await loadConversationVisibilityWhere(actorFromSession(session), tenantId);
+  const conversation = await conversationPrismaRepository.findVisibleLink(tenantId, id, visibility);
   if (!conversation) {
     return jsonError("NOT_FOUND", apiT("errors.conversationNotFound"), 404);
   }
 
   const row = await leadNotePrismaRepository.create(
-    tenantCtx.tenantId!,
+    tenantId,
     id,
-    auth.session!.user.id,
+    session.user.id,
     parsed.data,
     conversation.clientId,
   );
 
   return jsonSuccess(toDto(row), { status: 201 });
-}
+});

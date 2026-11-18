@@ -1,12 +1,7 @@
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import {
   getChecklistCompleteStaffHtml,
   getFilePendingReviewStaffHtml,
@@ -30,29 +25,13 @@ export const dynamic = "force-dynamic";
  * Pré-visualização HTML dos templates transacionais (dados fictícios, nome da clínica do tenant).
  * Autenticado, membro ativo do tenant. Uso: iframe no modal de ajuda em Configurações → E-mail.
  */
-export async function GET(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(
-    auth.session!,
-    tenantCtx.tenantId!,
-    request,
-    apiT,
-  );
-  if (memberErr) return memberErr;
-
+export const GET = withTenantRoute(async ({ request, tenantId, apiT }) => {
   const url = new URL(request.url);
   const parsed = kindSchema.safeParse(url.searchParams.get("kind") ?? "stage_transition");
   if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", "Invalid kind.", 422);
+    return jsonError("VALIDATION_ERROR", apiT("errors.emailPreviewInvalidKind"), 422);
   }
   const kind = parsed.data as EmailPreviewKind;
-  const tenantId = tenantCtx.tenantId!;
 
   const row = await tenantPrismaRepository.findTenantNameAndSlugById(tenantId);
   const clinicName = row?.name?.trim() || "Sua clínica";
@@ -113,4 +92,4 @@ export async function GET(request: Request) {
       "Cache-Control": "private, no-store",
     },
   });
-}
+});

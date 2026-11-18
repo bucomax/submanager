@@ -1,11 +1,8 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { SMTP_PATCH_ERRORS } from "@/lib/api/error-tables/tenant-settings";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertTenantAdminOrSuper,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { patchTenantSmtpBodySchema } from "@/lib/validators/tenant-smtp";
 import {
   getTenantSmtpState,
@@ -14,59 +11,23 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (adminBlock) return adminBlock;
-
-  const dto = await getTenantSmtpState(tenantCtx.tenantId);
+export const GET = withTenantRoute(async ({ tenantId, apiT }) => {
+  const dto = await getTenantSmtpState(tenantId);
   if (!dto) {
     return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
   }
   return jsonSuccess(dto);
-}
+}, { role: "admin" });
 
-export async function PATCH(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withTenantRoute(async ({ request, tenantId, apiT }) => {
+  const parsed = await parseJsonBody(request, patchTenantSmtpBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (adminBlock) return adminBlock;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patchTenantSmtpBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
-
-  const result = await patchTenantSmtp(tenantCtx.tenantId, parsed.data);
+  const result = await patchTenantSmtp(tenantId, parsed.data);
   if (!result.ok) {
-    if (result.code === "TENANT_NOT_FOUND") {
-      return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
-    }
-    if (result.code === "ENCRYPTION_KEY") {
-      return jsonError("INTERNAL_ERROR", "Chave de criptografia (WHATSAPP_ENCRYPTION_KEY) inválida.", 500);
-    }
-    if (result.code === "INVALID_SMTP_WHEN_ENABLING") {
-      return jsonError("UNPROCESSABLE_ENTITY", result.message, 422);
-    }
-    return jsonError("VALIDATION_ERROR", apiT("errors.invalidJson"), 422);
+    return mapUseCaseError(result.code, SMTP_PATCH_ERRORS, apiT, {
+      message: result.code === "INVALID_SMTP_WHEN_ENABLING" ? result.message : undefined,
+    });
   }
   return jsonSuccess({ smtp: result.dto });
-}
+}, { role: "admin" });

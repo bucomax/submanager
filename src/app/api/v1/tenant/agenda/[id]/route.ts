@@ -1,17 +1,12 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { loadAgendaEventVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
-import { formatZodIssues } from "@/lib/api/zod-error";
 import { validateAgendaEventRefs } from "@/application/use-cases/agenda/validate-agenda-event-references";
 import { agendaEventPrismaRepository } from "@/infrastructure/repositories/agenda-event.repository";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { updateAgendaEventBodySchema } from "@/lib/validators/agenda";
 import type { AgendaEventDto, AgendaEventType } from "@/types/api/agenda-v1";
-import type { RouteCtx } from "@/types/api/route-context";
 import { agendaRefsErrorResponse } from "../agenda-refs-error-response";
 
 export const dynamic = "force-dynamic";
@@ -46,30 +41,11 @@ function toDto(row: {
   };
 }
 
-export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withTenantRoute<{ id: string }>(async ({ request, session, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = updateAgendaEventBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, updateAgendaEventBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const { startsAt, ...rest } = parsed.data;
   const parsedStartsAt = startsAt ? new Date(startsAt) : undefined;
@@ -77,9 +53,8 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
     return jsonError("VALIDATION_ERROR", apiT("errors.agendaRangeRequired"), 422);
   }
 
-  const refsErr = await validateAgendaEventRefs(
-    auth.session!,
-    tenantCtx.tenantId!,
+  const refsErr = await validateAgendaEventRefs(actorFromSession(session),
+    tenantId,
     {
       conversationId: rest.conversationId,
       clientId: rest.clientId,
@@ -88,9 +63,9 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
   );
   if (refsErr) return agendaRefsErrorResponse(refsErr, apiT);
 
-  const visibility = await loadAgendaEventVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const visibility = await loadAgendaEventVisibilityWhere(actorFromSession(session), tenantId);
   const row = await agendaEventPrismaRepository.update(
-    tenantCtx.tenantId!,
+    tenantId,
     id,
     {
       ...rest,
@@ -103,26 +78,16 @@ export async function PATCH(request: Request, ctx: RouteCtx<{ id: string }>) {
   }
 
   return jsonSuccess(toDto(row));
-}
+});
 
-export async function DELETE(request: Request, ctx: RouteCtx<{ id: string }>) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const DELETE = withTenantRoute<{ id: string }>(async ({ session, tenantId, apiT, params }) => {
+  const { id } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
-  const { id } = await ctx.params;
-
-  const visibility = await loadAgendaEventVisibilityWhere(auth.session!, tenantCtx.tenantId!);
-  const removed = await agendaEventPrismaRepository.remove(tenantCtx.tenantId!, id, visibility);
+  const visibility = await loadAgendaEventVisibilityWhere(actorFromSession(session), tenantId);
+  const removed = await agendaEventPrismaRepository.remove(tenantId, id, visibility);
   if (!removed) {
     return jsonError("NOT_FOUND", apiT("errors.agendaEventNotFound"), 404);
   }
 
   return jsonSuccess({ id });
-}
+});

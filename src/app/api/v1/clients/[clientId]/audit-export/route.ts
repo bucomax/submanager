@@ -1,17 +1,11 @@
-import { getApiT } from "@/lib/api/i18n";
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { joinTranslatedZodIssues } from "@/lib/api/zod-i18n";
 import { jsonError } from "@/lib/api-response";
 import { runClientAuditExport } from "@/application/use-cases/client/run-client-audit-export";
 import type { ClientTimelineEventCategory } from "@/types/api/clients-v1";
-import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
-import {
-  assertActiveTenantMembership,
-  assertTenantAdminOrSuper,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+import { findTenantClientVisibleToActor } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { clientAuditExportQuerySchema } from "@/lib/validators/client-audit-export-query";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
@@ -42,30 +36,7 @@ function resolveExportRange(
  * Exportação CSV da linha do tempo (auditoria) do paciente.
  * Requer `tenant_admin` ou `super_admin`.
  */
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbiddenMember = await assertActiveTenantMembership(
-    auth.session!,
-    tenantCtx.tenantId,
-    request,
-    apiT,
-  );
-  if (forbiddenMember) return forbiddenMember;
-
-  const adminBlock = await assertTenantAdminOrSuper(
-    auth.session!,
-    tenantCtx.tenantId,
-    request,
-    apiT,
-    "errors.auditExportPermissionDenied",
-  );
-  if (adminBlock) return adminBlock;
-
+export const GET = withTenantRoute(async ({ request, session, tenantId, apiT, params }) => {
   const url = new URL(request.url);
   const parsedQ = clientAuditExportQuerySchema.safeParse({
     format: url.searchParams.get("format") || undefined,
@@ -81,10 +52,10 @@ export async function GET(request: Request, ctx: RouteCtx) {
     );
   }
 
-  const { clientId } = await ctx.params;
+  const { clientId } = params;
   const q = parsedQ.data;
 
-  const client = await findTenantClientVisibleToSession(auth.session!, tenantCtx.tenantId, clientId, {
+  const client = await findTenantClientVisibleToActor(actorFromSession(session), tenantId, clientId, {
     id: true,
   });
   if (!client) {
@@ -103,9 +74,9 @@ export async function GET(request: Request, ctx: RouteCtx) {
     q.categories != null && q.categories.length > 0 ? new Set(q.categories) : null;
 
   const { csv } = await runClientAuditExport({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     clientId,
-    actorUserId: auth.session!.user.id,
+    actorUserId: session.user.id,
     from,
     to,
     categoryFilter,
@@ -120,4 +91,4 @@ export async function GET(request: Request, ctx: RouteCtx) {
       "Cache-Control": "no-store",
     },
   });
-}
+}, { role: "admin", forbiddenMessageKey: "errors.auditExportPermissionDenied" });

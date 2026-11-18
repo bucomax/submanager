@@ -1,4 +1,5 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { logger } from "@/lib/observability/logger";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { createApiMeta } from "@/lib/api/envelope";
 import { rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
@@ -26,17 +27,8 @@ export async function POST(request: Request, ctx: RouteCtx) {
     return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postPatientPortalExchangeBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, postPatientPortalExchangeBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await runExchangePatientPortalMagicLink({
     tenant: { id: tenant.id, slug: tenant.slug },
@@ -64,7 +56,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
     });
     return res;
   } catch (e) {
-    console.error("[patient-portal] session cookie signing failed:", e);
+    logger.error("[patient-portal] session cookie signing failed", { err: e });
     return jsonError(
       "SERVICE_UNAVAILABLE",
       apiT("errors.patientPortalMisconfigured"),

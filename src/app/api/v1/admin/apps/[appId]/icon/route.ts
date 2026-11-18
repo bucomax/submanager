@@ -1,7 +1,7 @@
+import { withSessionRoute } from "@/lib/api/route-handler";
+import { readJsonBody } from "@/lib/api/parse-json-body";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import { superAdminOr403, requireSessionOr401 } from "@/lib/auth/guards";
-import { getApiT } from "@/lib/api/i18n";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
 import {
   isGcsConfigured,
@@ -12,8 +12,6 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
-
-type RouteContext = { params: Promise<{ appId: string }> };
 
 const presignBodySchema = z.object({
   fileName: z.string().min(1).max(256),
@@ -28,28 +26,18 @@ const registerBodySchema = z.object({
 });
 
 /** POST — Step 1: presign icon upload, or Step 2: register uploaded icon. */
-export async function POST(request: Request, context: RouteContext) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const superBlock = await superAdminOr403(auth.session!, request, apiT);
-  if (superBlock) return superBlock;
-
+export const POST = withSessionRoute<{ appId: string }>(async ({ request, session, apiT, params }) => {
   if (!isGcsConfigured()) {
-    return jsonError("SERVICE_UNAVAILABLE", "Storage não configurado.", 503);
+    return jsonError("SERVICE_UNAVAILABLE", apiT("errors.storageNotConfigured"), 503);
   }
 
-  const { appId } = await context.params;
+  const { appId } = params;
   const app = await appPrismaRepository.findById(appId);
-  if (!app) return jsonError("NOT_FOUND", "App não encontrado.", 404);
+  if (!app) return jsonError("NOT_FOUND", apiT("errors.appNotFound"), 404);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", "JSON inválido.", 400);
-  }
+  const raw = await readJsonBody(request, apiT);
+  if (raw.response) return raw.response;
+  const body = raw.data;
 
   // Step 2 — register uploaded file
   const registerParsed = registerBodySchema.safeParse(body);
@@ -61,7 +49,7 @@ export async function POST(request: Request, context: RouteContext) {
       fileName,
       mimeType,
       sizeBytes,
-      uploadedById: auth.session!.user.id,
+      uploadedById: session.user.id,
     });
 
     return jsonSuccess({
@@ -86,18 +74,11 @@ export async function POST(request: Request, context: RouteContext) {
     mimeType: presignParsed.data.mimeType,
     publicUrl: publicUrlForKey(key),
   });
-}
+}, { role: "super_admin" });
 
 /** DELETE — Remove icon */
-export async function DELETE(request: Request, context: RouteContext) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const superBlock = await superAdminOr403(auth.session!, request, apiT);
-  if (superBlock) return superBlock;
-
-  const { appId } = await context.params;
+export const DELETE = withSessionRoute<{ appId: string }>(async ({ params }) => {
+  const { appId } = params;
   await appPrismaRepository.setIcon(appId, null);
   return jsonSuccess({ removed: true });
-}
+}, { role: "super_admin" });

@@ -1,17 +1,10 @@
-import { getApiT } from "@/lib/api/i18n";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertTenantAdminOrSuper,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
 import { decryptConfigSecrets } from "@/infrastructure/crypto/app-config-secret";
 import type { AppConfigField } from "@/types/api/apps-v1";
 
 export const dynamic = "force-dynamic";
-
-type RouteContext = { params: Promise<{ appId: string }> };
 
 /**
  * POST /api/v1/tenant/apps/:appId/test
@@ -23,28 +16,13 @@ type RouteContext = { params: Promise<{ appId: string }> };
  * If the app has config with secret fields, they are decrypted and can be
  * interpolated into the health check URL or sent as Authorization header.
  */
-export async function POST(request: Request, context: RouteContext) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const adminBlock = await assertTenantAdminOrSuper(
-    auth.session!,
-    tenantCtx.tenantId!,
-    request,
-    apiT,
-  );
-  if (adminBlock) return adminBlock;
-
-  const { appId } = await context.params;
+export const POST = withTenantRoute<{ appId: string }>(async ({ tenantId, apiT, params }) => {
+  const { appId } = params;
 
   // Load app by ID or slug
   const app = await appPrismaRepository.findByIdOrSlug(appId);
   if (!app) {
-    return jsonError("NOT_FOUND", "App não encontrado.", 404);
+    return jsonError("NOT_FOUND", apiT("errors.appNotFound"), 404);
   }
 
   // Check for health check URL
@@ -53,14 +31,14 @@ export async function POST(request: Request, context: RouteContext) {
   if (!healthCheckUrl || typeof healthCheckUrl !== "string") {
     return jsonError(
       "NOT_SUPPORTED",
-      "Este app não suporta teste de conexão.",
+      apiT("errors.appTestNotSupported"),
       422,
     );
   }
 
-  // Load tenant app config (for auth header if needed)
+  // Load tenant app config (for the Authorization header if needed)
   const tenantApp = await appPrismaRepository.findTenantApp(
-    tenantCtx.tenantId!,
+    tenantId,
     app.id,
   );
 
@@ -118,4 +96,4 @@ export async function POST(request: Request, context: RouteContext) {
       error: message,
     });
   }
-}
+}, { role: "admin" });

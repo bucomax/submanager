@@ -1,12 +1,8 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { loadConversationVisibilityWhere } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { conversationPrismaRepository } from "@/infrastructure/repositories/conversation.repository";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import type {
   ConversationChannel,
   ConversationListItemDto,
@@ -33,17 +29,7 @@ function buildLastMessagePreview(lastMessage: { type: string; body: string | nul
 }
 
 /** Lista paginada de conversas do tenant — usada pela coluna 1 da tela de Conversas. */
-export async function GET(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId!, request, apiT);
-  if (memberErr) return memberErr;
-
+export const GET = withTenantRoute(async ({ request, session, tenantId }) => {
   const url = new URL(request.url);
   const channelParam = url.searchParams.get("channel");
   const statusParam = url.searchParams.get("status");
@@ -57,9 +43,9 @@ export async function GET(request: Request) {
   const channel = VALID_CHANNELS.find((c) => c === channelParam);
   const status = VALID_STATUSES.find((s) => s === statusParam);
 
-  const visibility = await loadConversationVisibilityWhere(auth.session!, tenantCtx.tenantId!);
+  const visibility = await loadConversationVisibilityWhere(actorFromSession(session), tenantId);
   const { items, nextCursor, totalItems } = await conversationPrismaRepository.listByTenantPaged(
-    tenantCtx.tenantId!,
+    tenantId,
     { channel, status, q, cursor, limit, visibility },
   );
 
@@ -81,4 +67,4 @@ export async function GET(request: Request) {
 
   const payload: ConversationsListResponseData = { data, nextCursor, totalItems };
   return jsonSuccess(payload);
-}
+});

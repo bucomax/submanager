@@ -1,4 +1,5 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { actorFromSession } from "@/lib/auth/actor";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { isGcsConfigured } from "@/infrastructure/storage/gcs-storage";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -27,23 +28,14 @@ export async function POST(request: Request) {
   const forbidden = await assertActiveTenantMembership(auth.session!, tenantId, request, apiT);
   if (forbidden) return forbidden;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = postFileDownloadPresignBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, postFileDownloadPresignBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const result = await runPresignStaffFileDownload({
     tenantId,
     fileId: parsed.data.fileId,
     actorUserId: auth.session!.user.id,
-    session: auth.session!,
+    actor: actorFromSession(auth.session!),
   });
 
   if (!result.ok) {

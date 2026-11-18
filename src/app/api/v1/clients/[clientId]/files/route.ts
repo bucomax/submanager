@@ -1,29 +1,15 @@
+import { actorFromSession } from "@/lib/auth/actor";
+import { withTenantRoute } from "@/lib/api/route-handler";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { buildPagination } from "@/lib/api/pagination";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { listStaffClientFilesPage } from "@/application/use-cases/client/list-staff-client-files-page";
-import { findTenantClientVisibleToSession } from "@/application/use-cases/shared/load-client-visibility-scope";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+import { findTenantClientVisibleToActor } from "@/application/use-cases/shared/load-client-visibility-scope";
 import { clientDetailQuerySchema } from "@/lib/validators/client-detail-query";
-import type { RouteCtx } from "@/types/api/route-context";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
+export const GET = withTenantRoute(async ({ request, session, tenantId, apiT, params }) => {
   const url = new URL(request.url);
   const parsedQ = clientDetailQuerySchema.safeParse({
     page: url.searchParams.get("page") ?? undefined,
@@ -34,9 +20,9 @@ export async function GET(request: Request, ctx: RouteCtx) {
   }
   const { page, limit } = parsedQ.data;
 
-  const { clientId } = await ctx.params;
+  const { clientId } = params;
 
-  const client = await findTenantClientVisibleToSession(auth.session!, tenantCtx.tenantId, clientId, {
+  const client = await findTenantClientVisibleToActor(actorFromSession(session), tenantId, clientId, {
     id: true,
   });
   if (!client) {
@@ -44,7 +30,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
   }
 
   const { totalItems, data } = await listStaffClientFilesPage({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     clientId,
     page,
     limit,
@@ -54,4 +40,4 @@ export async function GET(request: Request, ctx: RouteCtx) {
     data,
     pagination: buildPagination(page, limit, totalItems),
   });
-}
+});

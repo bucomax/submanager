@@ -1,51 +1,22 @@
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import * as Sentry from "@sentry/nextjs";
 import { toFeedbackDto } from "@/app/api/v1/feedback/to-feedback-dto";
 import { feedbackReportPrismaRepository } from "@/infrastructure/repositories/feedback-report.repository";
-import { formatZodIssues } from "@/lib/api/zod-error";
-import { getApiT } from "@/lib/api/i18n";
-import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
+import { jsonSuccess } from "@/lib/api-response";
 import { createFeedbackBodySchema } from "@/lib/validators/feedback";
 import type { CreateFeedbackResponseData } from "@/types/api/feedback-v1";
 
 export const dynamic = "force-dynamic";
 
 /** Relato de feedback do usuário autenticado — sugestão, problema ou dúvida. */
-export async function POST(request: Request) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-
-  const memberErr = await assertActiveTenantMembership(
-    auth.session!,
-    tenantCtx.tenantId!,
-    request,
-    apiT,
-  );
-  if (memberErr) return memberErr;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = createFeedbackBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+export const POST = withTenantRoute(async ({ request, session, tenantId, apiT }) => {
+  const parsed = await parseJsonBody(request, createFeedbackBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const row = await feedbackReportPrismaRepository.create({
-    tenantId: tenantCtx.tenantId!,
-    authorUserId: auth.session!.user.id,
+    tenantId,
+    authorUserId: session.user.id,
     type: parsed.data.type,
     message: parsed.data.message,
     sentryEventId: parsed.data.sentryEventId ?? null,
@@ -60,7 +31,7 @@ export async function POST(request: Request) {
 
   const payload: CreateFeedbackResponseData = { feedback: toFeedbackDto(row) };
   return jsonSuccess(payload, { status: 201 });
-}
+});
 
 /**
  * Espelho no Sentry, fora do caminho crítico: o Postgres é a fonte de verdade e

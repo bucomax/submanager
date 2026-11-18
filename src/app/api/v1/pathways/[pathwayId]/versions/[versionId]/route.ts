@@ -1,36 +1,19 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { withTenantRoute } from "@/lib/api/route-handler";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import {
   getPathwayVersionForTenant,
   updateDraftPathwayVersionForTenant,
 } from "@/infrastructure/database/pathway-version";
-import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
-import {
-  assertActiveTenantMembership,
-  assertTenantAdminOrSuper,
-  getActiveTenantIdOr400,
-  requireSessionOr401,
-} from "@/lib/auth/guards";
 import { patchPathwayVersionBodySchema } from "@/lib/validators/pathway";
 
 export const dynamic = "force-dynamic";
 
-import type { RouteCtx } from "@/types/api/route-context";
-
-export async function GET(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
-
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-
-  const { pathwayId, versionId } = await ctx.params;
+export const GET = withTenantRoute(async ({ tenantId, apiT, params }) => {
+  const { pathwayId, versionId } = params;
 
   const row = await getPathwayVersionForTenant({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     pathwayId,
     versionId,
   });
@@ -48,42 +31,16 @@ export async function GET(request: Request, ctx: RouteCtx) {
       createdAt: row.createdAt.toISOString(),
     },
   });
-}
+});
 
-export async function PATCH(request: Request, ctx: RouteCtx) {
-  const apiT = await getApiT(request);
-  const auth = await requireSessionOr401(request, apiT);
-  if (auth.response) return auth.response;
+export const PATCH = withTenantRoute(async ({ request, tenantId, apiT, params }) => {
+  const { pathwayId, versionId } = params;
 
-  const tenantCtx = await getActiveTenantIdOr400(auth.session!, request, apiT);
-  if (tenantCtx.response) return tenantCtx.response;
-  const forbidden = await assertActiveTenantMembership(auth.session!, tenantCtx.tenantId, request, apiT);
-  if (forbidden) return forbidden;
-  const adminErr = await assertTenantAdminOrSuper(
-    auth.session!,
-    tenantCtx.tenantId,
-    request,
-    apiT,
-    "errors.managePathwaysPermissionDenied",
-  );
-  if (adminErr) return adminErr;
-
-  const { pathwayId, versionId } = await ctx.params;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = patchPathwayVersionBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, patchPathwayVersionBodySchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const row = await updateDraftPathwayVersionForTenant({
-    tenantId: tenantCtx.tenantId,
+    tenantId,
     pathwayId,
     versionId,
     graphJson: parsed.data.graphJson as object,
@@ -105,4 +62,4 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
       createdAt: row.createdAt.toISOString(),
     },
   });
-}
+}, { role: "admin", forbiddenMessageKey: "errors.managePathwaysPermissionDenied" });

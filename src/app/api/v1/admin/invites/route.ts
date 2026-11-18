@@ -1,4 +1,6 @@
-import { formatZodIssues } from "@/lib/api/zod-error";
+import { mapUseCaseError } from "@/lib/api/map-use-case-error";
+import { INVITE_MEMBER_ERRORS } from "@/lib/api/error-tables/admin";
+import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { isEmailConfigured } from "@/infrastructure/email/resend.client";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
@@ -17,17 +19,8 @@ export async function POST(request: Request) {
   const auth = await requireSessionOr401(request, apiT);
   if (auth.response) return auth.response;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("INVALID_JSON", apiT("errors.invalidJson"), 400);
-  }
-
-  const parsed = adminInviteSchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError("VALIDATION_ERROR", formatZodIssues(parsed.error), 422);
-  }
+  const parsed = await parseJsonBody(request, adminInviteSchema, apiT, { issues: "fields" });
+  if (parsed.response) return parsed.response;
 
   const { email, name, tenantId, role } = parsed.data;
 
@@ -37,16 +30,7 @@ export async function POST(request: Request) {
   const outcome = await runInviteTenantMember({ email, name, tenantId, role }, { actorUserId: auth.session!.user.id });
 
   if (!outcome.ok) {
-    switch (outcome.code) {
-      case "EMAIL_NOT_CONFIGURED":
-        return jsonError("SERVICE_UNAVAILABLE", apiT("errors.invitesNotConfigured"), 503);
-      case "TENANT_NOT_FOUND":
-        return jsonError("NOT_FOUND", apiT("errors.tenantNotFound"), 404);
-      case "EMAIL_DISABLED_ACCOUNT":
-        return jsonError("CONFLICT", apiT("errors.emailDisabledAccount"), 409);
-      case "USER_ALREADY_MEMBER":
-        return jsonError("CONFLICT", apiT("errors.userAlreadyMember"), 409);
-    }
+    return mapUseCaseError(outcome.code, INVITE_MEMBER_ERRORS, apiT);
   }
 
   const { data } = outcome;
