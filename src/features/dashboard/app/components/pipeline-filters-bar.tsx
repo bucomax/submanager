@@ -63,7 +63,7 @@ export function PipelineFiltersBar({
     <div className="rounded-[20px] border bg-card p-5">
       <div className="mb-3 flex items-center gap-2">
         <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden />
-        <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Filtros</span>
+        <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{t("filters.title")}</span>
       </div>
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
         <Field className="min-w-[220px] flex-1">

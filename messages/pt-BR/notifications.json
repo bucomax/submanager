@@ -1,4 +1,9 @@
 {
+  "permissionBanner": {
+    "message": "Ative as notificações do navegador para ser alertado quando algo precisar da sua atenção.",
+    "enable": "Ativar",
+    "dismiss": "Dispensar"
+  },
   "bell": {
     "title": "Notificações",
     "empty": "Nenhuma notificação.",

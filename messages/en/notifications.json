@@ -1,4 +1,9 @@
 {
+  "permissionBanner": {
+    "message": "Turn on browser notifications to be alerted when something needs your attention.",
+    "enable": "Turn on",
+    "dismiss": "Dismiss"
+  },
   "bell": {
     "title": "Notifications",
     "empty": "No notifications.",

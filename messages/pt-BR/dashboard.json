@@ -82,6 +82,7 @@
       "viewPatient": "Ver paciente"
     },
     "filters": {
+      "title": "Filtros",
       "search": "Busca",
       "searchPlaceholder": "Nome ou telefone…",
       "status": "Filtro de status",
