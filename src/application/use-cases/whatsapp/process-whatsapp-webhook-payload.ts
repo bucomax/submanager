@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
 import { whatsappDispatcher } from "@/infrastructure/whatsapp/whatsapp-dispatcher";
 import type { WhatsappWebhookPayload } from "@/types/api/whatsapp-webhook-v1";
@@ -15,9 +16,7 @@ export async function processWhatsappWebhookPayload(payload: WhatsappWebhookPayl
 
       const tenant = await tenantPrismaRepository.findTenantIdByWhatsappPhoneNumberId(phoneNumberId);
       if (!tenant) {
-        console.warn(
-          `[whatsapp-webhook] No tenant found for phone_number_id=${phoneNumberId}`,
-        );
+        logger.warn("[whatsapp-webhook] No tenant found for phone_number_id", { phoneNumberId });
         continue;
       }
 

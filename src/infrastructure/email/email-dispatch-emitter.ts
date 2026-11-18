@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
 import type { EmailDispatchJobPayload } from "@/infrastructure/queue/email-dispatch-job-types";
 import { isQueueConsumerAvailable, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
@@ -35,7 +36,7 @@ export async function enqueueEmailDispatch(
         return;
       }
     } catch (e) {
-      console.warn("[email] fila Redis indisponível; enviando inline.", e);
+      logger.warn("[email] fila Redis indisponível; enviando inline.", { err: e });
       tripRedisCircuit();
     }
   }

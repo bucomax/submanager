@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { randomUUID } from "node:crypto";
 
 import { getRedisConnection } from "@/infrastructure/queue/redis-connection";
@@ -28,7 +29,7 @@ export async function acquireLock(key: string, ttlSec: number): Promise<LockHand
     const result = await redis.set(key, token, "EX", ttlSec, "NX");
     if (result !== "OK") return null;
   } catch (err) {
-    console.warn("[distributed-lock] acquire failed; fail-open.", err);
+    logger.warn("[distributed-lock] acquire failed; fail-open.", { err });
     return noop;
   }
 
@@ -37,7 +38,7 @@ export async function acquireLock(key: string, ttlSec: number): Promise<LockHand
       try {
         await redis.eval(RELEASE_IF_OWNER_LUA, 1, key, token);
       } catch (err) {
-        console.warn("[distributed-lock] release failed; lock expires by TTL.", err);
+        logger.warn("[distributed-lock] release failed; lock expires by TTL.", { err });
       }
     },
   };

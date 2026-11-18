@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import nodemailer from "nodemailer";
 
 import { resolvePublicSmtpHost } from "@/infrastructure/email/smtp-host-guard";
@@ -28,7 +29,7 @@ export async function sendEmailViaSmtp(
 ): Promise<{ id?: string; error?: Error }> {
   try {
     if (!isAllowedSmtpPort(connection.port)) {
-      console.warn("[smtp] blocked: port not allowed", { port: connection.port });
+      logger.warn("[smtp] blocked: port not allowed", { port: connection.port });
       return { error: new Error(SMTP_GENERIC_ERROR_MESSAGE) };
     }
     const resolvedIp = await resolvePublicSmtpHost(connection.host);
@@ -57,7 +58,7 @@ export async function sendEmailViaSmtp(
   } catch (err) {
     // Sem credenciais no log; detalhes ficam só no servidor.
     const e = err as { name?: string; code?: string; responseCode?: number; message?: string };
-    console.error("[smtp] send failed", {
+    logger.warn("[smtp] send failed", {
       host: connection.host,
       port: connection.port,
       name: e?.name,

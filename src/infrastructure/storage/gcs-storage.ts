@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { createHash, randomUUID } from "crypto";
 import { Storage } from "@google-cloud/storage";
 
@@ -282,7 +283,7 @@ export async function getGcsObjectSize(key: string): Promise<number | null> {
     const size = Number(metadata.size);
     return Number.isFinite(size) ? size : null;
   } catch (err) {
-    console.warn("[gcs] object metadata read failed:", err);
+    logger.warn("[gcs] object metadata read failed", { err });
     return null;
   }
 }

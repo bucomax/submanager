@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { AuditEventType } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -105,7 +106,7 @@ async function notifyExistingUserAddedToTenant(params: {
       payload: { userId, role, actorUserId: actorUserId ?? null },
     });
   } catch (err) {
-    console.warn("[invite] failed to record audit for existing user added to tenant:", userId, err);
+    logger.warn("[invite] failed to record audit for existing user added to tenant", { userId, err });
   }
 
   try {
@@ -123,10 +124,10 @@ async function notifyExistingUserAddedToTenant(params: {
       useSmtp,
     });
     if (error) {
-      console.warn("[invite] failed to send added-to-tenant notice:", userId, error.message);
+      logger.warn("[invite] failed to send added-to-tenant notice", { userId, err: error });
     }
   } catch (err) {
-    console.warn("[invite] failed to send added-to-tenant notice:", userId, err);
+    logger.warn("[invite] failed to send added-to-tenant notice", { userId, err });
   }
 }
 
@@ -200,7 +201,7 @@ export async function runInviteTenantMember(
 
     const { error: sendError } = await sendInviteSetPasswordEmail(emailNorm, name, token, tenantForEmail);
     if (sendError) {
-      console.error("Erro ao enviar convite:", sendError);
+      logger.error("Erro ao enviar convite", { err: sendError });
       return {
         ok: true,
         data: {
@@ -242,7 +243,7 @@ export async function runInviteTenantMember(
 
   const { error: sendError } = await sendInviteSetPasswordEmail(emailNorm, name, token, tenantForEmail);
   if (sendError) {
-    console.error("Erro ao enviar convite:", sendError);
+    logger.error("Erro ao enviar convite", { err: sendError });
     return {
       ok: true,
       data: {

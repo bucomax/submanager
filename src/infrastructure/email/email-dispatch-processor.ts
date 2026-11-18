@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { prisma } from "@/infrastructure/database/prisma";
 import {
   getChecklistCompleteStaffHtml,
@@ -25,7 +26,7 @@ function persistDispatchLogIfSent(
     to,
     resendMessageId: result.id,
   }).catch((err) => {
-    console.error("[email-dispatch] EmailDispatchLog persist failed:", err);
+    logger.error("[email-dispatch] EmailDispatchLog persist failed", { err });
   });
 }
 

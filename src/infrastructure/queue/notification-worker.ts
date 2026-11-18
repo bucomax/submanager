@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { Worker } from "bullmq";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/infrastructure/database/prisma";
@@ -60,7 +61,7 @@ export function startNotificationWorker(): Worker | null {
 
   const connection = getWorkerRedisConnection();
   if (!connection) {
-    console.warn("[notification-worker] Redis not available – worker not started.");
+    logger.warn("[notification-worker] Redis not available – worker not started.");
     return null;
   }
 
@@ -77,10 +78,12 @@ export function startNotificationWorker(): Worker | null {
 
   workerInstance.on("failed", (job, err) => {
     const payload = job?.data as NotificationJobPayload | undefined;
-    console.error(
-      `[notification-worker] Job ${job?.id} failed | tenantId=${payload?.tenantId ?? "?"} type=${payload?.type ?? "?"}:`,
-      err.message,
-    );
+    logger.error("[notification-worker] job failed", {
+      jobId: job?.id,
+      tenantId: payload?.tenantId,
+      type: payload?.type,
+      err,
+    });
   });
 
   return workerInstance;

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { Webhook } from "svix";
 
 import { processResendWebhookPayload } from "@/application/use-cases/email/process-resend-webhook-payload";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       "svix-signature": sig,
     });
   } catch (err) {
-    console.warn("[resend-webhook] Invalid signature:", err);
+    logger.warn("[resend-webhook] Invalid signature", { err });
     return new Response("Invalid signature", { status: 401 });
   }
 

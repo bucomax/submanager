@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { prisma } from "@/infrastructure/database/prisma";
 import { decryptTenantSecret } from "@/infrastructure/crypto/tenant-secret";
 import { sendEmailViaSmtp } from "@/infrastructure/email/smtp-send.client";
@@ -88,7 +89,7 @@ async function sendViaTenantSmtp(params: {
   try {
     pass = decryptTenantSecret(t.smtpPasswordEnc);
   } catch (e) {
-    console.error("SMTP password decrypt failed:", e);
+    logger.error("SMTP password decrypt failed", { err: e });
     return { error: new Error("Falha ao ler credenciais SMTP.") };
   }
   const port = t.smtpPort ?? 587;
@@ -127,12 +128,12 @@ async function sendViaResend(input: {
       text: input.text,
     });
     if (error) {
-      console.error("Resend error:", error);
+      logger.error("Resend error", { err: error });
       return { error: new Error(error.message) };
     }
     return { id: data?.id };
   } catch (err) {
-    console.error("Erro ao enviar email (Resend):", err);
+    logger.error("Erro ao enviar email (Resend)", { err });
     return { error: err instanceof Error ? err : new Error(String(err)) };
   }
 }

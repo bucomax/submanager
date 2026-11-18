@@ -19,10 +19,11 @@ export async function register() {
 
   Sentry.init(sentrySharedOptions);
 
+  // Import dinâmico dentro do guard: o logger puxa `node:crypto` (request-id) e não pode entrar no bundle de edge.
+  const { logger } = await import("@/lib/observability/logger");
+
   if (!process.env.REDIS_URL?.trim()) {
-    console.log(
-      "[instrumentation] REDIS_URL not set – running in inline mode (no BullMQ worker)"
-    );
+    logger.info("[instrumentation] REDIS_URL not set – running in inline mode (no BullMQ worker)");
     return;
   }
 
@@ -33,9 +34,7 @@ export async function register() {
     process.env.VERCEL === "1" ||
     process.env.DISABLE_NOTIFICATION_WORKER === "true"
   ) {
-    console.log(
-      "[instrumentation] BullMQ worker skipped (Vercel/serverless or DISABLE_NOTIFICATION_WORKER)."
-    );
+    logger.info("[instrumentation] BullMQ worker skipped (Vercel/serverless or DISABLE_NOTIFICATION_WORKER).");
     return;
   }
 
@@ -44,7 +43,7 @@ export async function register() {
   );
   const worker = startNotificationWorker();
   if (worker) {
-    console.log("[instrumentation] BullMQ notification worker started");
+    logger.info("[instrumentation] BullMQ notification worker started");
   }
 
   const { startWhatsAppDispatchWorker } = await import(
@@ -52,7 +51,7 @@ export async function register() {
   );
   const wppWorker = startWhatsAppDispatchWorker();
   if (wppWorker) {
-    console.log("[instrumentation] BullMQ WhatsApp dispatch worker started");
+    logger.info("[instrumentation] BullMQ WhatsApp dispatch worker started");
   }
 
   const { startEmailDispatchWorker } = await import(
@@ -60,7 +59,7 @@ export async function register() {
   );
   const emailWorker = startEmailDispatchWorker();
   if (emailWorker) {
-    console.log("[instrumentation] BullMQ email dispatch worker started");
+    logger.info("[instrumentation] BullMQ email dispatch worker started");
   }
 }
 

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { randomBytes } from "crypto";
 
 import { userPrismaRepository } from "@/infrastructure/repositories/user.repository";
@@ -42,7 +43,7 @@ export async function runForgotPassword(emailRaw: string): Promise<ForgotPasswor
   });
 
   if (error) {
-    console.error("Erro ao enviar email de recuperação:", error);
+    logger.error("Erro ao enviar email de recuperação", { err: error });
     return { ok: false, code: "EMAIL_SEND_FAILED" };
   }
 

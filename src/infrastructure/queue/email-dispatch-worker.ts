@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { Worker } from "bullmq";
 
 import { getWorkerRedisConnection } from "./redis-connection";
@@ -12,7 +13,7 @@ export function startEmailDispatchWorker(): Worker | null {
 
   const connection = getWorkerRedisConnection();
   if (!connection) {
-    console.warn("[email-worker] Redis not available – worker not started.");
+    logger.warn("[email-worker] Redis not available – worker not started.");
     return null;
   }
 
@@ -30,10 +31,12 @@ export function startEmailDispatchWorker(): Worker | null {
 
   workerInstance.on("failed", (job, err) => {
     const p = job?.data as EmailDispatchJobPayload | undefined;
-    console.error(
-      `[email-worker] Job ${job?.id} failed | kind=${p?.kind ?? "?"} tenantId=${p?.tenantId ?? "?"}:`,
-      err.message,
-    );
+    logger.error("[email-worker] job failed", {
+      jobId: job?.id,
+      kind: p?.kind,
+      tenantId: p?.tenantId,
+      err,
+    });
   });
 
   return workerInstance;

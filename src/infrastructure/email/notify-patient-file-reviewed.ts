@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { prisma } from "@/infrastructure/database/prisma";
 import { getFileReviewResultPatientHtml } from "@/infrastructure/email/email-templates";
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
@@ -85,7 +86,7 @@ export async function notifyPatientFileReviewed(params: NotifyParams): Promise<v
 
     for (const to of emailRecipients) {
       sendEmail({ to, from, subject, html, text, tenantId, useSmtp }).catch((err) =>
-        console.error("[notify-file-reviewed] email failed:", err),
+        logger.error("[notify-file-reviewed] email failed", { err }),
       );
     }
   }
@@ -113,7 +114,7 @@ export async function notifyPatientFileReviewed(params: NotifyParams): Promise<v
         await sendTextMessage(tenant.whatsappPhoneNumberId, accessToken, to, message);
       }
     } catch (err) {
-      console.error("[notify-file-reviewed] whatsapp failed:", err);
+      logger.error("[notify-file-reviewed] whatsapp failed", { err });
     }
   }
 }

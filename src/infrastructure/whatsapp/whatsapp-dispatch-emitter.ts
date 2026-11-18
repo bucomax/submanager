@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import type { WhatsAppDispatchInput } from "@/application/ports/whatsapp-dispatcher.port";
 import type { WhatsAppDispatchJobPayload } from "@/infrastructure/queue/whatsapp-dispatch-job-types";
 import { isQueueConsumerAvailable, tripRedisCircuit } from "@/infrastructure/queue/redis-connection";
@@ -42,10 +43,7 @@ export async function enqueueWhatsAppDispatch(
         return;
       }
     } catch (e) {
-      console.warn(
-        "[whatsapp] Redis queue unavailable; dispatching inline.",
-        e,
-      );
+      logger.warn("[whatsapp] Redis queue unavailable; dispatching inline", { err: e });
       tripRedisCircuit();
     }
   }

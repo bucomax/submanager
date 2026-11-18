@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { createHmac } from "node:crypto";
 
 import { after } from "next/server";
@@ -60,20 +61,20 @@ function verifySignature(rawBody: string, signature: string, appSecret: string):
 export async function POST(request: Request) {
   const appSecret = process.env.WHATSAPP_APP_SECRET?.trim();
   if (!appSecret) {
-    console.error("[whatsapp-webhook] WHATSAPP_APP_SECRET ausente — rejeitando.");
+    logger.error("[whatsapp-webhook] WHATSAPP_APP_SECRET ausente — rejeitando.");
     return new Response("Webhook not configured", { status: 503 });
   }
 
   const signature = request.headers.get("x-hub-signature-256");
   if (!signature) {
-    console.warn("[whatsapp-webhook] Missing signature — rejecting.");
+    logger.warn("[whatsapp-webhook] Missing signature — rejecting.");
     return new Response("Missing signature", { status: 401 });
   }
 
   const rawBody = await request.text();
 
   if (!verifySignature(rawBody, signature, appSecret)) {
-    console.warn("[whatsapp-webhook] Invalid signature — rejecting.");
+    logger.warn("[whatsapp-webhook] Invalid signature — rejecting.");
     return new Response("Invalid signature", { status: 401 });
   }
 
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
   // `after()` mantém a função viva em serverless até o processamento terminar (fire-and-forget solto é perdido).
   after(() =>
     processWhatsappWebhookPayload(payload).catch((err) =>
-      console.error("[whatsapp-webhook] processing error:", err),
+      logger.error("[whatsapp-webhook] processing error", { err }),
     ),
   );
 

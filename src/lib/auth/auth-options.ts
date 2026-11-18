@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
@@ -128,7 +129,7 @@ export const authOptions: NextAuthOptions = {
             })
             .catch((err) => {
               // Best-effort: a sessão segue com o tenant resolvido; a próxima leitura tenta persistir de novo.
-              console.warn("[auth] failed to persist auto-resolved activeTenantId:", userId, err);
+              logger.warn("[auth] failed to persist auto-resolved activeTenantId", { userId, err });
             });
         }
       }

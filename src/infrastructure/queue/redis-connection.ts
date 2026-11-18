@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import IORedis from "ioredis";
 
 type ConnectionSlot = "default" | "worker" | "subscriber";
@@ -85,9 +86,9 @@ function createConnection(): IORedis {
     retryStrategy(times) {
       const cap = 8;
       if (times > cap) {
-        console.warn(
-          "[redis] Desistindo da reconexão após %s tentativas. Suba o Redis (`docker compose up -d redis`), defina `REDIS_URL`, ou remova/limpe `REDIS_URL` no `.env` para modo inline.",
-          cap,
+        logger.warn(
+          "[redis] Desistindo da reconexão. Suba o Redis (`docker compose up -d redis`), defina `REDIS_URL`, ou remova/limpe `REDIS_URL` no `.env` para modo inline.",
+          { attempts: cap },
         );
         tripRedisCircuit();
         return null;

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
@@ -112,9 +113,7 @@ export async function POST(request: Request, context: RouteContext) {
   // TODO: Dispatch to BullMQ queue for heavy processing
   // For now, just acknowledge receipt and log.
 
-  console.info(
-    `[webhook] app=${appSlug} tenant=${tenantId} event=${eventType} id=${eventId} ts=${timestamp ?? "now"}`,
-  );
+  logger.info("[webhook] received", { appSlug, tenantId, eventType, eventId, timestamp: timestamp ?? "now" });
 
   return jsonSuccess({ received: true });
 }

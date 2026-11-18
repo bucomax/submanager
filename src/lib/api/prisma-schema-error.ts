@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { Prisma } from "@prisma/client";
 
 import type { ApiT } from "@/lib/api/i18n";
@@ -13,9 +14,9 @@ export function jsonIfPrismaSchemaMismatch(
 ): Response | null {
   if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return null;
   if (err.code !== "P2021" && err.code !== "P2022") return null;
-  console.error(
-    `${logPrefix} DB schema out of sync with Prisma — run migrate deploy on production`,
-    err.meta,
-  );
+  logger.error(`${logPrefix} DB schema out of sync with Prisma — run migrate deploy on production`, {
+    code: err.code,
+    meta: err.meta,
+  });
   return jsonError("DATABASE_SCHEMA_PENDING", apiT("errors.databaseSchemaOutdated"), 503);
 }

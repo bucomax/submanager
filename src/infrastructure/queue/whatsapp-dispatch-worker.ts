@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { Worker } from "bullmq";
 
 import { getWorkerRedisConnection } from "./redis-connection";
@@ -12,7 +13,7 @@ export function startWhatsAppDispatchWorker(): Worker | null {
 
   const connection = getWorkerRedisConnection();
   if (!connection) {
-    console.warn("[whatsapp-worker] Redis not available – worker not started.");
+    logger.warn("[whatsapp-worker] Redis not available – worker not started.");
     return null;
   }
 
@@ -37,10 +38,12 @@ export function startWhatsAppDispatchWorker(): Worker | null {
 
   workerInstance.on("failed", (job, err) => {
     const payload = job?.data as WhatsAppDispatchJobPayload | undefined;
-    console.error(
-      `[whatsapp-worker] Job ${job?.id} failed | tenantId=${payload?.tenantId ?? "?"} stageTransitionId=${payload?.stageTransitionId ?? "?"}:`,
-      err.message,
-    );
+    logger.error("[whatsapp-worker] job failed", {
+      jobId: job?.id,
+      tenantId: payload?.tenantId,
+      stageTransitionId: payload?.stageTransitionId,
+      err,
+    });
   });
 
   return workerInstance;

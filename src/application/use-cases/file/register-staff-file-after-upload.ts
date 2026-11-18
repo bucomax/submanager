@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { AuditEventType, Prisma } from "@prisma/client";
 
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
@@ -57,7 +58,7 @@ export async function runRegisterStaffFileAfterUpload(params: {
     }
     if (actualSizeBytes > MAX_UPLOAD_SIZE_BYTES) {
       await deleteObjectFromBucket(data.key).catch((err) =>
-        console.error("[registerStaffFileAfterUpload] oversize object cleanup failed:", err),
+        logger.error("[registerStaffFileAfterUpload] oversize object cleanup failed", { err }),
       );
       return { ok: false, code: "FILE_TOO_LARGE" };
     }
@@ -124,7 +125,7 @@ export async function runRegisterStaffFileAfterUpload(params: {
       },
     };
   } catch (err) {
-    console.error("[registerStaffFileAfterUpload]", err);
+    logger.error("[registerStaffFileAfterUpload]", { err });
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         return { ok: false, code: "CONFLICT" };
@@ -133,10 +134,8 @@ export async function runRegisterStaffFileAfterUpload(params: {
         return { ok: false, code: "DATABASE_SCHEMA_PENDING" };
       }
       if (err.code === "P2003") {
-        console.error("[registerStaffFileAfterUpload] FK constraint (uploadedById / tenantId)", err.meta);
+        logger.error("[registerStaffFileAfterUpload] FK constraint (uploadedById / tenantId)", { meta: err.meta });
       }
-    } else if (err instanceof Error) {
-      console.error("[registerStaffFileAfterUpload]", err.message);
     }
     return { ok: false, code: "INTERNAL" };
   }

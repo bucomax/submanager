@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { getRedisConnection } from "@/infrastructure/queue/redis-connection";
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
@@ -125,7 +126,7 @@ export async function rateLimit(
       }
       return null;
     } catch (err) {
-      console.error("[rate-limit] redis error, using in-memory fallback:", err instanceof Error ? err.message : "unknown");
+      logger.warn("[rate-limit] redis error, using in-memory fallback", { err });
     }
   }
 

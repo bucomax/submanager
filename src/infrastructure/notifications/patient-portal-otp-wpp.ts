@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 /**
  * Opcional: envio do código OTP por WhatsApp (ou outro canal) via webhook configurável.
  * Body JSON: `{ "phone": "+5511...", "text": "..." }` — ajuste o receptor conforme o serviço SubManager.
@@ -19,6 +20,6 @@ export async function notifyPatientPortalOtpByWebhook(params: {
       signal: AbortSignal.timeout(10_000),
     });
   } catch (e) {
-    console.error("[patient-portal] OTP notify webhook failed:", e);
+    logger.error("[patient-portal] OTP notify webhook failed", { err: e });
   }
 }
