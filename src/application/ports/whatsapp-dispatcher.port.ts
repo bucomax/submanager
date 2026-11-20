@@ -14,11 +14,16 @@ export type WhatsAppDispatchInput = {
 };
 
 export type WhatsAppDispatchResult = {
-  /** ChannelDispatch IDs created (one per document + one for the confirmation message). */
+  /**
+   * ChannelDispatch IDs created in this run: one per document attempted (documents already sent in an
+   * earlier attempt are skipped) + one for the confirmation message, only when it was sent now.
+   */
   dispatchIds: string[];
 };
 
 export type WhatsAppStatusUpdate = {
+  /** Tenant dono do número (resolvido pelo `phone_number_id` do webhook); isola a busca do dispatch. */
+  tenantId: string;
   externalMessageId: string;
   status: "sent" | "delivered" | "read" | "failed";
   timestamp: string;
@@ -27,6 +32,7 @@ export type WhatsAppStatusUpdate = {
 };
 
 export type WhatsAppButtonReply = {
+  tenantId: string;
   externalMessageId: string;
   buttonPayload: string;
   timestamp: string;

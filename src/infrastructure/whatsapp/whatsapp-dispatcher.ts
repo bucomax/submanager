@@ -10,16 +10,14 @@ import type {
 } from "@/application/ports/whatsapp-dispatcher.port";
 import { decryptTenantSecret } from "@/infrastructure/crypto/tenant-secret";
 import { prisma } from "@/infrastructure/database/prisma";
-import { presignGetObject } from "@/infrastructure/storage/gcs-storage";
+import { getPhoneNumberInfo } from "@/infrastructure/whatsapp/whatsapp-cloud-client";
 import {
-  getPhoneNumberInfo,
-  sendDocumentMessage,
-  sendInteractiveButtonMessage,
-} from "@/infrastructure/whatsapp/whatsapp-cloud-client";
+  loadAlreadySent,
+  sendConfirmationMessage,
+  sendDocument,
+  type SendContext,
+} from "@/infrastructure/whatsapp/whatsapp-dispatch-steps";
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
-
-/** Presigned URL TTL for documents sent via WhatsApp (30 minutes). */
-const PRESIGN_TTL_SECONDS = 30 * 60;
 
 /** Maps Meta status webhook values to our DispatchStatus enum. */
 const STATUS_MAP: Record<string, DispatchStatus> = {
@@ -63,126 +61,33 @@ export const whatsappDispatcher: IWhatsAppDispatcher = {
       return { dispatchIds: [] };
     }
 
-    const accessToken = decryptTenantSecret(tenant.whatsappAccessTokenEnc);
-    const phoneNumberId = tenant.whatsappPhoneNumberId;
+    const ctx: SendContext = {
+      input,
+      phoneNumberId: tenant.whatsappPhoneNumberId,
+      accessToken: decryptTenantSecret(tenant.whatsappAccessTokenEnc),
+    };
+    // Em retry, documentos já aceitos pela Meta nesta transição não são reenviados.
+    const alreadySent = await loadAlreadySent(input);
     const dispatchIds: string[] = [];
+    let deliveredCount = 0;
 
-    // --- Send each document ---
     for (const doc of input.documents) {
-      let presignedUrl: string | undefined;
-      let externalMessageId: string | undefined;
-      let errorDetail: string | undefined;
-      let status: DispatchStatus = DispatchStatus.QUEUED;
-
-      try {
-        presignedUrl = await presignGetObject(doc.r2Key, PRESIGN_TTL_SECONDS);
-        externalMessageId = await sendDocumentMessage(
-          phoneNumberId,
-          accessToken,
-          input.recipientPhone,
-          presignedUrl,
-          doc.fileName,
-          `📄 ${doc.fileName}`,
-        );
-        status = DispatchStatus.SENT;
-      } catch (err) {
-        status = DispatchStatus.FAILED;
-        errorDetail =
-          err instanceof Error ? err.message : "Unknown dispatch error";
-        logger.warn("[whatsapp] doc dispatch failed", {
-          stageTransitionId: input.stageTransitionId,
-          errorDetail,
-        });
+      if (alreadySent.documentKeys.has(doc.r2Key)) {
+        deliveredCount += 1;
+        continue;
       }
-
-      const dispatch = await prisma.channelDispatch.create({
-        data: {
-          tenantId: input.tenantId,
-          stageTransitionId: input.stageTransitionId,
-          clientId: input.clientId,
-          channel: "WHATSAPP",
-          status,
-          externalMessageId,
-          recipientPhone: input.recipientPhone,
-          documentFileName: doc.fileName,
-          documentR2Key: doc.r2Key,
-          presignedUrl,
-          errorDetail,
-          sentAt: status === DispatchStatus.SENT ? new Date() : undefined,
-        },
-      });
-      dispatchIds.push(dispatch.id);
-
-      await auditEventPrismaRepository.recordCanonical({
-        tenantId: input.tenantId,
-        clientId: input.clientId,
-        patientPathwayId: null,
-        actorUserId: null,
-        eventType:
-          status === DispatchStatus.SENT
-            ? AuditEventType.WHATSAPP_DISPATCH_SENT
-            : AuditEventType.WHATSAPP_DISPATCH_FAILED,
-        payload: {
-          channelDispatchId: dispatch.id,
-          stageTransitionId: input.stageTransitionId,
-          documentFileName: doc.fileName,
-          ...(errorDetail ? { errorDetail } : {}),
-        },
-      });
+      const { dispatchId, delivered } = await sendDocument(ctx, doc);
+      dispatchIds.push(dispatchId);
+      if (delivered) deliveredCount += 1;
     }
 
-    // --- Send interactive confirmation message ---
-    try {
-      const msgId = await sendInteractiveButtonMessage(
-        phoneNumberId,
-        accessToken,
-        input.recipientPhone,
-        `Você recebeu ${input.documents.length} documento(s) da etapa "${input.stageName}". Por favor, confirme o recebimento.`,
-        [
-          {
-            type: "reply",
-            reply: { id: "received", title: "Recebi os documentos" },
-          },
-          {
-            type: "reply",
-            reply: { id: "help", title: "Preciso de ajuda" },
-          },
-        ],
-      );
-
-      const confirmDispatch = await prisma.channelDispatch.create({
-        data: {
-          tenantId: input.tenantId,
-          stageTransitionId: input.stageTransitionId,
-          clientId: input.clientId,
-          channel: "WHATSAPP",
-          status: DispatchStatus.SENT,
-          externalMessageId: msgId,
-          recipientPhone: input.recipientPhone,
-          sentAt: new Date(),
-        },
-      });
-      dispatchIds.push(confirmDispatch.id);
-    } catch (err) {
-      const errorDetail =
-        err instanceof Error ? err.message : "Unknown error sending confirmation";
-      logger.warn("[whatsapp] confirmation message failed", {
+    // Resumo só se algum documento saiu (N = enviados de fato) e se ainda não foi enviado.
+    if (deliveredCount === 0) {
+      logger.warn("[whatsapp] no document was delivered; skipping confirmation message", {
         stageTransitionId: input.stageTransitionId,
-        errorDetail,
       });
-
-      const failedDispatch = await prisma.channelDispatch.create({
-        data: {
-          tenantId: input.tenantId,
-          stageTransitionId: input.stageTransitionId,
-          clientId: input.clientId,
-          channel: "WHATSAPP",
-          status: DispatchStatus.FAILED,
-          recipientPhone: input.recipientPhone,
-          errorDetail,
-        },
-      });
-      dispatchIds.push(failedDispatch.id);
+    } else if (!alreadySent.summarySent) {
+      dispatchIds.push(await sendConfirmationMessage(ctx, deliveredCount));
     }
 
     return { dispatchIds };
@@ -190,7 +95,7 @@ export const whatsappDispatcher: IWhatsAppDispatcher = {
 
   async handleStatusUpdate(update: WhatsAppStatusUpdate): Promise<void> {
     const dispatch = await prisma.channelDispatch.findFirst({
-      where: { externalMessageId: update.externalMessageId },
+      where: { tenantId: update.tenantId, externalMessageId: update.externalMessageId },
     });
     if (!dispatch) return;
 
@@ -254,7 +159,7 @@ export const whatsappDispatcher: IWhatsAppDispatcher = {
   async handleButtonReply(reply: WhatsAppButtonReply): Promise<void> {
     // The button reply context references the original interactive message ID
     const dispatch = await prisma.channelDispatch.findFirst({
-      where: { externalMessageId: reply.externalMessageId },
+      where: { tenantId: reply.tenantId, externalMessageId: reply.externalMessageId },
     });
     if (!dispatch) return;
 
@@ -273,6 +178,7 @@ export const whatsappDispatcher: IWhatsAppDispatcher = {
     // Also mark all document dispatches of the same transition as confirmed
     await prisma.channelDispatch.updateMany({
       where: {
+        tenantId: dispatch.tenantId,
         stageTransitionId: dispatch.stageTransitionId,
         id: { not: dispatch.id },
         status: { not: DispatchStatus.FAILED },

@@ -22,6 +22,7 @@ export async function processWhatsappWebhookPayload(payload: WhatsappWebhookPayl
 
       for (const status of value.statuses ?? []) {
         await whatsappDispatcher.handleStatusUpdate({
+          tenantId: tenant.id,
           externalMessageId: status.id,
           status: status.status as "sent" | "delivered" | "read" | "failed",
           timestamp: status.timestamp,
@@ -38,6 +39,7 @@ export async function processWhatsappWebhookPayload(payload: WhatsappWebhookPayl
           msg.context?.id
         ) {
           await whatsappDispatcher.handleButtonReply({
+            tenantId: tenant.id,
             externalMessageId: msg.context.id,
             buttonPayload: msg.interactive.button_reply.id,
             timestamp: msg.timestamp,
