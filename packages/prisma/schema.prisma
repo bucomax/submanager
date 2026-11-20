@@ -375,7 +375,6 @@ model Client {
   leadNotes                    LeadNote[]
   agendaEvents                 AgendaEvent[]
 
-  @@index([tenantId])
   @@index([tenantId, deletedAt])
   @@index([deletedByUserId])
 }
@@ -452,7 +451,6 @@ model QuickPhrase {
   updatedAt   DateTime @updatedAt
 
   @@unique([tenantId, slug])
-  @@index([tenantId])
 }
 
 /** Nota interna sobre um lead/conversa — nunca enviada ao contato. */
@@ -495,6 +493,8 @@ model AgendaEvent {
   updatedAt      DateTime      @updatedAt
 
   @@index([tenantId, startsAt])
+  // Índice parcial `AgendaEvent_startsAt_cirurgia_idx` ("startsAt" WHERE type = 'cirurgia', sweep de lembretes)
+  // existe só na migration: Prisma não representa índices parciais (e os ignora no diff).
 }
 
 model PatientPortalLinkToken {
@@ -538,6 +538,7 @@ model PatientSelfRegisterInvite {
   id              String    @id @default(cuid())
   tenantId        String
   tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /** sha256 hex do token; o valor cru só existe no link/QR entregue na criação do convite. */
   token           String    @unique
   expiresAt       DateTime
   usedAt          DateTime?
@@ -547,7 +548,6 @@ model PatientSelfRegisterInvite {
   client          Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now())
 
-  @@index([tenantId])
   @@index([tenantId, clientId])
 }
 
@@ -755,7 +755,6 @@ model PatientPathwayChecklistItem {
   updatedAt         DateTime                  @updatedAt
 
   @@unique([patientPathwayId, checklistItemId])
-  @@index([patientPathwayId])
   @@index([checklistItemId])
 }
 
@@ -785,7 +784,7 @@ model StageTransition {
   channelDispatches  ChannelDispatch[]
 
   @@unique([patientPathwayId, correlationId])
-  @@index([patientPathwayId])
+  @@index([patientPathwayId, createdAt])
   @@index([forcedByUserId])
 }
 
@@ -809,6 +808,7 @@ model AuditEvent {
   createdAt        DateTime         @default(now())
 
   @@index([tenantId, clientId, createdAt])
+  @@index([tenantId, createdAt(sort: Desc)])
 }
 
 /**
@@ -836,7 +836,6 @@ model FileAsset {
   appScreenshots              AppScreenshot[]              @relation("AppScreenshot")
   messages                    Message[]
 
-  @@index([tenantId])
   @@index([clientId])
   @@index([tenantId, clientId, patientPortalReviewStatus])
 }
@@ -878,11 +877,27 @@ model Notification {
   title     String
   body      String?
   metadata  Json?
+  /** Chave de deduplicação atômica (ex.: SLA por paciente/etapa/nível). Null = sem dedupe. */
+  dedupeKey String?
   readAt    DateTime?
   createdAt DateTime         @default(now())
 
+  @@unique([userId, dedupeKey])
   @@index([userId, readAt, createdAt])
+  @@index([userId, tenantId, createdAt(sort: Desc)])
   @@index([tenantId, createdAt])
+}
+
+/**
+ * Reserva de chave de envio idempotente (e-mail de cron, resumo semanal, etc.).
+ * Inserir com `createMany({ skipDuplicates: true })`: count 0 = já enviado/em curso.
+ * Expurgada por cron (`createdAt` antigo).
+ */
+model DispatchKey {
+  key       String   @id
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // ---------------------------------------------------------------------------
