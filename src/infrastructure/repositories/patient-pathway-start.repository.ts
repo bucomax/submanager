@@ -6,6 +6,7 @@ import type {
 } from "@/application/ports/patient-pathway-start.port";
 import { prisma } from "@/infrastructure/database/prisma";
 import { createPrismaAuditRecorder } from "@/infrastructure/repositories/audit-recorder.repository";
+import { acquirePathwaySharedLock } from "@/infrastructure/repositories/pathway-advisory-lock";
 import { getStageDocumentBundleFrom } from "@/infrastructure/repositories/stage-document-bundle.query";
 import { pickFirstTenantMemberFrom } from "@/infrastructure/repositories/tenant-member-picker.query";
 
@@ -16,6 +17,15 @@ function createTx(tx: Prisma.TransactionClient): IPatientPathwayStartTx {
     async lockClient(clientId) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`patient-pathway:${clientId}`}))`;
     },
+
+    lockPathway: (pathwayId) => acquirePathwaySharedLock(tx, pathwayId),
+
+    findPublishedVersionWithFirstStage: (pathwayId) =>
+      tx.pathwayVersion.findFirst({
+        where: { pathwayId, published: true },
+        orderBy: { version: "desc" },
+        include: { stages: { orderBy: { sortOrder: "asc" }, take: 1 } },
+      }),
 
     async hasActivePatientPathway(clientId) {
       const row = await tx.patientPathway.findFirst({
@@ -64,13 +74,6 @@ export const patientPathwayStartPrismaStore: IPatientPathwayStartStore = {
 
   findCarePathwayId: (tenantId, pathwayId) =>
     prisma.carePathway.findFirst({ where: { id: pathwayId, tenantId }, select: { id: true } }),
-
-  findPublishedVersionWithFirstStage: (pathwayId) =>
-    prisma.pathwayVersion.findFirst({
-      where: { pathwayId, published: true },
-      orderBy: { version: "desc" },
-      include: { stages: { orderBy: { sortOrder: "asc" }, take: 1 } },
-    }),
 
   runInTransaction: (fn) => prisma.$transaction((tx) => fn(createTx(tx))),
 };

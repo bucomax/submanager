@@ -21,7 +21,10 @@ export type StartState = AuditLog & {
   transitions: { id: string; patientPathwayId: string; toStageId: string; actorUserId: string; dispatchStub: unknown }[];
   documentsByStage: Record<string, StageDocumentBundleItem[]>;
   members: string[];
+  /** Locks por paciente (`lockClient`). */
   locks: string[];
+  /** Locks compartilhados por jornada (`lockPathway`), na ordem em que foram pegos. */
+  pathwayLocks: string[];
 };
 
 export class InMemoryPatientPathwayStartStore implements IPatientPathwayStartStore {
@@ -34,9 +37,10 @@ export class InMemoryPatientPathwayStartStore implements IPatientPathwayStartSto
     documentsByStage: {},
     members: [],
     locks: [],
+    pathwayLocks: [],
     audits: [],
   };
-  /** Simula outra requisição criando a jornada entre a checagem rápida e a transação. */
+  /** Simula outra requisição (criar jornada, publicar versão) entre a checagem rápida e a transação. */
   beforeTransaction: (() => void) | null = null;
   private nextId = 1;
 
@@ -49,13 +53,6 @@ export class InMemoryPatientPathwayStartStore implements IPatientPathwayStartSto
     return this.state.carePathways.find((p) => p.id === pathwayId && p.tenantId === tenantId) ?? null;
   }
 
-  async findPublishedVersionWithFirstStage(pathwayId: string): Promise<PublishedVersionForStart | null> {
-    const latest = this.state.publishedVersions
-      .filter((v) => v.pathwayId === pathwayId)
-      .sort((a, b) => b.version - a.version)[0];
-    return latest ? { id: latest.id, stages: latest.stages.slice(0, 1) } : null;
-  }
-
   runInTransaction<T>(fn: (tx: IPatientPathwayStartTx) => Promise<T>): Promise<T> {
     this.beforeTransaction?.();
     return runInMemoryTransaction(this, (draft) => fn(this.createTx(draft)));
@@ -65,6 +62,13 @@ export class InMemoryPatientPathwayStartStore implements IPatientPathwayStartSto
     return {
       audit: auditRecorderFor(s),
       lockClient: async (clientId) => void s.locks.push(clientId),
+      lockPathway: async (pathwayId) => void s.pathwayLocks.push(pathwayId),
+      findPublishedVersionWithFirstStage: async (pathwayId): Promise<PublishedVersionForStart | null> => {
+        const latest = s.publishedVersions
+          .filter((v) => v.pathwayId === pathwayId)
+          .sort((a, b) => b.version - a.version)[0];
+        return latest ? { id: latest.id, stages: latest.stages.slice(0, 1) } : null;
+      },
       hasActivePatientPathway: async (clientId) =>
         s.patientPathways.some((p) => p.clientId === clientId && !p.completedAt),
       pickFirstTenantMember: async (tenantId, candidates) =>

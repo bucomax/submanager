@@ -54,6 +54,8 @@ export type CreateStageTransitionRecord = {
 export type ClaimStageParams = {
   tenantId: string;
   patientPathwayId: string;
+  /** Versão em que `toStageId` foi validada; um publish que migrou o paciente no meio faz o claim falhar. */
+  expectedPathwayVersionId: string;
   fromStageId: string;
   toStageId: string;
   enteredStageAt: Date;
@@ -71,7 +73,10 @@ export interface IStageTransitionTx extends IStageDocumentBundleReader, ITenantM
     patientPathwayId: string,
     stageId: string,
   ): Promise<PendingChecklistItem[]>;
-  /** Update condicional (etapa atual == `fromStageId` e não concluída). `false` = perdeu a corrida. */
+  /**
+   * Update condicional (etapa atual == `fromStageId`, versão == `expectedPathwayVersionId`, não concluída).
+   * `false` = perdeu a corrida (transição concorrente ou publish que migrou o paciente).
+   */
   claimStage(params: ClaimStageParams): Promise<boolean>;
   createStageTransition(record: CreateStageTransitionRecord): Promise<{ id: string }>;
   loadPatientPathwayView(patientPathwayId: string): Promise<PatientPathwayViewRow>;

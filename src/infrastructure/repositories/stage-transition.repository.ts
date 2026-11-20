@@ -54,6 +54,7 @@ function createTx(tx: Prisma.TransactionClient): IStageTransitionTx {
         where: {
           id: p.patientPathwayId,
           tenantId: p.tenantId,
+          pathwayVersionId: p.expectedPathwayVersionId,
           currentStageId: p.fromStageId,
           completedAt: null,
         },

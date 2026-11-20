@@ -69,7 +69,34 @@ describe("createPatientPathway", () => {
     expect(state.transitions).toMatchObject([{ toStageId: "s1", actorUserId: ACTOR }]);
     expect(state.audits).toMatchObject([{ type: "PATIENT_PATHWAY_STARTED", clientId: "c1" }]);
     expect(state.locks).toEqual(["c1"]);
+    expect(state.pathwayLocks).toEqual(["p1"]);
     expect(ctx.cache.clientsListRevalidated).toEqual([TENANT]);
+  });
+
+  it("should start on the version published when the transaction runs, not the one read before it", async () => {
+    // Um publish conclui entre a validação inicial e a transação.
+    ctx.store.beforeTransaction = () => {
+      ctx.store.state.publishedVersions = [
+        { pathwayId: "p1", version: 2, id: "v2", stages: [ctx.stage("s9", 0)] },
+      ];
+    };
+
+    const result = await ctx.run();
+
+    expect(result.ok && result.data.patientPathway.currentStage.id).toBe("s9");
+    expect(ctx.store.state.transitions).toMatchObject([{ toStageId: "s9" }]);
+    expect(ctx.store.state.pathwayLocks).toEqual(["p1"]);
+  });
+
+  it("should reject when the version is unpublished between the quick check and the transaction", async () => {
+    ctx.store.beforeTransaction = () => {
+      ctx.store.state.publishedVersions = [];
+    };
+
+    expect(await ctx.run()).toEqual({ ok: false, code: "NO_PUBLISHED_VERSION" });
+    expect(ctx.store.state.patientPathways).toHaveLength(0);
+    expect(ctx.store.state.transitions).toHaveLength(0);
+    expect(ctx.store.state.audits).toHaveLength(0);
   });
 
   it("should reject a second active pathway for the same client", async () => {

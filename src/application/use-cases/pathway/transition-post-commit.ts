@@ -8,6 +8,8 @@ import type { StageDocumentBundleItem } from "@/domain/pathway/stage-document-bu
 export type TransitionPostCommitContext = {
   tenantId: string;
   transitionId: string;
+  /** Usuário que fez a transição (recebe a confirmação de envio dos documentos). */
+  actorUserId: string;
   patientPathwayId: string;
   fromStageId: string;
   toStage: { id: string; name: string; patientMessage: string | null };
@@ -99,8 +101,23 @@ async function whatsAppPatient(
   });
 }
 
+async function confirmDocumentDelivery(
+  ctx: TransitionPostCommitContext,
+  deps: TransitionPostCommitDeps,
+): Promise<void> {
+  if (ctx.documents.length === 0) return;
+  await deps.emailQueue.enqueueDocumentDeliveryStaffEmail({
+    tenantId: ctx.tenantId,
+    transitionId: ctx.transitionId,
+    candidateUserIds: [ctx.actorUserId, ctx.currentStageAssigneeUserId].filter((id): id is string => Boolean(id)),
+    client: ctx.client,
+    stageName: ctx.toStage.name,
+    documents: ctx.documents.map((d) => ({ fileName: d.file.fileName })),
+  });
+}
+
 /**
- * Efeitos pós-commit (notificação, e-mail, WhatsApp). Cada canal falha isoladamente e é logado.
+ * Efeitos pós-commit (notificação, e-mail, WhatsApp, confirmação de documentos à equipe). Cada canal falha isoladamente e é logado.
  * O chamador decide como executar (a rota usa `after()` para sobreviver ao fim da resposta em serverless).
  */
 export async function runTransitionPostCommit(
@@ -111,6 +128,7 @@ export async function runTransitionPostCommit(
     ["notification", notifyStaff],
     ["email", emailPatient],
     ["whatsapp", whatsAppPatient],
+    ["document-delivery", confirmDocumentDelivery],
   ] as const;
   const results = await Promise.allSettled(channels.map(([, run]) => run(ctx, deps)));
   results.forEach((result, i) => {

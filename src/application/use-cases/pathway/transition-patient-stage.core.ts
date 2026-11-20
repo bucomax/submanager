@@ -36,7 +36,9 @@ export type TransitionPatientStageErrorCode =
   | "ALREADY_IN_TARGET_STAGE"
   | "LOCK_CONFLICT"
   /** Etapa/versão do paciente mudou entre a leitura e a escrita (transição concorrente). */
-  | "STAGE_CONFLICT";
+  | "STAGE_CONFLICT"
+  /** `force` com checklist obrigatório incompleto exige justificativa (`OVERRIDE_REASON_MIN_LENGTH`). */
+  | "OVERRIDE_REASON_REQUIRED";
 
 type TransitionPatientPathwayView = {
   id: string;
@@ -124,6 +126,7 @@ async function replayOr(
 
 type TxOutcome =
   | { outcome: "blocked"; pending: PendingChecklistItem[] }
+  | { outcome: "override_reason_required" }
   | { outcome: "conflict" }
   | { outcome: "already_in_target" }
   | { outcome: "completed" }
@@ -164,6 +167,7 @@ async function applyTransition(
     overrideReason: parsed.overrideReason,
   });
   if (gate.kind === "blocked") return { outcome: "blocked", pending: gate.pending };
+  if (gate.kind === "override_reason_required") return { outcome: "override_reason_required" };
 
   const documents = await tx.getStageDocumentBundle(toStage.id);
   const currentStageAssigneeUserId = await tx.pickFirstTenantMember(
@@ -171,10 +175,12 @@ async function applyTransition(
     stageAssigneeCandidates(toStage, pp.client.assignedToUserId),
   );
 
-  // Claim condicional: serializa transições concorrentes (a segunda vê `false` após o commit da primeira).
+  // Claim condicional: serializa transições concorrentes (a segunda vê `false` após o commit da primeira)
+  // e falha se um publish migrou o paciente de versão depois da leitura de `toStage` (fora da tx).
   const claimed = await tx.claimStage({
     tenantId,
     patientPathwayId: pp.id,
+    expectedPathwayVersionId: pp.pathwayVersionId,
     fromStageId,
     toStageId: toStage.id,
     enteredStageAt: new Date(),
@@ -293,6 +299,8 @@ export async function transitionPatientStage(
   switch (txResult.outcome) {
     case "blocked":
       return { ok: false, code: "CHECKLIST_BLOCKED", pendingItems: txResult.pending };
+    case "override_reason_required":
+      return { ok: false, code: "OVERRIDE_REASON_REQUIRED" };
     case "conflict":
       return replayOr(store, pp.id, parsed, { ok: false, code: "STAGE_CONFLICT" });
     case "already_in_target":
@@ -308,6 +316,7 @@ export async function transitionPatientStage(
   const postCommit: TransitionPostCommitContext = {
     tenantId,
     transitionId: txResult.transitionId,
+    actorUserId,
     patientPathwayId: pp.id,
     fromStageId: txResult.fromStageId,
     toStage: { id: toStage.id, name: toStage.name, patientMessage: toStage.patientMessage },

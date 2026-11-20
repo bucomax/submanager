@@ -44,6 +44,13 @@ export interface IPatientPathwayStartTx extends IStageDocumentBundleReader, ITen
   readonly audit: IAuditRecorder;
   /** Serializa criações concorrentes para o mesmo paciente (duplo clique / retry). */
   lockClient(clientId: string): Promise<void>;
+  /**
+   * Lock compartilhado da jornada, na mesma chave do publish: espera um publish em andamento e impede
+   * que um publish comece no meio da criação. Chamar antes de ler a versão publicada.
+   */
+  lockPathway(pathwayId: string): Promise<void>;
+  /** Versão publicada mais recente, com a primeira etapa (por `sortOrder`). Ler dentro da tx, após `lockPathway`. */
+  findPublishedVersionWithFirstStage(pathwayId: string): Promise<PublishedVersionForStart | null>;
   hasActivePatientPathway(clientId: string): Promise<boolean>;
   createPatientPathway(record: CreatePatientPathwayRecord): Promise<CreatedPatientPathwayRow>;
   createInitialTransition(record: {
@@ -57,7 +64,5 @@ export interface IPatientPathwayStartTx extends IStageDocumentBundleReader, ITen
 export interface IPatientPathwayStartStore {
   findActivePatientPathwayId(clientId: string): Promise<{ id: string } | null>;
   findCarePathwayId(tenantId: string, pathwayId: string): Promise<{ id: string } | null>;
-  /** Versão publicada mais recente, com a primeira etapa (por `sortOrder`). */
-  findPublishedVersionWithFirstStage(pathwayId: string): Promise<PublishedVersionForStart | null>;
   runInTransaction<T>(fn: (tx: IPatientPathwayStartTx) => Promise<T>): Promise<T>;
 }

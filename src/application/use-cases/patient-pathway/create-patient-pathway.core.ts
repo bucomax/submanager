@@ -4,12 +4,16 @@ import type { z } from "zod";
 
 import type { INotificationEmitter } from "@/application/ports/notification-emitter.port";
 import type { INotificationTargetResolver } from "@/application/ports/notification-target-resolver.port";
-import type { IPatientPathwayStartStore } from "@/application/ports/patient-pathway-start.port";
+import type {
+  CreatedPatientPathwayRow,
+  IPatientPathwayStartStore,
+} from "@/application/ports/patient-pathway-start.port";
 import type { ITenantListCache } from "@/application/ports/tenant-list-cache.port";
 import type { IVisibleClientFinder } from "@/application/ports/visible-client-finder.port";
 import type { IWhatsAppDispatchQueue } from "@/application/ports/dispatch-queues.port";
 import { AuditEventType } from "@/domain/audit/audit-event-type";
 import { stageAssigneeCandidates } from "@/domain/pathway/stage-assignee";
+import type { StageDocumentBundleItem } from "@/domain/pathway/stage-document-bundle";
 import { buildStageDispatchStub } from "@/application/use-cases/pathway/build-stage-dispatch";
 import type { postPatientPathwayBodySchema } from "@/lib/validators/pathway";
 
@@ -64,6 +68,16 @@ export type CreatePatientPathwayParams = {
   pathwayId: string;
 };
 
+type TxResult =
+  | { outcome: "active_pathway_exists" }
+  | { outcome: "no_published_version" }
+  | {
+      outcome: "created";
+      pp: CreatedPatientPathwayRow;
+      transitionId: string;
+      documents: StageDocumentBundleItem[];
+    };
+
 /**
  * Inicia jornada (`PatientPathway`) para um cliente: transação, notificação, WhatsApp, audit, revalidate cache.
  */
@@ -88,15 +102,16 @@ export async function createPatientPathway(
     return { ok: false, code: "PATHWAY_NOT_FOUND" };
   }
 
-  const publishedVersion = await store.findPublishedVersionWithFirstStage(pathwayId);
-  const firstStage = publishedVersion?.stages[0];
-  if (!publishedVersion || !firstStage) {
-    return { ok: false, code: "NO_PUBLISHED_VERSION" };
-  }
-
-  const txResult = await store.runInTransaction(async (tx) => {
+  const txResult = await store.runInTransaction(async (tx): Promise<TxResult> => {
     await tx.lockClient(clientId);
-    if (await tx.hasActivePatientPathway(clientId)) return null;
+    if (await tx.hasActivePatientPathway(clientId)) return { outcome: "active_pathway_exists" };
+
+    // Versão publicada lida SÓ aqui, após o lock da jornada (mesma chave do publish): um publish
+    // concorrente já terminou (ou espera), então o paciente nunca nasce numa versão despublicada.
+    await tx.lockPathway(pathwayId);
+    const publishedVersion = await tx.findPublishedVersionWithFirstStage(pathwayId);
+    const firstStage = publishedVersion?.stages[0];
+    if (!publishedVersion || !firstStage) return { outcome: "no_published_version" };
 
     const currentStageAssigneeUserId = await tx.pickFirstTenantMember(
       tenantId,
@@ -135,10 +150,13 @@ export async function createPatientPathway(
       payload: { patientPathwayId: pp.id, pathwayId },
     });
 
-    return { pp, transitionId: createdTransition.id, documents };
+    return { outcome: "created", pp, transitionId: createdTransition.id, documents };
   });
-  if (!txResult) {
+  if (txResult.outcome === "active_pathway_exists") {
     return { ok: false, code: "ACTIVE_PATHWAY_EXISTS" };
+  }
+  if (txResult.outcome === "no_published_version") {
+    return { ok: false, code: "NO_PUBLISHED_VERSION" };
   }
 
   const { pp: result, transitionId, documents } = txResult;

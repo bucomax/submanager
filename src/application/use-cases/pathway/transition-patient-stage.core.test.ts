@@ -162,24 +162,36 @@ describe("transitionPatientStage", () => {
     });
 
     it("should let the transition through with force and record the trimmed override reason and the forcing user", async () => {
-      const result = await ctx.run({ toStageId: "s2", force: true, overrideReason: "  urgente  " });
+      const result = await ctx.run({ toStageId: "s2", force: true, overrideReason: "  cirurgia urgente  " });
 
       expect(result.ok).toBe(true);
       expect(ctx.store.state.transitions[0]).toMatchObject({
-        ruleOverrideReason: "urgente",
+        ruleOverrideReason: "cirurgia urgente",
         forcedByUserId: ACTOR,
       });
       expect(ctx.store.state.audits[0]!.payload).toMatchObject({ forcedOverride: true });
       expect(JSON.stringify(ctx.store.state.audits[0]!.payload)).not.toContain("urgente");
     });
 
-    it("should store a null reason when forcing without text, and ignore force when nothing is pending", async () => {
-      await ctx.run({ toStageId: "s2", force: true, overrideReason: "   " });
-      expect(ctx.store.state.transitions[0]).toMatchObject({ ruleOverrideReason: null, forcedByUserId: ACTOR });
+    it.each([undefined, "", "   ", "curto", "         x         "])(
+      "should reject force without a sufficient override reason (%j) and persist nothing",
+      async (overrideReason) => {
+        const result = await ctx.run({ toStageId: "s2", force: true, overrideReason });
 
-      ctx.store.state.completedChecklist = []; // s2 não tem itens obrigatórios
-      await ctx.run({ toStageId: "s3", force: true, overrideReason: "x" });
-      expect(ctx.store.state.transitions[1]).toMatchObject({ ruleOverrideReason: null, forcedByUserId: null });
+        expect(result).toEqual({ ok: false, code: "OVERRIDE_REASON_REQUIRED" });
+        expect(ctx.store.state.patientPathways[PP]!.currentStageId).toBe("s1");
+        expect(ctx.store.state.transitions).toHaveLength(0);
+        expect(ctx.store.state.audits).toHaveLength(0);
+      },
+    );
+
+    it("should ignore force (and not require a reason) when nothing is pending", async () => {
+      ctx.store.state.completedChecklist = [`${PP}:i1`, `${PP}:i2`];
+
+      const result = await ctx.run({ toStageId: "s2", force: true });
+
+      expect(result.ok).toBe(true);
+      expect(ctx.store.state.transitions[0]).toMatchObject({ ruleOverrideReason: null, forcedByUserId: null });
     });
   });
 
@@ -203,6 +215,16 @@ describe("transitionPatientStage", () => {
         ctx.store.state.patientPathways[PP]!.pathwayVersionId = "v2";
       };
       expect(await ctx.run({ toStageId: "s2" })).toEqual({ ok: false, code: "STAGE_CONFLICT" });
+    });
+
+    it("should return STAGE_CONFLICT when a publish migrates the patient inside the tx, between the state read and the claim", async () => {
+      ctx.store.afterStateRead = (draft) => {
+        draft.patientPathways[PP]!.pathwayVersionId = "v2";
+      };
+
+      expect(await ctx.run({ toStageId: "s2" })).toEqual({ ok: false, code: "STAGE_CONFLICT" });
+      expect(ctx.store.state.transitions).toHaveLength(0);
+      expect(ctx.store.state.patientPathways[PP]!.currentStageId).toBe("s1");
     });
 
     it("should return PATHWAY_ALREADY_COMPLETED when the pathway got completed after the read", async () => {
@@ -290,6 +312,11 @@ describe("transitionPatientStage", () => {
         data: { portalUrl: "https://app.test/clinica/patient/login", documents: [{ fileName: "orientacoes.pdf" }] },
       });
       expect(whatsappQueue.enqueued[0]).toMatchObject({ recipientPhone: "11999999999", stageName: "Cirurgia" });
+      expect(emailQueue.documentDeliveries[0]).toMatchObject({
+        candidateUserIds: expect.arrayContaining([ACTOR]),
+        stageName: "Cirurgia",
+        documents: [{ fileName: "orientacoes.pdf" }],
+      });
     });
 
     it("should skip WhatsApp when the stage has no documents and not block the other channels when one fails", async () => {
@@ -302,6 +329,7 @@ describe("transitionPatientStage", () => {
       await expect(result.afterCommit()).resolves.toBeUndefined();
 
       expect(ctx.postCommit.whatsappQueue.enqueued).toHaveLength(0);
+      expect(ctx.postCommit.emailQueue.documentDeliveries).toHaveLength(0);
       expect(ctx.postCommit.notifications.emitted).toHaveLength(1);
     });
   });

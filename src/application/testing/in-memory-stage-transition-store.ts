@@ -77,6 +77,8 @@ export class InMemoryStageTransitionStore implements IStageTransitionStore, ICli
   state: StageTransitionState = emptyStageTransitionState();
   /** Simula uma transição concorrente que vence a corrida entre a leitura e a transação. */
   beforeTransaction: (() => void) | null = null;
+  /** Simula um publish/transição que confirma DENTRO da tx, entre a releitura do estado e o claim. */
+  afterStateRead: ((draft: StageTransitionState) => void) | null = null;
   /** Fault injection: o update condicional perde a corrida (count 0). */
   forceClaimConflict = false;
   private nextId = 1;
@@ -136,12 +138,14 @@ export class InMemoryStageTransitionStore implements IStageTransitionStore, ICli
       findPatientPathwayState: async (tenantId, id) => {
         const pp = draft.patientPathways[id];
         if (!pp || pp.tenantId !== tenantId) return null;
-        return {
+        const state = {
           currentStageId: pp.currentStageId,
           pathwayVersionId: pp.pathwayVersionId,
           completedAt: pp.completedAt,
           currentStageName: draft.stages[pp.currentStageId]?.name ?? null,
         };
+        this.afterStateRead?.(draft);
+        return state;
       },
       listPendingRequiredChecklistItems: async (ppId, stageId) =>
         draft.requiredChecklist
@@ -153,7 +157,14 @@ export class InMemoryStageTransitionStore implements IStageTransitionStore, ICli
         candidates.find((id) => draft.members.includes(`${tenantId}:${id}`)) ?? null,
       claimStage: async (p) => {
         const pp = draft.patientPathways[p.patientPathwayId];
-        if (this.forceClaimConflict || !pp || pp.tenantId !== p.tenantId || pp.currentStageId !== p.fromStageId || pp.completedAt) {
+        if (
+          this.forceClaimConflict ||
+          !pp ||
+          pp.tenantId !== p.tenantId ||
+          pp.pathwayVersionId !== p.expectedPathwayVersionId ||
+          pp.currentStageId !== p.fromStageId ||
+          pp.completedAt
+        ) {
           return false;
         }
         Object.assign(pp, {
