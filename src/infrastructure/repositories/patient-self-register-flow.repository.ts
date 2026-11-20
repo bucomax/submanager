@@ -10,8 +10,17 @@ import type {
 import { TransactionConflictError } from "@/domain/errors/transaction-conflict";
 import { prisma } from "@/infrastructure/database/prisma";
 import { createPrismaAuditRecorder } from "@/infrastructure/repositories/audit-recorder.repository";
+import { hashAuthToken } from "@/lib/auth/auth-token-hash";
 
 const PRISMA_SERIALIZATION_FAILURE = "P2034";
+
+/**
+ * O token é guardado como sha256 hex. TODO(remover na release seguinte ao deploy): aceita também o valor cru,
+ * para convites emitidos entre a migration de hash e o deploy do código novo (TTL de 48h).
+ */
+function inviteTokenCandidates(rawToken: string): string[] {
+  return [hashAuthToken(rawToken), rawToken];
+}
 
 /** Colunas do `Client` preenchidas pelo formulário público (explícito: nada além do contrato vaza para o DB). */
 function toClientColumns(cf: SelfRegisterClientFields, credentials: PortalPasswordCredentials) {
@@ -48,8 +57,8 @@ function createTx(tx: Prisma.TransactionClient): ISelfRegisterTx {
     audit: createPrismaAuditRecorder(tx),
 
     findInviteByToken: (token) =>
-      tx.patientSelfRegisterInvite.findUnique({
-        where: { token },
+      tx.patientSelfRegisterInvite.findFirst({
+        where: { token: { in: inviteTokenCandidates(token) } },
         include: { tenant: { select: { id: true, name: true, slug: true, isActive: true } } },
       }),
 
@@ -93,8 +102,8 @@ export const patientSelfRegisterPrismaStore: IPatientSelfRegisterStore = {
   },
 
   findInviteForPreview: (token) =>
-    prisma.patientSelfRegisterInvite.findUnique({
-      where: { token },
+    prisma.patientSelfRegisterInvite.findFirst({
+      where: { token: { in: inviteTokenCandidates(token) } },
       include: {
         tenant: { select: { name: true, taxId: true, isActive: true } },
         client: {

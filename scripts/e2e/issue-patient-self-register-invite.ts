@@ -11,6 +11,7 @@
 import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
+import { hashAuthToken } from "../../src/lib/auth/auth-token-hash";
 import { loadRootEnv } from "../../e2e/load-root-env";
 
 function argTenantSlug(): string {
@@ -54,7 +55,7 @@ async function main() {
     await prisma.patientSelfRegisterInvite.create({
       data: {
         tenantId: tenant.id,
-        token,
+        token: hashAuthToken(token),
         expiresAt,
         createdByUserId: member.userId,
         clientId: null,

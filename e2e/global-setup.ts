@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
+import { hashAuthToken } from "../src/lib/auth/auth-token-hash";
 import { loadRootEnv } from "./load-root-env";
 import { mintSessionCookie } from "./session-cookie";
 
@@ -53,14 +54,14 @@ export default async function globalSetup(): Promise<void> {
       data: [
         {
           tenantId: tenant.id,
-          token: tokenUi,
+          token: hashAuthToken(tokenUi),
           expiresAt,
           createdByUserId: member.userId,
           clientId: null,
         },
         {
           tenantId: tenant.id,
-          token: tokenApi,
+          token: hashAuthToken(tokenApi),
           expiresAt,
           createdByUserId: member.userId,
           clientId: null,

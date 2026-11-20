@@ -38,12 +38,15 @@ export async function runResetPasswordWithToken(params: {
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
 
-  await userPrismaRepository.applyPasswordResetAndConsumeToken({
+  const consumed = await userPrismaRepository.applyPasswordResetAndConsumeToken({
     tokenId: row.id,
     userId: row.userId,
     passwordHash,
     activeTenantId: row.tenantId ?? undefined,
   });
+  if (!consumed) {
+    return { ok: false, code: "INVALID_TOKEN" };
+  }
 
   let auditTenantId = row.tenantId;
   if (!auditTenantId) {

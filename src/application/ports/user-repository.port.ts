@@ -79,12 +79,13 @@ export interface IUserRepository {
     user: { id: string; passwordHash: string | null };
   } | null>;
 
+  /** `false` quando o token já foi consumido por outra requisição (nada é alterado). */
   applyPasswordResetAndConsumeToken(params: {
     tokenId: string;
     userId: string;
     passwordHash: string;
     activeTenantId: string | null | undefined;
-  }): Promise<void>;
+  }): Promise<boolean>;
 
   findFirstTenantIdForUser(userId: string): Promise<string | null>;
 

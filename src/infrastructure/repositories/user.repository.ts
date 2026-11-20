@@ -272,27 +272,32 @@ export class UserPrismaRepository implements IUserRepository {
     };
   }
 
+  /** Consome o token de forma atômica; `false` (nada gravado) se outra requisição já o usou. */
   async applyPasswordResetAndConsumeToken(params: {
     tokenId: string;
     userId: string;
     passwordHash: string;
     activeTenantId: string | null | undefined;
-  }) {
+  }): Promise<boolean> {
     const { tokenId, userId, passwordHash, activeTenantId } = params;
-    await prisma.$transaction([
-      prisma.user.update({
+    return prisma.$transaction(async (tx) => {
+      // O claim vem antes da troca de senha: o UPDATE condicional serializa requisições paralelas no lock da linha.
+      const { count } = await tx.userAuthToken.updateMany({
+        where: { id: tokenId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      if (count !== 1) return false;
+
+      await tx.user.update({
         where: { id: userId },
         data: {
           passwordHash,
           sessionVersion: { increment: 1 },
           ...(activeTenantId ? { activeTenantId } : {}),
         },
-      }),
-      prisma.userAuthToken.update({
-        where: { id: tokenId },
-        data: { usedAt: new Date() },
-      }),
-    ]);
+      });
+      return true;
+    });
   }
 
   async findFirstTenantIdForUser(userId: string) {
