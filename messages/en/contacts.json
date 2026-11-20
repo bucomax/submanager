@@ -124,7 +124,8 @@
       "consulta": "Appointment",
       "retorno": "Follow-up",
       "exame": "Exam",
-      "ligacao": "Call"
+      "ligacao": "Call",
+      "cirurgia": "Surgery"
     },
     "dateShortcuts": {
       "today": "Today",

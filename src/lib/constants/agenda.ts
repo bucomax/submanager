@@ -6,4 +6,5 @@ export const EVENT_TYPE_LABEL_PT_BR: Record<AgendaEventType, string> = {
   retorno: "Retorno",
   exame: "Exame",
   ligacao: "Ligação",
+  cirurgia: "Cirurgia",
 };

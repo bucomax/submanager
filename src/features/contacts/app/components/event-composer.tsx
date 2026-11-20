@@ -11,8 +11,8 @@ import { CalendarPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CreateAgendaEventRequestBody, AgendaEventType } from "@/types/api/agenda-v1";
 
-const TYPES: AgendaEventType[] = ["consulta", "retorno", "exame", "ligacao"];
-const DURATIONS = [30, 45, 60, 90];
+const TYPES: AgendaEventType[] = ["consulta", "retorno", "exame", "ligacao", "cirurgia"];
+const DURATIONS = [30, 45, 60, 90, 120, 180, 240];
 
 function addDaysIso(days: number): string {
   const d = new Date();

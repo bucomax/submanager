@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EVENT_TYPE_COLOR, NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
+import { EVENT_TYPE_TOKEN } from "@/features/contacts/app/utils/note-colors";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
 import type { AgendaEventDto } from "@/types/api/agenda-v1";
@@ -75,7 +75,7 @@ export function AgendaMonthGrid({ monthStart, events, onEventClick }: AgendaMont
               </span>
               <div className="mt-1 space-y-0.5">
                 {visible.map((event) => {
-                  const token = NOTE_COLOR_TOKENS[EVENT_TYPE_COLOR[event.type]];
+                  const token = EVENT_TYPE_TOKEN[event.type];
                   return (
                     <button
                       key={event.id}

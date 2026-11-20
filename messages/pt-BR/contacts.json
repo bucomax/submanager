@@ -124,7 +124,8 @@
       "consulta": "Consulta",
       "retorno": "Retorno",
       "exame": "Exame",
-      "ligacao": "Ligação"
+      "ligacao": "Ligação",
+      "cirurgia": "Cirurgia"
     },
     "dateShortcuts": {
       "today": "Hoje",

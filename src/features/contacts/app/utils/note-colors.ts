@@ -16,10 +16,14 @@ export const NOTE_COLOR_TOKENS: Record<LeadNoteColor, ColorToken> = {
   violet: { solid: "#8b5cf6", ink: "#5b21b6", soft: "rgba(139,92,246,.14)", line: "rgba(139,92,246,.5)" },
 };
 
-/** Tipo de compromisso → mesma cor da nota equivalente (Ligação=amber, Consulta=sky, Exame=emerald, Retorno=violet). */
-export const EVENT_TYPE_COLOR: Record<AgendaEventType, LeadNoteColor> = {
-  ligacao: "amber",
-  consulta: "sky",
-  exame: "emerald",
-  retorno: "violet",
+/**
+ * Cor de cada tipo de compromisso. Os quatro primeiros reutilizam a cor da nota equivalente
+ * (Ligação=amber, Consulta=sky, Exame=emerald, Retorno=violet); Cirurgia tem cor própria (rose).
+ */
+export const EVENT_TYPE_TOKEN: Record<AgendaEventType, ColorToken> = {
+  ligacao: NOTE_COLOR_TOKENS.amber,
+  consulta: NOTE_COLOR_TOKENS.sky,
+  exame: NOTE_COLOR_TOKENS.emerald,
+  retorno: NOTE_COLOR_TOKENS.violet,
+  cirurgia: { solid: "#e11d48", ink: "#9f1239", soft: "rgba(225,29,72,.14)", line: "rgba(225,29,72,.5)" },
 };

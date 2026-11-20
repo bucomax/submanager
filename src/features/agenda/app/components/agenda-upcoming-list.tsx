@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EVENT_TYPE_COLOR, NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
+import { EVENT_TYPE_TOKEN } from "@/features/contacts/app/utils/note-colors";
 import { useRouter } from "@/i18n/navigation";
 import { MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -31,7 +31,7 @@ export function AgendaUpcomingList({ events }: AgendaUpcomingListProps) {
       ) : (
         <div className="space-y-2 overflow-y-auto">
           {upcoming.map((event) => {
-            const token = NOTE_COLOR_TOKENS[EVENT_TYPE_COLOR[event.type]];
+            const token = EVENT_TYPE_TOKEN[event.type];
             const date = new Date(event.startsAt);
             return (
               <div

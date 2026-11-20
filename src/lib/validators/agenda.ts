@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const agendaEventTypeEnum = z.enum(["consulta", "retorno", "exame", "ligacao"]);
+const agendaEventTypeEnum = z.enum(["consulta", "retorno", "exame", "ligacao", "cirurgia"]);
 
 export const createAgendaEventBodySchema = z.object({
   conversationId: z.string().trim().min(1).nullable().optional(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { EVENT_TYPE_COLOR, NOTE_COLOR_TOKENS } from "@/features/contacts/app/utils/note-colors";
+import { EVENT_TYPE_TOKEN } from "@/features/contacts/app/utils/note-colors";
 import { CalendarCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { AgendaEventDto } from "@/types/api/agenda-v1";
@@ -23,7 +23,7 @@ function formatEventRange(startsAt: string, durationMin: number): string {
 export function ChatEventBlock({ event, onOpenInAgenda }: ChatEventBlockProps) {
   const tChat = useTranslations("contacts.chat");
   const tStage = useTranslations("contacts.event.type");
-  const token = NOTE_COLOR_TOKENS[EVENT_TYPE_COLOR[event.type]];
+  const token = EVENT_TYPE_TOKEN[event.type];
 
   return (
     <div

@@ -3,7 +3,7 @@
  * Ver docs/superpowers/plans/2026-08-11-conversas-agenda-whatsapp.md
  */
 
-export type AgendaEventType = "consulta" | "retorno" | "exame" | "ligacao";
+export type AgendaEventType = "consulta" | "retorno" | "exame" | "ligacao" | "cirurgia";
 
 export type AgendaEventDto = {
   id: string;
