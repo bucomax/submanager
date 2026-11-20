@@ -65,7 +65,7 @@
                             "imageUrl": {
                               "type": "string",
                               "nullable": true,
-                              "description": "URL resolvida para exibição (presign ou base pública)"
+                              "description": "URL resolvida para exibição (presign ou base pública). Referências gcs: fora de tenants/{tenantId}/avatars/ resolvem para null."
                             },
                             "globalRole": { "type": "string" },
                             "tenantId": { "type": "string", "nullable": true },
@@ -98,7 +98,7 @@
                   "image": {
                     "type": "string",
                     "nullable": true,
-                    "description": "URL http(s), referência gcs:{key} do tenant ativo, ou null/vazio para limpar"
+                    "description": "URL http(s), referência gcs:{key} de avatar do tenant ativo (chave `tenants/{tenantId}/avatars/{arquivo}`, gerada por `POST /api/v1/files/presign` com `purpose: avatar`), ou null/vazio para limpar. Chaves de outros prefixos (clients/, library/, exports/, uploads/) são rejeitadas."
                   }
                 }
               }
@@ -108,7 +108,7 @@
         "responses": {
           "200": { "description": "OK" },
           "401": { "description": "Não autenticado" },
-          "422": { "description": "Validação" }
+          "422": { "description": "Validação (inclui `image` com chave gcs que não seja avatar do tenant ativo)" }
         }
       },
       "delete": {
@@ -246,6 +246,31 @@
           },
           "422": { "description": "Token ausente na query (`VALIDATION_ERROR`)" },
           "429": { "description": "Rate limit (bucket auth)" }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "summary": "Solicita link de redefinição de senha",
+        "description": "Público. Resposta idêntica (conteúdo e tempo) exista a conta ou não, e mesmo se o envio do e-mail falhar (a falha é apenas logada). Limitado por IP (bucket auth) e por e-mail normalizado.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": { "email": { "type": "string", "format": "email" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mensagem genérica (`success.forgotPasswordHint`)" },
+          "422": { "description": "E-mail inválido" },
+          "429": { "description": "Limite por IP ou por e-mail (header Retry-After)" },
+          "503": { "description": "Envio de e-mail não configurado na plataforma" }
         }
       }
     },
@@ -1845,6 +1870,8 @@
                 "properties": {
                   "toStageId": { "type": "string" },
                   "note": { "type": "string", "maxLength": 2000 },
+                  "force": { "type": "boolean", "description": "Ignora checklist obrigatório incompleto. Exige `overrideReason` (mínimo 10 caracteres após trim); o motivo e o ator ficam registrados na StageTransition." },
+                  "overrideReason": { "type": "string", "maxLength": 2000, "description": "Justificativa do override; obrigatória (mín. 10 caracteres) quando `force: true`" },
                   "correlationId": { "type": "string", "minLength": 8, "maxLength": 128, "description": "Chave de idempotência; replay com mesmo toStageId devolve 200 com o estado atual" }
                 }
               }
@@ -1856,7 +1883,7 @@
           "401": { "description": "Não autenticado" },
           "404": { "description": "Instância ou etapa inválida" },
           "409": { "description": "Conflito: transição concorrente, lock ocupado ou correlationId reutilizado com outro toStageId" },
-          "422": { "description": "Validação ou já na etapa" }
+          "422": { "description": "Validação, já na etapa, checklist obrigatório incompleto (`CHECKLIST_REQUIRED_INCOMPLETE`) ou `force` sem justificativa suficiente (`VALIDATION_ERROR`)" }
         }
       }
     },
@@ -2169,7 +2196,7 @@
         },
         "responses": {
           "200": {
-            "description": "`{ hasPassword: boolean }` — se clínica inexistente, retorna `hasPassword: false`"
+            "description": "`{ hasPassword: boolean }` — login inexistente na clínica responde `hasPassword: true` (indistinguível de quem tem senha; o paciente cai em \"esqueci a senha\"/OTP). Clínica inexistente retorna `hasPassword: false`. Resíduo: paciente existente sem senha ainda responde `false`."
           },
           "422": { "description": "Formato de login inválido" },
           "429": { "description": "Limite de solicitações (header Retry-After)" }
@@ -2538,7 +2565,7 @@
         "tags": ["Apps (admin)"],
         "security": [{ "cookieAuth": [] }],
         "responses": {
-          "200": { "description": "Detalhe do app" },
+          "200": { "description": "Detalhe do app; `metadata` sanitizado (chaves sensíveis como `webhookSecret` nunca são devolvidas)" },
           "404": { "description": "App não encontrado" }
         }
       },
@@ -2872,7 +2899,7 @@
                   "conversationId": { "type": "string", "nullable": true },
                   "clientId": { "type": "string", "nullable": true },
                   "title": { "type": "string", "maxLength": 160 },
-                  "type": { "type": "string", "enum": ["consulta", "retorno", "exame", "ligacao"] },
+                  "type": { "type": "string", "enum": ["consulta", "retorno", "exame", "ligacao", "cirurgia"] },
                   "startsAt": { "type": "string", "format": "date-time" },
                   "durationMin": { "type": "integer", "minimum": 5, "maximum": 480 },
                   "ownerUserId": { "type": "string" },
@@ -2932,7 +2959,7 @@
         "tags": ["Apps (tenant)"],
         "security": [{ "cookieAuth": [] }],
         "responses": {
-          "200": { "description": "App com tenantApp status e configSummary mascarado" },
+          "200": { "description": "App (sem `metadata`) com tenantApp status e configSummary mascarado" },
           "404": { "description": "App não encontrado ou não publicado" }
         }
       },
@@ -3036,7 +3063,7 @@
       "parameters": [{ "name": "appSlug", "in": "path", "required": true, "schema": { "type": "string" } }],
       "post": {
         "summary": "Webhook de entrada de app externo",
-        "description": "Recebe eventos de apps externos. Requer header X-Webhook-Signature com HMAC-SHA256 do body usando App.metadata.webhookSecret.",
+        "description": "Recebe eventos de apps externos. Requer header X-Webhook-Signature com HMAC-SHA256 do body usando App.metadata.webhookSecret (segredo só do servidor; nunca exposto em DTO). Proteção a replay: `timestamp`, quando enviado, deve estar a até 5 minutos do relógio do servidor; cada `eventId` é processado uma única vez por app/tenant (reenvio responde 200 com `duplicate: true`, sem reprocessar).",
         "tags": ["Webhooks"],
         "parameters": [
           { "name": "X-Webhook-Signature", "in": "header", "required": true, "schema": { "type": "string" }, "description": "sha256=<hmac hex>" }
@@ -3046,10 +3073,12 @@
           "content": { "application/json": { "schema": { "type": "object", "required": ["eventId", "eventType", "tenantId"], "properties": { "eventId": { "type": "string" }, "eventType": { "type": "string" }, "tenantId": { "type": "string" }, "data": { "type": "object" }, "timestamp": { "type": "string", "format": "date-time" } } } } }
         },
         "responses": {
-          "200": { "description": "Evento recebido", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "received": { "type": "boolean" } } } } } } } },
+          "200": { "description": "Evento recebido", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "received": { "type": "boolean" }, "duplicate": { "type": "boolean", "description": "true quando o eventId já havia sido aceito (idempotente)" } } } } } } } },
+          "400": { "description": "JSON inválido ou `timestamp` fora da janela de ±5 min (`TIMESTAMP_OUT_OF_RANGE`)" },
           "401": { "description": "Assinatura inválida" },
           "403": { "description": "App não ativo no tenant" },
-          "404": { "description": "App não encontrado" }
+          "404": { "description": "App não encontrado" },
+          "422": { "description": "Webhook não configurado, corpo inválido ou `timestamp` não ISO" }
         }
       }
     },
