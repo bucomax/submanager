@@ -31,6 +31,17 @@ describe("logger", () => {
     expect(last()).toMatchObject({ level: "info", msg: "notification emitted", tenantId: "t1", clientId: "c1", requestId: "req-1" });
   });
 
+  it("should map level to the Cloud Logging severity while keeping level", () => {
+    logger.debug("d");
+    expect(last()).toMatchObject({ level: "debug", severity: "DEBUG" });
+    logger.info("i");
+    expect(last()).toMatchObject({ level: "info", severity: "INFO" });
+    logger.warn("w");
+    expect(last()).toMatchObject({ level: "warn", severity: "WARNING" });
+    logger.error("e");
+    expect(last()).toMatchObject({ level: "error", severity: "ERROR" });
+  });
+
   it("should redact sensitive keys and PII patterns", () => {
     logger.warn("failed for maria@example.com", { phone: "11999990000", nested: { cpf: "123.456.789-09", id: "x" }, note: "ok" });
 

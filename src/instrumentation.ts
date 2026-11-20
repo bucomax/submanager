@@ -22,13 +22,18 @@ export async function register() {
   // Import dinâmico dentro do guard: o logger puxa `node:crypto` (request-id) e não pode entrar no bundle de edge.
   const { logger } = await import("@/lib/observability/logger");
 
+  // Em produção lança se faltar DATABASE_URL/NEXTAUTH_SECRET/URL pública (boot falha cedo, com nomes claros).
+  const { validateRuntimeEnv } = await import("@/lib/config/env");
+  validateRuntimeEnv();
+
   if (!process.env.REDIS_URL?.trim()) {
     logger.info("[instrumentation] REDIS_URL not set – running in inline mode (no BullMQ worker)");
     return;
   }
 
   // BullMQ worker is long-running; Vercel serverless não mantém processo dedicado.
-  // Use Redis na API (filas) e rode o worker em outro host, ou DISABLE_NOTIFICATION_WORKER=true.
+  // Use Redis na API (filas) e rode o worker em outro host, ou DISABLE_NOTIFICATION_WORKER=true
+  // (ex.: serviço web do Cloud Run com worker separado).
   // Emitters só enfileiram na Vercel com QUEUE_EXTERNAL_WORKER=1 (ver `isQueueConsumerAvailable`).
   if (
     process.env.VERCEL === "1" ||
@@ -41,8 +46,10 @@ export async function register() {
   const { startNotificationWorker } = await import(
     "@/infrastructure/queue/notification-worker"
   );
+  const workers: Array<{ close: () => Promise<unknown> }> = [];
   const worker = startNotificationWorker();
   if (worker) {
+    workers.push(worker);
     logger.info("[instrumentation] BullMQ notification worker started");
   }
 
@@ -51,6 +58,7 @@ export async function register() {
   );
   const wppWorker = startWhatsAppDispatchWorker();
   if (wppWorker) {
+    workers.push(wppWorker);
     logger.info("[instrumentation] BullMQ WhatsApp dispatch worker started");
   }
 
@@ -59,8 +67,13 @@ export async function register() {
   );
   const emailWorker = startEmailDispatchWorker();
   if (emailWorker) {
+    workers.push(emailWorker);
     logger.info("[instrumentation] BullMQ email dispatch worker started");
   }
+
+  // SIGTERM/SIGINT: fecha workers e Redis (Cloud Run redeploy/scale-in) sem perder job em andamento.
+  const { registerQueueShutdown } = await import("@/infrastructure/queue/queue-shutdown");
+  registerQueueShutdown(workers);
 }
 
 /** Captura erro não tratado de Server Component, route handler e proxy. */

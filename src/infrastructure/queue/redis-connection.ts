@@ -46,6 +46,28 @@ export function tripRedisCircuit(durationMs = CIRCUIT_MS_DEFAULT): void {
   }
 }
 
+/**
+ * Shutdown gracioso: encerra as conexões do pool e dos subscribers com `QUIT` (aguarda comandos
+ * pendentes) e força `disconnect` após o timeout. Mantém o circuito aberto para que requisições
+ * em voo caiam no modo inline em vez de recriar conexões durante o desligamento.
+ */
+export async function closeRedisConnections(timeoutMs = 5_000): Promise<void> {
+  globalConnections.__redisCircuitUntil = Number.MAX_SAFE_INTEGER;
+
+  const connections = [...(globalConnections.__redisPool?.values() ?? []), ...standaloneSubscribers];
+  globalConnections.__redisPool?.clear();
+  standaloneSubscribers.clear();
+
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, timeoutMs);
+  });
+  await Promise.race([Promise.allSettled(connections.map((c) => c.quit())), timeout]);
+  clearTimeout(timer);
+
+  for (const c of connections) c.disconnect(false);
+}
+
 function isRedisCircuitOpen(): boolean {
   return Date.now() < (globalConnections.__redisCircuitUntil ?? 0);
 }

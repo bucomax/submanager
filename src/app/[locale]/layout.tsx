@@ -74,7 +74,8 @@ export default async function LocaleLayout({
                 <LocalePreferenceBridge />
                 {children}
                 <Toaster position="top-right" richColors closeButton />
-                <SpeedInsights />
+                {/* Só existe na Vercel: no Cloud Run o script /_vercel/speed-insights responde 404. */}
+                {process.env.VERCEL ? <SpeedInsights /> : null}
               </TooltipProvider>
             </ThemeProvider>
           </AuthSessionProvider>

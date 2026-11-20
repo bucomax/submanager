@@ -16,6 +16,14 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 /** `err` é serializado (nome, código, mensagem redigida) e, em `error`, enviado ao Sentry. */
 export type LogContext = Record<string, unknown> & { err?: unknown };
 
+/** Cloud Logging lê `severity` do JSON de stdout; `level` continua para os demais consumidores. */
+const SEVERITY_BY_LEVEL: Record<LogLevel, "DEBUG" | "INFO" | "WARNING" | "ERROR"> = {
+  debug: "DEBUG",
+  info: "INFO",
+  warn: "WARNING",
+  error: "ERROR",
+};
+
 const REDACTED = "[redacted]";
 const MAX_ERROR_MESSAGE_LENGTH = 300;
 
@@ -68,6 +76,7 @@ export function buildLogLine(level: LogLevel, msg: string, context: LogContext =
   const requestId = safeRequestId();
   return {
     level,
+    severity: SEVERITY_BY_LEVEL[level],
     time: new Date().toISOString(),
     msg: redactSensitiveText(msg),
     ...(requestId ? { requestId } : {}),
