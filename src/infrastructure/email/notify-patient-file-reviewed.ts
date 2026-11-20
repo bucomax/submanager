@@ -69,8 +69,8 @@ export async function notifyPatientFileReviewed(params: NotifyParams): Promise<v
   if ((await canSendEmailForTenant(tenantId)) && emailRecipients.size > 0) {
     const isApproved = decision === "approve";
     const subject = isApproved
-      ? `SubManager — Documento aprovado: ${fileName}`
-      : `SubManager — Documento precisa de ajustes: ${fileName}`;
+      ? `Documento aprovado: ${fileName}`
+      : `Documento precisa de ajuste: ${fileName}`;
 
     const html = getFileReviewResultPatientHtml({
       patientName,

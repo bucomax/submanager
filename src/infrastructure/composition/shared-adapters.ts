@@ -10,6 +10,7 @@ import {
   revalidateTenantPathwaysAndClientsLists,
 } from "@/infrastructure/cache/revalidate-tenant-lists";
 import { enqueueEmailDispatch } from "@/infrastructure/email/email-dispatch-emitter";
+import { enqueueDocumentDeliveryStaffEmail } from "@/infrastructure/email/document-delivery-staff-email";
 import { notificationEmitter } from "@/infrastructure/notifications/notification-emitter";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
 import { enqueueWhatsAppDispatch } from "@/infrastructure/whatsapp/whatsapp-dispatch-emitter";
@@ -36,6 +37,7 @@ export const tenantProfileReader: ITenantProfileReader = {
 export const emailDispatchQueue: IEmailDispatchQueue = {
   enqueueStageTransitionPatientEmail: ({ jobId, ...payload }) =>
     enqueueEmailDispatch({ kind: "stage_transition_patient", ...payload }, { jobId }),
+  enqueueDocumentDeliveryStaffEmail: enqueueDocumentDeliveryStaffEmail,
 };
 
 export const whatsAppDispatchQueue: IWhatsAppDispatchQueue = {

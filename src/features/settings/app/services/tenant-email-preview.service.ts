@@ -9,6 +9,9 @@ export const EMAIL_PREVIEW_KINDS = [
   "sla_alert",
   "file_pending_review",
   "checklist_complete",
+  "surgery_reminder",
+  "weekly_report",
+  "document_delivery",
 ] as const;
 
 export type EmailPreviewKind = (typeof EMAIL_PREVIEW_KINDS)[number];

@@ -61,7 +61,7 @@ export async function notifyStaffPatientSelfRegistered(params: NotifyParams): Pr
       sendEmail({
         to: user.email,
         from,
-        subject: `SubManager — Novo paciente: ${patientName}`,
+        subject: `Novo paciente pelo formulário: ${patientName}`,
         html: getPatientSelfRegisteredStaffHtml({
           staffName: user.name,
           patientName,

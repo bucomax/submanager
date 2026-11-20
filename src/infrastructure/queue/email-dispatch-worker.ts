@@ -21,7 +21,9 @@ export function startEmailDispatchWorker(): Worker | null {
     EMAIL_DISPATCH_QUEUE_NAME,
     async (job) => {
       const payload = job.data as EmailDispatchJobPayload;
-      await processEmailDispatchJob(payload);
+      // Lança em falha transitória (429/5xx/rede) para o BullMQ reprocessar (`attempts`);
+      // `runKey` faz o retry pular destinatários já enviados.
+      await processEmailDispatchJob(payload, { runKey: `${job.id}:${job.timestamp}` });
     },
     {
       connection,

@@ -74,7 +74,7 @@ export async function runCreateClientPortalLink(params: {
     const { error } = await sendEmail({
       to: email,
       from,
-      subject: `${clinicName} — Acesso ao seu acompanhamento (SubManager)`,
+      subject: `${clinicName}: acesse seu acompanhamento`,
       html: getPatientPortalMagicLinkHtml({
         patientName: client.name,
         clinicName,

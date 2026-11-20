@@ -4,9 +4,12 @@ import { z } from "zod";
 import { jsonError } from "@/lib/api-response";
 import {
   getChecklistCompleteStaffHtml,
+  getDocumentDeliveryStaffHtml,
   getFilePendingReviewStaffHtml,
   getSlaAlertStaffHtml,
   getStageTransitionPatientHtml,
+  getSurgeryReminderStaffHtml,
+  getWeeklyReportStaffHtml,
 } from "@/infrastructure/email/email-templates";
 import { tenantPrismaRepository } from "@/infrastructure/repositories/tenant.repository";
 import { getPublicAppUrl } from "@/lib/config/urls";
@@ -79,6 +82,53 @@ export const GET = withTenantRoute(async ({ request, tenantId, apiT }) => {
         patientName: "Maria Exemplo",
         stageName: "Triagem",
         totalRequiredItems: 3,
+        clinicName,
+        patientUrl: demoClientPath,
+      });
+      break;
+    case "surgery_reminder":
+      html = getSurgeryReminderStaffHtml({
+        staffName: "Dra. Exemplo",
+        patientName: "Maria Exemplo",
+        whenLabel: "quinta, 19/11 às 7h30",
+        durationLabel: "3 h",
+        eventTitle: "Cirurgia ortognática",
+        stageName: "Cirurgia agendada",
+        pendingRequiredItems: 1,
+        notes: "Jejum desde 22h. Levar exames de imagem.",
+        clinicName,
+        openUrl: demoClientPath,
+        openLabel: "Abrir ficha do paciente",
+      });
+      break;
+    case "weekly_report":
+      html = getWeeklyReportStaffHtml({
+        staffName: "Dra. Exemplo",
+        clinicName,
+        periodLabel: "10 a 16 de novembro",
+        kpis: { patients: 42, transitions: 17, critical: 3, pathways: 2 },
+        byStatus: { ok: 31, warning: 8, danger: 3 },
+        topStages: [
+          { label: "Exames pré-operatórios", count: 12 },
+          { label: "Planejamento", count: 9 },
+          { label: "Pós-operatório", count: 7 },
+        ],
+        critical: [
+          { name: "Maria Exemplo", stageName: "Autorização do convênio", daysInStage: 14, url: demoClientPath },
+          { name: "João Exemplo", stageName: "Exames pré-operatórios", daysInStage: 11, url: demoClientPath },
+        ],
+        criticalTotal: 3,
+        reportsUrl: `${base}/dashboard/reports`,
+      });
+      break;
+    case "document_delivery":
+      html = getDocumentDeliveryStaffHtml({
+        staffName: "Dra. Exemplo",
+        patientName: "Maria Exemplo",
+        stageName: "Pré-operatório",
+        documents: ["orientacoes_pre_operatorio.pdf", "lista_de_exames.pdf"],
+        emailTo: "m***@exemplo.com",
+        whatsappTo: "****-4410",
         clinicName,
         patientUrl: demoClientPath,
       });

@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 
 import { resolvePublicSmtpHost } from "@/infrastructure/email/smtp-host-guard";
 import { isAllowedSmtpPort } from "@/lib/constants/smtp";
+import { EmailSendError, isTransientSmtpFailure } from "@/infrastructure/email/email-send-error";
 
 export type SmtpConnectionInput = {
   host: string;
@@ -30,7 +31,7 @@ export async function sendEmailViaSmtp(
   try {
     if (!isAllowedSmtpPort(connection.port)) {
       logger.warn("[smtp] blocked: port not allowed", { port: connection.port });
-      return { error: new Error(SMTP_GENERIC_ERROR_MESSAGE) };
+      return { error: new EmailSendError(SMTP_GENERIC_ERROR_MESSAGE, false) };
     }
     const resolvedIp = await resolvePublicSmtpHost(connection.host);
 
@@ -66,6 +67,6 @@ export async function sendEmailViaSmtp(
       responseCode: e?.responseCode,
       reason: e instanceof Error && e.name === "SmtpHostNotAllowedError" ? e.message : undefined,
     });
-    return { error: new Error(SMTP_GENERIC_ERROR_MESSAGE, { cause: err }) };
+    return { error: new EmailSendError(SMTP_GENERIC_ERROR_MESSAGE, isTransientSmtpFailure(e), { cause: err }) };
   }
 }

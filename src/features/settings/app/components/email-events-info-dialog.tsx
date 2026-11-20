@@ -18,11 +18,24 @@ import {
 
 export type { EmailPreviewKind };
 
-const PREVIEW_KINDS: { value: EmailPreviewKind; labelKey: "previewKindStage" | "previewKindSla" | "previewKindFile" | "previewKindChecklist" }[] = [
+const PREVIEW_KINDS: {
+  value: EmailPreviewKind;
+  labelKey:
+    | "previewKindStage"
+    | "previewKindSla"
+    | "previewKindFile"
+    | "previewKindChecklist"
+    | "previewKindSurgery"
+    | "previewKindWeekly"
+    | "previewKindDocuments";
+}[] = [
   { value: "stage_transition", labelKey: "previewKindStage" },
   { value: "sla_alert", labelKey: "previewKindSla" },
   { value: "file_pending_review", labelKey: "previewKindFile" },
   { value: "checklist_complete", labelKey: "previewKindChecklist" },
+  { value: "surgery_reminder", labelKey: "previewKindSurgery" },
+  { value: "weekly_report", labelKey: "previewKindWeekly" },
+  { value: "document_delivery", labelKey: "previewKindDocuments" },
 ];
 
 type Props = {

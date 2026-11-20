@@ -5,7 +5,8 @@ import { z } from "zod";
 
 import type { TenantMembershipRole } from "@/application/ports/user-repository.port";
 import { auditEventPrismaRepository } from "@/infrastructure/repositories/audit-event.repository";
-import { getInviteSetPasswordHtml } from "@/infrastructure/email/email-templates";
+import { getInviteSetPasswordHtml, getTenantMemberAddedHtml } from "@/infrastructure/email/email-templates";
+import { getPublicAppUrl } from "@/lib/config/urls";
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
 import { resolveTenantSender } from "@/infrastructure/email/resolve-tenant-sender";
 import { sendEmail, buildInviteSetPasswordUrl } from "@/infrastructure/email/resend.client";
@@ -43,11 +44,11 @@ export type InviteTenantMemberSuccess =
 function buildInviteEmailSubject(clinicName: string): string {
   const name = clinicName.trim();
   if (!name) {
-    return "SubManager — Defina sua senha";
+    return "Defina sua senha do SubManager";
   }
   const max = 88;
   const shortened = name.length > max ? `${name.slice(0, max - 1)}…` : name;
-  return `SubManager — ${shortened} — Defina sua senha`;
+  return `Convite da ${shortened}: defina sua senha no SubManager`;
 }
 
 async function sendInviteSetPasswordEmail(
@@ -75,13 +76,6 @@ async function sendInviteSetPasswordEmail(
   });
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 /**
  * Usuário existente (com senha) foi adicionado a uma clínica: avisa por e-mail e registra auditoria.
@@ -111,14 +105,12 @@ async function notifyExistingUserAddedToTenant(params: {
 
   try {
     if (!(await canSendEmailForTenant(tenant.id))) return;
-    const clinic = escapeHtml(tenant.name.trim());
-    const greeting = escapeHtml(name?.trim() || "Olá");
     const { from, useSmtp } = await resolveTenantSender(tenant.id);
     const { error } = await sendEmail({
       to: emailNorm,
       from,
-      subject: `SubManager — Você foi adicionado a ${tenant.name.trim()}`,
-      html: `<p>${greeting},</p><p>Sua conta SubManager foi adicionada à clínica <strong>${clinic}</strong>. Sua senha não foi alterada.</p><p>Se você não esperava este acesso, entre em contato com a clínica ou com o suporte.</p>`,
+      subject: `Você foi adicionado à ${tenant.name.trim()} no SubManager`,
+      html: getTenantMemberAddedHtml({ name: name ?? null, tenantName: tenant.name, appUrl: getPublicAppUrl() }),
       text: `Sua conta SubManager foi adicionada à clínica ${tenant.name.trim()}. Sua senha não foi alterada. Se você não esperava este acesso, entre em contato com a clínica ou com o suporte.`,
       tenantId: tenant.id,
       useSmtp,

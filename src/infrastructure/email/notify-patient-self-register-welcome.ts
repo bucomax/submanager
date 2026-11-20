@@ -30,7 +30,7 @@ export async function notifyPatientSelfRegisterWelcome(params: NotifyParams): Pr
   const slug = params.tenantSlug.trim();
   const portalLoginUrl = `${base}/${encodeURIComponent(slug)}/patient/login`;
   const clinic = params.clinicName.trim() || "sua clínica";
-  const subject = `Tudo certo — ${clinic} recebeu seu cadastro`;
+  const subject = `Tudo certo, ${clinic} recebeu seu cadastro`;
 
   const text = [
     `Olá!`,
@@ -40,7 +40,7 @@ export async function notifyPatientSelfRegisterWelcome(params: NotifyParams): Pr
     ``,
     `Portal do paciente: ${portalLoginUrl}`,
     ``,
-    `— SubManager`,
+    `Enviado por ${clinic} pelo SubManager`,
   ].join("\n");
 
   const { from, useSmtp } = await resolveTenantSender(params.tenantId);

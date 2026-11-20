@@ -1,4 +1,9 @@
-import type { IEmailDispatchQueue, IWhatsAppDispatchQueue, StageTransitionPatientEmailInput } from "@/application/ports/dispatch-queues.port";
+import type {
+  DocumentDeliveryStaffEmailInput,
+  IEmailDispatchQueue,
+  IWhatsAppDispatchQueue,
+  StageTransitionPatientEmailInput,
+} from "@/application/ports/dispatch-queues.port";
 import type { EmitNotificationInput, INotificationEmitter } from "@/application/ports/notification-emitter.port";
 import type { INotificationTargetResolver } from "@/application/ports/notification-target-resolver.port";
 import type { ITenantProfileReader } from "@/application/ports/tenant-profile-reader.port";
@@ -23,9 +28,14 @@ export class FakeNotificationTargetResolver implements INotificationTargetResolv
 
 export class FakeEmailQueue implements IEmailDispatchQueue {
   readonly enqueued: StageTransitionPatientEmailInput[] = [];
+  readonly documentDeliveries: DocumentDeliveryStaffEmailInput[] = [];
 
   async enqueueStageTransitionPatientEmail(input: StageTransitionPatientEmailInput): Promise<void> {
     this.enqueued.push(input);
+  }
+
+  async enqueueDocumentDeliveryStaffEmail(input: DocumentDeliveryStaffEmailInput): Promise<void> {
+    this.documentDeliveries.push(input);
   }
 }
 

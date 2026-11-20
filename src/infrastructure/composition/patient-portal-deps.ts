@@ -16,7 +16,7 @@ const portalOtpDelivery: IPortalOtpDelivery = {
 
   async sendEmailCode({ tenantId, recipients, patientName, clinicName, code }) {
     const { from, useSmtp } = await resolveTenantSender(tenantId);
-    const subject = `${clinicName} — Código do portal do paciente (SubManager)`;
+    const subject = `${clinicName}: seu código do portal do paciente`;
     const html = getPatientPortalOtpHtml({ patientName, clinicName, code });
     const text = `Olá, ${patientName}. Seu código SubManager: ${code}. Válido por poucos minutos.`;
     for (const to of recipients) {

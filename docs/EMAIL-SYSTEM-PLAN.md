@@ -262,11 +262,21 @@ notificationEmitter.emit({
 
 **Prioridade:** alta — o paciente recebe 2 canais (e-mail + WhatsApp) mas a equipe não tem rastro algum no dashboard.
 
-### 2.6 RESUMO SEMANAL (Futuro)
+### 2.6 LEMBRETES E RESUMOS (implementado)
 
-- Flag `notifyWeeklyReport` existe no modelo `Tenant` mas não é usada
-- Implementar como cron job (BullMQ repeatable ou cron externo)
-- Template com métricas: pacientes por etapa, SLAs violados, transições da semana
+As três flags de Configurações › Notificações que só eram persistidas agora disparam e-mail à equipe (job kinds em `email-dispatch-job-types.ts`, templates em `email-templates.ts`, prévia em Configurações › E-mail):
+
+| Flag | Gatilho | Destinatários | Job kind / template |
+|------|---------|---------------|---------------------|
+| `notifySurgeryReminders` | Cron diário `GET /api/cron/surgery-reminders` (21:00 UTC, 18h Brasília): compromissos da agenda com `type = "cirurgia"` que começam amanhã (fuso `America/Sao_Paulo`) | Responsável pelo compromisso + responsável pela etapa atual do paciente (membros do tenant, sem duplicar) | `surgery_reminder_staff` / `getSurgeryReminderStaffHtml` (horário, duração, etapa, itens obrigatórios do checklist em aberto, observações) |
+| `notifyWeeklyReport` | Cron semanal `GET /api/cron/weekly-report` (segunda 11:00 UTC, 8h Brasília); só tenants com pacientes em jornada | `tenant_admin` do tenant | `weekly_report_staff` / `getWeeklyReportStaffHtml` (mesma agregação de Relatórios para a semana fechada anterior, segunda a domingo no fuso da clínica: KPIs, prazo, etapas com mais pacientes, top 5 críticos) |
+| `notifyDocumentDelivery` | Pós-commit da transição de etapa quando a etapa tem documentos (`confirmDocumentDelivery` em `transition-post-commit.ts`) | Quem moveu o paciente + responsável pela etapa | `document_delivery_staff` / `getDocumentDeliveryStaffHtml` (documentos e canais com destino mascarado; avisa quando não havia canal) |
+
+- Crons usam `Authorization: Bearer $CRON_SECRET` (`src/lib/auth/cron-auth.ts`, fail-closed) e estão em `vercel.json`. Fora da Vercel (Cloud Run), rode `APP_URL=<url do serviço> ./scripts/cloud-scheduler-setup.sh`: cria/atualiza um job do Cloud Scheduler por entrada do `vercel.json` (mesmos horários, UTC), lendo o `CRON_SECRET` do Secret Manager e enviando o header acima.
+- Idempotência: `jobId` por evento + dia (`email|surgery|…`), tenant + semana (`email|weekly|…`) e transição (`email|docs|…`). Com fila, o BullMQ dedupa pelo `jobId`; sem fila (inline ou fallback), `enqueueEmailDispatch` reserva `DispatchKey` `email-job|<jobId>` antes de enviar (reexecutar o cron não duplica) e libera a reserva se o envio falhar de forma transitória. `DispatchKey` com mais de 60 dias é expurgada pelo cron `sla-check`.
+- Retry: o processor lança `EmailDispatchRetryableError` quando algum destinatário falha por motivo transitório (429, 5xx, rede/timeout; SMTP 4xx) e o worker reprocessa (`attempts: 3`); o retry pula quem já recebeu (`DispatchKey` `email-sent|<jobId>:<timestamp>|<hash do e-mail>`) e o Resend recebe `Idempotency-Key`. Erros permanentes (4xx de validação, endereço/credencial inválidos) não retentam. Sem fila não há retry automático: o erro é logado.
+- Visibilidade (LGPD): e-mails de equipe com `clientId` só vão a quem enxerga o paciente (mesmo filtro das notificações in-app), aplicado uma vez em `sendToStaff` (`email-dispatch-processor.ts`).
+- `notifyDocumentDelivery` continua controlando também as notificações in-app do portal (`patient_portal_file_pending`, `patient_portal_link_sent`).
 
 ---
 

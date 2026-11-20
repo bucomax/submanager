@@ -1,167 +1,109 @@
-import { logger } from "@/lib/observability/logger";
 import { prisma } from "@/infrastructure/database/prisma";
-import {
-  getChecklistCompleteStaffHtml,
-  getFilePendingReviewStaffHtml,
-  getSlaAlertStaffHtml,
-  getStageTransitionPatientHtml,
-} from "@/infrastructure/email/email-templates";
-import type { EmailDispatchJobPayload } from "@/infrastructure/queue/email-dispatch-job-types";
 import { canSendEmailForTenant } from "@/infrastructure/email/email-availability";
-import { recordEmailDispatchSent } from "@/infrastructure/email/email-dispatch-log";
-import { sendEmail } from "@/infrastructure/email/resend.client";
+import { deliverEmail, type DeliveryContext } from "@/infrastructure/email/email-delivery";
+import { EmailDispatchRetryableError } from "@/infrastructure/email/email-send-error";
+import { getStageTransitionPatientHtml } from "@/infrastructure/email/email-templates";
 import { resolveTenantSender } from "@/infrastructure/email/resolve-tenant-sender";
+import { buildStaffMailPlan, type StaffMailPlan } from "@/infrastructure/email/staff-mail-plans";
+import type { EmailDispatchJobPayload } from "@/infrastructure/queue/email-dispatch-job-types";
+import { filterUserIdsWhoCanViewClient } from "@/infrastructure/visibility/client-visibility-scope";
 import { getPublicAppUrl } from "@/lib/config/urls";
+import { logger } from "@/lib/observability/logger";
 
-function persistDispatchLogIfSent(
-  tenantId: string,
-  jobKind: string,
-  to: string,
-  result: { id?: string; error?: Error },
-): void {
-  if (!result.id) return;
-  void recordEmailDispatchSent({
-    tenantId,
-    jobKind,
-    to,
-    resendMessageId: result.id,
-  }).catch((err) => {
-    logger.error("[email-dispatch] EmailDispatchLog persist failed", { err });
-  });
+export type EmailDispatchRunOptions = {
+  /**
+   * Identifica esta instância do job no worker BullMQ (`jobId:timestamp`). Habilita pular, nos retries,
+   * destinatários já enviados. Sem ela (modo inline) não há retry nem rastreio por destinatário.
+   */
+  runKey?: string;
+};
+
+type StageTransitionPatientPayload = Extract<EmailDispatchJobPayload, { kind: "stage_transition_patient" }>;
+
+async function sendStageTransitionToPatient(
+  ctx: DeliveryContext,
+  payload: StageTransitionPatientPayload,
+): Promise<void> {
+  const to = payload.to.trim();
+  if (!to) return;
+  const { data } = payload;
+  await deliverEmail(
+    ctx,
+    { to, ref: "patient" },
+    {
+      subject: `${data.clinicName}: nova etapa no seu tratamento`,
+      html: getStageTransitionPatientHtml({
+        patientName: data.patientName,
+        clinicName: data.clinicName,
+        stageName: data.stageName,
+        patientMessage: data.patientMessage,
+        documents: data.documents,
+        portalUrl: data.portalUrl,
+      }),
+      text: `Olá! Você entrou na etapa "${data.stageName}" em ${data.clinicName}. Acesse o portal: ${data.portalUrl}`,
+    },
+  );
 }
 
 /**
- * Envia um job de e-mail (chamado pelo worker BullMQ ou em modo inline).
- * Não logar corpos; apenas erros de API.
+ * Envia um e-mail por membro da equipe (só quem tem e-mail). Ponto único do filtro de visibilidade (LGPD):
+ * com `clientId`, só recebe quem enxerga o paciente, igual às notificações in-app.
+ */
+async function sendToStaff(ctx: DeliveryContext, plan: StaffMailPlan): Promise<void> {
+  const userIds = plan.clientId
+    ? await filterUserIdsWhoCanViewClient(ctx.tenantId, plan.clientId, plan.targetUserIds)
+    : plan.targetUserIds;
+  if (userIds.length < plan.targetUserIds.length) {
+    logger.debug("[email-dispatch] recipients filtered by client visibility", {
+      tenantId: ctx.tenantId,
+      kind: ctx.kind,
+      before: plan.targetUserIds.length,
+      after: userIds.length,
+    });
+  }
+  if (userIds.length === 0) return;
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, name: true, email: true },
+  });
+  for (const user of users) {
+    const to = user.email?.trim();
+    if (!to) continue;
+    await deliverEmail(ctx, { to, ref: user.id }, plan.build(user.name));
+  }
+}
+
+/**
+ * Processa um job de e-mail (worker BullMQ ou modo inline). Não loga corpos nem endereços.
+ * Lança `EmailDispatchRetryableError` ao final se algum destinatário falhou por motivo transitório
+ * (429/5xx/rede) — o worker então reprocessa o job e o retry pula quem já recebeu. Falhas permanentes
+ * (endereço/credencial inválidos) são só logadas: reprocessar não adianta.
  */
 export async function processEmailDispatchJob(
   payload: EmailDispatchJobPayload,
+  options: EmailDispatchRunOptions = {},
 ): Promise<void> {
   if (!(await canSendEmailForTenant(payload.tenantId))) return;
 
-  const base = getPublicAppUrl().replace(/\/$/, "");
   const { from, useSmtp } = await resolveTenantSender(payload.tenantId);
+  const ctx: DeliveryContext = {
+    tenantId: payload.tenantId,
+    kind: payload.kind,
+    from,
+    useSmtp,
+    runKey: options.runKey,
+    failures: { retryable: 0, permanent: 0 },
+  };
 
   if (payload.kind === "stage_transition_patient") {
-    const to = payload.to.trim();
-    if (!to) return;
-    const { data } = payload;
-    const html = getStageTransitionPatientHtml({
-      patientName: data.patientName,
-      clinicName: data.clinicName,
-      stageName: data.stageName,
-      patientMessage: data.patientMessage,
-      documents: data.documents,
-      portalUrl: data.portalUrl,
-    });
-    const text = `Olá! Você entrou na etapa "${data.stageName}" em ${data.clinicName}. Acesse o portal: ${data.portalUrl}`;
-    const sent = await sendEmail({
-      to,
-      subject: `${data.clinicName} — Nova etapa na sua jornada (SubManager)`,
-      html,
-      text,
-      from,
-      tenantId: payload.tenantId,
-      useSmtp,
-    });
-    persistDispatchLogIfSent(payload.tenantId, payload.kind, to, sent);
-    return;
+    await sendStageTransitionToPatient(ctx, payload);
+  } else {
+    const base = getPublicAppUrl().replace(/\/$/, "");
+    await sendToStaff(ctx, buildStaffMailPlan(payload, base));
   }
 
-  if (payload.kind === "sla_alert") {
-    const users = await prisma.user.findMany({
-      where: { id: { in: payload.data.targetUserIds } },
-      select: { id: true, name: true, email: true },
-    });
-    for (const u of users) {
-      const to = u.email?.trim();
-      if (!to) continue;
-      const patientUrl = `${base}/dashboard/clients/${payload.data.clientId}`;
-      const html = getSlaAlertStaffHtml({
-        staffName: u.name,
-        patientName: payload.data.patientName,
-        stageName: payload.data.stageName,
-        daysInStage: payload.data.daysInStage,
-        slaThresholdDays: payload.data.slaThresholdDays,
-        clinicName: payload.data.clinicName,
-        severity: payload.data.severity,
-        patientUrl,
-      });
-      const label = payload.data.severity === "danger" ? "Alerta crítico" : "Atenção";
-      const text = `${label}: ${payload.data.patientName} — ${payload.data.daysInStage} dia(s) na etapa "${payload.data.stageName}". Abrir: ${patientUrl}`;
-      const sent = await sendEmail({
-        to,
-        subject: `SubManager — ${label}: ${payload.data.patientName} (${payload.data.stageName})`,
-        html,
-        text,
-        from,
-        tenantId: payload.tenantId,
-        useSmtp,
-      });
-      persistDispatchLogIfSent(payload.tenantId, payload.kind, to, sent);
-    }
-    return;
-  }
-
-  if (payload.kind === "file_pending_review_staff") {
-    const users = await prisma.user.findMany({
-      where: { id: { in: payload.data.targetUserIds } },
-      select: { id: true, name: true, email: true },
-    });
-    for (const u of users) {
-      const to = u.email?.trim();
-      if (!to) continue;
-      const reviewUrl = `${base}/dashboard/clients/${payload.data.clientId}?tab=files`;
-      const html = getFilePendingReviewStaffHtml({
-        staffName: u.name,
-        patientName: payload.data.patientName,
-        fileName: payload.data.fileName,
-        clinicName: payload.data.clinicName,
-        reviewUrl,
-      });
-      const text = `${payload.data.patientName} enviou "${payload.data.fileName}". Revisar: ${reviewUrl}`;
-      const sent = await sendEmail({
-        to,
-        subject: `SubManager — Novo documento: ${payload.data.fileName} (${payload.data.patientName})`,
-        html,
-        text,
-        from,
-        tenantId: payload.tenantId,
-        useSmtp,
-      });
-      persistDispatchLogIfSent(payload.tenantId, payload.kind, to, sent);
-    }
-    return;
-  }
-
-  if (payload.kind === "checklist_complete_staff") {
-    const users = await prisma.user.findMany({
-      where: { id: { in: payload.data.targetUserIds } },
-      select: { id: true, name: true, email: true },
-    });
-    for (const u of users) {
-      const to = u.email?.trim();
-      if (!to) continue;
-      const patientUrl = `${base}/dashboard/clients/${payload.data.clientId}`;
-      const html = getChecklistCompleteStaffHtml({
-        staffName: u.name,
-        patientName: payload.data.patientName,
-        stageName: payload.data.stageName,
-        totalRequiredItems: payload.data.totalRequiredItems,
-        clinicName: payload.data.clinicName,
-        patientUrl,
-      });
-      const text = `Checklist: ${payload.data.patientName} concluiu ${payload.data.totalRequiredItems} item(ns) obrigatório(s) em "${payload.data.stageName}". ${patientUrl}`;
-      const sent = await sendEmail({
-        to,
-        subject: `SubManager — Checklist concluído: ${payload.data.patientName} — ${payload.data.stageName}`,
-        html,
-        text,
-        from,
-        tenantId: payload.tenantId,
-        useSmtp,
-      });
-      persistDispatchLogIfSent(payload.tenantId, payload.kind, to, sent);
-    }
+  if (ctx.failures.retryable > 0) {
+    throw new EmailDispatchRetryableError(payload.kind, ctx.failures.retryable);
   }
 }

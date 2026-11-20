@@ -3,10 +3,14 @@ import { prisma } from "@/infrastructure/database/prisma";
 import { decryptTenantSecret } from "@/infrastructure/crypto/tenant-secret";
 import { sendEmailViaSmtp } from "@/infrastructure/email/smtp-send.client";
 import { isResendApiConfigured } from "@/infrastructure/email/resend-domain.client";
+import { classifyResendError, EmailSendError, withTimeout } from "@/infrastructure/email/email-send-error";
 import { Resend } from "resend";
 
 const defaultFromEmail = process.env.EMAIL_FROM ?? "SubManager <onboarding@resend.dev>";
 const resendApiKey = process.env.RESEND_API_KEY;
+
+/** Timeout do envio via API Resend (SMTP tem o próprio, 10s). */
+const RESEND_SEND_TIMEOUT_MS = 15_000;
 
 let resendClient: Resend | null = null;
 
@@ -22,6 +26,7 @@ function getResendClient(): Resend {
 
 /**
  * Envia e-mail: SMTP do tenant se `useSmtp` e credenciais ok; senão Resend.
+ * `error` é um `EmailSendError` quando a falha foi classificada (ver `isRetryableEmailError`).
  */
 export async function sendEmail(params: {
   to: string;
@@ -32,6 +37,8 @@ export async function sendEmail(params: {
   /** Quando o tenant usa SMTP, deve ser true. */
   useSmtp?: boolean;
   tenantId?: string;
+  /** Só Resend: reenvio com a mesma chave (retry após timeout) não duplica o e-mail. */
+  idempotencyKey?: string;
 }): Promise<{ id?: string; error?: Error }> {
   if (params.useSmtp && params.tenantId) {
     return sendViaTenantSmtp({
@@ -52,6 +59,7 @@ export async function sendEmail(params: {
     html: params.html,
     text: params.text,
     from: params.from ?? defaultFromEmail,
+    idempotencyKey: params.idempotencyKey,
   });
 }
 
@@ -117,23 +125,33 @@ async function sendViaResend(input: {
   html: string;
   text?: string;
   from: string;
+  idempotencyKey?: string;
 }): Promise<{ id?: string; error?: Error }> {
   try {
     const resend = getResendClient();
-    const { data, error } = await resend.emails.send({
-      from: input.from,
-      to: [input.to],
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-    });
+    const { data, error } = await withTimeout(
+      resend.emails.send(
+        {
+          from: input.from,
+          to: [input.to],
+          subject: input.subject,
+          html: input.html,
+          text: input.text,
+        },
+        input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
+      ),
+      RESEND_SEND_TIMEOUT_MS,
+      "Resend send",
+    );
     if (error) {
       logger.error("Resend error", { err: error });
-      return { error: new Error(error.message) };
+      return { error: classifyResendError(error) };
     }
     return { id: data?.id };
   } catch (err) {
     logger.error("Erro ao enviar email (Resend)", { err });
-    return { error: err instanceof Error ? err : new Error(String(err)) };
+    if (err instanceof EmailSendError) return { error: err };
+    // Falha de rede/runtime antes de obter resposta: vale tentar de novo.
+    return { error: new EmailSendError(err instanceof Error ? err.message : String(err), true, { cause: err }) };
   }
 }
