@@ -1,0 +1,163 @@
+# Deploy do SubManager no Cloud Run (projeto bucomax-497005).
+# Uso: gcloud builds submit --config cloudbuild.yaml --project bucomax-497005 .
+#      (opcional) --substitutions=_SENTRY_DSN=https://<chave>@<org>.ingest.sentry.io/<id>
+#
+# Etapas: build da imagem -> migrations (Prisma, URL direta) -> push -> deploy.
+# Segredos vêm do Secret Manager; nada sensível fica neste arquivo.
+#
+# ── Segredos/envs OPCIONAIS (não estão no --update-secrets abaixo de propósito) ─────────────────
+# Referenciar um secret inexistente no Secret Manager derruba o deploy, então estes ficam fora
+# daqui. Crie o secret (gcloud secrets create ...) e conecte-o ao serviço, uma vez, com:
+#
+#   gcloud run services update submanager --region=us-east4 \
+#     --update-secrets=WHATSAPP_ENCRYPTION_KEY=WHATSAPP_ENCRYPTION_KEY:latest,\
+#   WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,\
+#   WHATSAPP_WEBHOOK_VERIFY_TOKEN=WHATSAPP_WEBHOOK_VERIFY_TOKEN:latest,\
+#   RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest,\
+#   PATIENT_PORTAL_SECRET=PATIENT_PORTAL_SECRET:latest,\
+#   REDIS_URL=REDIS_URL:latest
+#
+#   WHATSAPP_ENCRYPTION_KEY        AES-256-GCM (64 hex) do access token do tenant. Sem ele, WhatsApp não opera.
+#   WHATSAPP_APP_SECRET            valida x-hub-signature-256 do webhook; vazio = webhook responde 503.
+#   WHATSAPP_WEBHOOK_VERIFY_TOKEN  handshake GET do webhook da Meta.
+#   RESEND_WEBHOOK_SECRET          signing secret (Svix) do webhook do Resend.
+#   PATIENT_PORTAL_SECRET          cookie do portal do paciente; vazio = reutiliza NEXTAUTH_SECRET.
+#   REDIS_URL                      filas BullMQ, SSE, rate limit e locks. Sem ele tudo roda inline/em memória
+#                                  (rate limit por instância!). Upstash (rediss://) é público; Memorystore exige
+#                                  VPC (--network/--subnet ou connector) no serviço.
+#   SENTRY_AUTH_TOKEN              upload de source map (BUILD, não runtime). Para ativar: adicioná-lo em
+#                                  availableSecrets, definir DOCKER_BUILDKIT=1 no step build-app e consumi-lo no
+#                                  Dockerfile com `RUN --mount=type=secret,id=sentry_auth_token ...`. Sem isso,
+#                                  o stack trace de produção chega minificado no Sentry.
+#
+# Também opcionais (envs simples): TRUSTED_PROXY_HOPS (default 1; use 2 atrás de um HTTPS Load Balancer),
+# DISABLE_NOTIFICATION_WORKER=true (não sobe worker BullMQ neste serviço), SENTRY_ENVIRONMENT.
+#
+# ── Credencial do GCS ───────────────────────────────────────────────────────────────────────────
+# Hoje usa GCS_SERVICE_ACCOUNT_JSON (chave de service account em secret). Alternativa sem chave
+# (ADC): remover esse secret, usar a runtime SA (_RUNTIME_SA) com roles/storage.objectAdmin no bucket
+# e roles/iam.serviceAccountTokenCreator nela mesma (assinar URL v4 via signBlob), e definir
+# GOOGLE_CLOUD_PROJECT=<id do projeto>. Troca exige testar upload/download antes de apagar a chave.
+
+substitutions:
+  _REGION: us-east4
+  _SERVICE: submanager
+  _REPO: submanager
+  _RUNTIME_SA: sa-submanager@bucomax-497005.iam.gserviceaccount.com
+  _APP_URL: https://submanager-714014611104.us-east4.run.app
+  # Origens liberadas no CSP frame-src (apps do marketplace em iframe), separadas por vírgula.
+  _ALLOWED_IFRAME_ORIGINS: https://separador-api-26ve7ldwva-uc.a.run.app
+  # DSN do Sentry (público por natureza; vai no bundle do browser). Vazio = SDK desligado.
+  _SENTRY_DSN: ""
+  _SENTRY_ENVIRONMENT: production
+
+serviceAccount: projects/bucomax-497005/serviceAccounts/sa-cloud-build@bucomax-497005.iam.gserviceaccount.com
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/DIRECT_URL/versions/latest
+      env: DIRECT_URL
+    - versionName: projects/$PROJECT_ID/secrets/DATABASE_URL/versions/latest
+      env: DATABASE_URL
+    - versionName: projects/$PROJECT_ID/secrets/NEXT_PUBLIC_APP_PERSIST_SECRET/versions/latest
+      env: NEXT_PUBLIC_APP_PERSIST_SECRET
+
+steps:
+  - id: build-deps
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --target=deps
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}-deps:$BUILD_ID
+      - .
+
+  - id: build-app
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    secretEnv: [NEXT_PUBLIC_APP_PERSIST_SECRET]
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}"
+        # COMMIT_SHA só existe em builds disparados por trigger; em `gcloud builds submit` fica vazio
+        # e uma tag `imagem:` seria inválida, então a tag extra é condicional.
+        EXTRA_TAG=""
+        if [ -n "${COMMIT_SHA}" ]; then EXTRA_TAG="-t $${IMAGE}:${COMMIT_SHA}"; fi
+        docker build \
+          --build-arg NEXT_PUBLIC_APP_URL=${_APP_URL} \
+          --build-arg ALLOWED_IFRAME_ORIGINS=${_ALLOWED_IFRAME_ORIGINS} \
+          --build-arg NEXT_PUBLIC_APP_PERSIST_SECRET="$$NEXT_PUBLIC_APP_PERSIST_SECRET" \
+          --build-arg NEXT_PUBLIC_SENTRY_DSN="${_SENTRY_DSN}" \
+          --build-arg NEXT_PUBLIC_SENTRY_ENVIRONMENT="${_SENTRY_ENVIRONMENT}" \
+          -t "$${IMAGE}:$BUILD_ID" \
+          -t "$${IMAGE}:latest" \
+          $${EXTRA_TAG} \
+          .
+    waitFor: [build-deps]
+
+  # Migrations só rodam depois que o build da aplicação passou: build quebrado não pode deixar o
+  # banco à frente do código. Política expand/contract: a migration é aplicada ANTES do deploy,
+  # então a revisão antiga (ainda servindo tráfego) roda contra o schema novo. Toda migration
+  # precisa ser retrocompatível com o código anterior — adicionar coluna nullable/tabela/índice
+  # primeiro (expand); só remover/renomear/tornar NOT NULL num deploy seguinte, depois que
+  # nenhuma revisão antiga use o campo (contract).
+  - id: migrate
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    secretEnv: [DIRECT_URL, DATABASE_URL]
+    args:
+      - -c
+      - >-
+        docker run --rm -e DIRECT_URL -e DATABASE_URL
+        ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}-deps:$BUILD_ID
+        npx prisma migrate deploy --schema=packages/prisma/schema.prisma
+    waitFor: [build-app]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: [push, --all-tags, "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}"]
+    waitFor: [migrate, build-app]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_RUNTIME_SA}
+      - --allow-unauthenticated
+      - --port=8080
+      - --cpu=1
+      - --memory=1Gi
+      # Efeitos pós-resposta (`after()` do Next: e-mails, notificações, dispatch) e o worker BullMQ
+      # em processo precisam de CPU depois que a resposta HTTP termina; com o throttling padrão do
+      # Cloud Run a CPU é cortada e esse trabalho trava ou se perde. Custo: cobrança por instância
+      # (CPU/memória alocadas 24x7 com min-instances=1), na ordem de US$ 50/mês para 1 vCPU + 1 GiB
+      # em tier 1 — confirmar na calculadora de preços. Para economizar, volte a --cpu-throttling
+      # e --min-instances=0 SOMENTE se os efeitos pós-resposta forem movidos para fila/Cloud Tasks.
+      - --no-cpu-throttling
+      - --min-instances=1
+      - --max-instances=4
+      - --concurrency=40
+      - --timeout=300
+      # Startup probe HTTP no health da aplicação (chaves aceitas pelo `gcloud run deploy --help`:
+      # httpGet.path/httpGet.port/periodSeconds/timeoutSeconds/failureThreshold). timeoutSeconds=3
+      # cobre o ping do banco (teto de 2 s em /api/v1/health); janela total = 12 x 5 s = 60 s.
+      # Banco fora do ar reprova a revisão nova e o Cloud Run mantém a anterior servindo.
+      - --startup-probe=httpGet.path=/api/v1/health,httpGet.port=8080,periodSeconds=5,timeoutSeconds=3,failureThreshold=12
+      # update (merge) em vez de set: preserva envs adicionadas manualmente no console/CLI.
+      - --update-env-vars=NEXTAUTH_URL=${_APP_URL},APP_PUBLIC_URL=${_APP_URL},NEXT_PUBLIC_APP_URL=${_APP_URL}
+      - --update-secrets=DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest,APP_TOKEN_SECRET=APP_TOKEN_SECRET:latest,CRON_SECRET=CRON_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest,EMAIL_FROM=EMAIL_FROM:latest,GCS_BUCKET_NAME=GCS_BUCKET_NAME:latest,GCS_PROJECT_ID=GCS_PROJECT_ID:latest,GCS_SERVICE_ACCOUNT_JSON=GCS_SERVICE_ACCOUNT_JSON:latest
+    waitFor: [push]
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$BUILD_ID
