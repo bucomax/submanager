@@ -1,12 +1,40 @@
 import type { App, AppScreenshot, FileAsset } from "@prisma/client";
-import type { AppDto, AppScreenshotDto, AppConfigField } from "@/types/api/apps-v1";
+import type { AppDto, AppScreenshotDto, AppConfigField, TenantAppCatalogDto } from "@/types/api/apps-v1";
 
 type AppWithRelations = App & {
   iconFile: FileAsset | null;
   screenshots: (AppScreenshot & { file: FileAsset })[];
 };
 
+/** Chaves de `App.metadata` que carregam segredo de integração (ex.: `webhookSecret`) e nunca saem pela API. */
+const SENSITIVE_METADATA_KEY = /secret|token|password|passwd|api[-_]?key|private[-_]?key|credential|signature/i;
+
+function redactSensitiveKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSensitiveKeys);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !SENSITIVE_METADATA_KEY.test(key))
+      .map(([key, nested]) => [key, redactSensitiveKeys(nested)]),
+  );
+}
+
+/**
+ * `App.metadata` sem chaves sensíveis. Ponto único de sanitização: o segredo do webhook
+ * (`metadata.webhookSecret`) é lido só pelo servidor, nunca devolvido em DTO.
+ */
+export function sanitizeAppMetadata(metadata: unknown): Record<string, unknown> | null {
+  if (metadata === null || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  return redactSensitiveKeys(metadata) as Record<string, unknown>;
+}
+
+/** DTO de administração (`super_admin`): `metadata` sanitizado. */
 export function mapAppToDto(app: AppWithRelations): AppDto {
+  return { ...mapAppToTenantDto(app), metadata: sanitizeAppMetadata(app.metadata) };
+}
+
+/** DTO para rotas de tenant: sem `metadata` (segredos de integração e configuração interna da plataforma). */
+export function mapAppToTenantDto(app: AppWithRelations): TenantAppCatalogDto {
   return {
     id: app.id,
     slug: app.slug,
@@ -26,7 +54,6 @@ export function mapAppToDto(app: AppWithRelations): AppDto {
     isPublished: app.isPublished,
     isFeatured: app.isFeatured,
     sortOrder: app.sortOrder,
-    metadata: app.metadata as Record<string, unknown> | null,
     screenshots: app.screenshots.map(mapScreenshotToDto),
     pricingModel: app.pricingModel,
     priceInCents: app.priceInCents,

@@ -962,7 +962,7 @@ Quando a plataforma for escolhida, será necessário:
 - [x] Criptografia de campos `secret` — AES-256-GCM (`encryptConfigSecrets` / `decryptConfigSecrets` / `maskConfigSecrets`)
 - [x] configSummary mascarado na API (`••••••` para secrets)
 - [x] Endpoint de test connection — `POST /api/v1/tenant/apps/:appId/test` (chama `metadata.healthCheckUrl`, usa apiKey decriptado)
-- [x] Webhooks de entrada — `POST /api/v1/webhooks/apps/:appSlug` (HMAC-SHA256, Zod schema, verificação tenant ativo)
+- [x] Webhooks de entrada — `POST /api/v1/webhooks/apps/:appSlug` (HMAC-SHA256, Zod schema, verificação tenant ativo, anti-replay: `timestamp` ±5 min + idempotência por `eventId` em `DispatchKey`; `metadata` com segredos nunca sai em DTO)
 
 ---
 

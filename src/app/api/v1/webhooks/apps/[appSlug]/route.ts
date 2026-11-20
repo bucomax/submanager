@@ -1,7 +1,9 @@
 import { logger } from "@/lib/observability/logger";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
+import { prisma } from "@/infrastructure/database/prisma";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
+import { checkWebhookTimestamp } from "@/lib/utils/webhook-timestamp";
 import { createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
 
@@ -54,7 +56,10 @@ function verifySignature(
  *
  * Receives webhook events from external apps.
  * Validates HMAC-SHA256 signature via X-Webhook-Signature header.
- * The webhook secret is stored in App.metadata.webhookSecret.
+ * The webhook secret is stored in App.metadata.webhookSecret (server-only; never serialized in DTOs).
+ *
+ * Replay protection: `timestamp` (when sent) must be within ±5 min, and each
+ * `eventId` is processed once per app/tenant (duplicates are acknowledged with 200).
  *
  * Responds 200 immediately; heavy processing should be queued.
  */
@@ -102,13 +107,31 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { eventId, eventType, tenantId, timestamp } = parsed.data;
 
+  // Replay: the timestamp is covered by the HMAC, so a stale one means a captured request being resent.
+  const timestampCheck = checkWebhookTimestamp(timestamp);
+  if (timestampCheck === "invalid") {
+    return jsonError("VALIDATION_ERROR", "Invalid timestamp.", 422);
+  }
+  if (timestampCheck === "stale") {
+    return jsonError("TIMESTAMP_OUT_OF_RANGE", "Webhook timestamp outside the accepted window.", 400);
+  }
+
   // Verify tenant has this app active
   const tenantApp = await appPrismaRepository.findTenantApp(tenantId, app.id);
   if (!tenantApp || tenantApp.status !== "active") {
     return jsonError("FORBIDDEN", "App not active for this tenant.", 403);
   }
 
-  // TODO: Idempotency check via dedicated webhook event table or AuditEvent
+  // Idempotency: count 0 = this event was already accepted; acknowledge without reprocessing.
+  const claimed = await prisma.dispatchKey.createMany({
+    data: [{ key: `app-webhook:${app.id}:${tenantId}:${eventId}` }],
+    skipDuplicates: true,
+  });
+  if (claimed.count === 0) {
+    logger.info("[webhook] duplicate event ignored", { appSlug, tenantId, eventId });
+    return jsonSuccess({ received: true, duplicate: true });
+  }
+
   // TODO: Route event to specific handler based on eventType
   // TODO: Dispatch to BullMQ queue for heavy processing
   // For now, just acknowledge receipt and log.

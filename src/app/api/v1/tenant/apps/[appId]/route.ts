@@ -3,7 +3,7 @@ import { formatZodIssues } from "@/lib/api/zod-error";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { activateAppBodySchema } from "@/lib/validators/app";
 import { appPrismaRepository } from "@/infrastructure/repositories/app.repository";
-import { mapAppToDto } from "@/application/use-cases/admin/apps/map-app-dto";
+import { mapAppToTenantDto } from "@/application/use-cases/admin/apps/map-app-dto";
 import { encryptConfigSecrets, maskConfigSecrets } from "@/infrastructure/crypto/app-config-secret";
 import type { AppConfigField } from "@/types/api/apps-v1";
 
@@ -34,7 +34,7 @@ export const GET = withTenantRoute<{ appId: string }>(async ({ tenantId, apiT, p
   }
 
   return jsonSuccess({
-    ...mapAppToDto(app),
+    ...mapAppToTenantDto(app),
     tenantApp: tenantApp
       ? {
           id: tenantApp.id,

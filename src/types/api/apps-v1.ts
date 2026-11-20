@@ -51,6 +51,7 @@ export type AppDto = {
   isPublished: boolean;
   isFeatured: boolean;
   sortOrder: number;
+  /** Sanitizado no servidor: chaves sensíveis (ex.: `webhookSecret`) nunca são devolvidas. */
   metadata: Record<string, unknown> | null;
   screenshots: AppScreenshotDto[];
   pricingModel: AppPricingModel;
@@ -59,6 +60,9 @@ export type AppDto = {
   billingInterval: AppBillingInterval;
   trialDays: number;
 };
+
+/** App servido a rotas de tenant: nunca inclui `metadata` (configuração interna/segredos da plataforma). */
+export type TenantAppCatalogDto = Omit<AppDto, "metadata">;
 
 /** Card resumido para grid do catálogo */
 export type AppCatalogCardDto = {
@@ -90,7 +94,7 @@ export type TenantAppDto = {
   status: TenantAppStatus;
   activatedAt: string | null;
   deactivatedAt: string | null;
-  app: AppDto;
+  app: TenantAppCatalogDto;
   configSummary: Record<string, string> | null;
   subscriptionStatus: SubscriptionStatus;
   trialStartedAt: string | null;
@@ -188,7 +192,7 @@ export type AppCatalogResponseData = {
   byCategory: Partial<Record<AppCategory, AppCatalogCardDto[]>>;
 };
 
-export type AppDetailResponseData = AppDto & {
+export type AppDetailResponseData = TenantAppCatalogDto & {
   tenantApp: TenantAppDto | null;
 };
 
