@@ -7,6 +7,7 @@ import {
   buildPatientPortalSessionClaims,
   type PatientPortalSessionClaims,
 } from "@/domain/auth/patient-portal-session";
+import { spendPasswordCompareTime } from "@/lib/auth/dummy-password-compare";
 import {
   PATIENT_PORTAL_PASSWORD_LOCKOUT_MS,
   PATIENT_PORTAL_PASSWORD_MAX_FAILED_ATTEMPTS,
@@ -35,17 +36,21 @@ export async function verifyPatientPortalPassword(
   const { tenant, identifier, password } = params;
   const { lockout } = deps;
 
+  // Todo desfecho de falha gasta um bcrypt (real ou fictício): a latência não revela se o CPF existe.
   const client = await deps.clients.findForPortalLogin(tenant.id, identifier);
   if (!client) {
+    await spendPasswordCompareTime(password);
     return { ok: false, reason: "client_not_found" };
   }
 
   if (!client.portalPasswordHash) {
+    await spendPasswordCompareTime(password);
     return { ok: false, reason: "password_not_set", client };
   }
 
-  // Bloqueado: mesma resposta de senha inválida, sem sequer comparar (não dá para "adivinhar" durante o lock).
+  // Bloqueado: mesma resposta de senha inválida, sem comparar com o hash real (não dá para "adivinhar" durante o lock).
   if (await lockout.isLocked(client.id, new Date())) {
+    await spendPasswordCompareTime(password);
     return { ok: false, reason: "locked", client };
   }
 

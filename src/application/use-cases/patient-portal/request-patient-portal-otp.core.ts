@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import type { IPatientPortalOtpRepository } from "@/application/ports/patient-portal-otp-repository.port";
 import type { IPortalOtpDelivery } from "@/application/ports/patient-portal-otp-delivery.port";
 import { resolvePortalOtpDelivery } from "@/domain/auth/patient-portal-otp-channels";
@@ -16,7 +17,11 @@ export type RequestPatientPortalOtpResult =
   | { kind: "opaque" }
   | { kind: "rate_limited" }
   | { kind: "service_unavailable" }
-  | { kind: "sent" };
+  /**
+   * Desafio criado. `deliver` envia o código (e-mail/WhatsApp); a rota agenda com `after()` para a resposta não
+   * demorar mais para CPF existente do que para inexistente (oráculo por tempo). Nunca rejeita: falha só é logada.
+   */
+  | { kind: "sent"; deliver: () => Promise<void> };
 
 export type RequestPatientPortalOtpDeps = {
   otp: Pick<IPatientPortalOtpRepository, "countRecentChallenges" | "createChallenge">;
@@ -66,22 +71,39 @@ export async function requestPatientPortalOtp(
     expiresAt: new Date(Date.now() + PATIENT_PORTAL_OTP_TTL_MS),
   });
 
-  if (delivery.emailReady) {
-    await deps.delivery.sendEmailCode({
-      tenantId: tenant.id,
-      recipients: delivery.emailRecipients,
-      patientName: client.name,
-      clinicName: tenant.name,
-      code,
-    });
-  }
-  if (delivery.wppReady) {
-    await deps.delivery.sendWhatsAppCode({
-      phones: delivery.phoneRecipients,
-      clinicName: tenant.name,
-      code,
-    });
-  }
+  const deliver = async (): Promise<void> => {
+    const sends: Promise<void>[] = [];
+    if (delivery.emailReady) {
+      sends.push(
+        deps.delivery.sendEmailCode({
+          tenantId: tenant.id,
+          recipients: delivery.emailRecipients,
+          patientName: client.name,
+          clinicName: tenant.name,
+          code,
+        }),
+      );
+    }
+    if (delivery.wppReady) {
+      sends.push(
+        deps.delivery.sendWhatsAppCode({
+          phones: delivery.phoneRecipients,
+          clinicName: tenant.name,
+          code,
+        }),
+      );
+    }
+    // Um canal falhar não impede o outro; falha só é logada (sem código nem contato).
+    for (const outcome of await Promise.allSettled(sends)) {
+      if (outcome.status === "rejected") {
+        logger.error("[patient-portal] OTP delivery failed", {
+          tenantId: tenant.id,
+          clientId: client.id,
+          err: outcome.reason,
+        });
+      }
+    }
+  };
 
-  return { kind: "sent" };
+  return { kind: "sent", deliver };
 }

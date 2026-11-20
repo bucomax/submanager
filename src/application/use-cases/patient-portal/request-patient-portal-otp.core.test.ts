@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakePortalOtpDelivery, InMemoryPatientPortalOtpRepository } from "@/application/testing/in-memory-patient-portal";
 import { requestPatientPortalOtp } from "@/application/use-cases/patient-portal/request-patient-portal-otp.core";
 import { PATIENT_PORTAL_OTP_MAX_REQUESTS_PER_WINDOW } from "@/lib/constants/patient-portal";
 import { hashPatientPortalOtpCode } from "@/lib/utils/patient-portal-otp";
 import type { PortalClientForLogin } from "@/types/api/patient-portal-v1";
+
+vi.mock("@/lib/observability/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 
 const TENANT = { id: "tenant-1", name: "Clínica" };
 const CLIENT = {
@@ -22,6 +24,13 @@ describe("requestPatientPortalOtp", () => {
   let delivery: FakePortalOtpDelivery;
   const request = (client: PortalClientForLogin | null = CLIENT) =>
     requestPatientPortalOtp({ tenant: TENANT, client }, { otp, delivery });
+
+  /** Executa a entrega diferida (a rota a agenda com `after()`). */
+  const requestAndDeliver = async (client: PortalClientForLogin | null = CLIENT) => {
+    const result = await request(client);
+    if (result.kind === "sent") await result.deliver();
+    return result;
+  };
 
   beforeEach(() => {
     process.env.PATIENT_PORTAL_SECRET = "test-secret";
@@ -41,7 +50,7 @@ describe("requestPatientPortalOtp", () => {
   });
 
   it("should store only the hash of a code and e-mail the plain code to the patient", async () => {
-    expect(await request()).toEqual({ kind: "sent" });
+    expect((await requestAndDeliver()).kind).toBe("sent");
 
     const [email] = delivery.emails;
     expect(email).toMatchObject({ recipients: ["ana@x.com"], clinicName: "Clínica" });
@@ -54,8 +63,26 @@ describe("requestPatientPortalOtp", () => {
 
   it("should also send on WhatsApp when the webhook is configured", async () => {
     delivery.webhookConfigured = true;
-    await request();
+    await requestAndDeliver();
     expect(delivery.whatsapps).toMatchObject([{ phones: ["11999990000"] }]);
+  });
+
+  it("should not deliver before deliver() runs, so the response time does not depend on the channels", async () => {
+    const result = await request();
+
+    expect(result.kind).toBe("sent");
+    expect(delivery.emails).toHaveLength(0);
+    expect(otp.challenges).toHaveLength(1);
+  });
+
+  it("should never reject from deliver(): a failing channel is only logged and the other still sends", async () => {
+    delivery.webhookConfigured = true;
+    vi.spyOn(delivery, "sendEmailCode").mockRejectedValue(new Error("smtp down"));
+
+    const result = await request();
+
+    await expect(result.kind === "sent" ? result.deliver() : Promise.reject(new Error("not sent"))).resolves.toBeUndefined();
+    expect(delivery.whatsapps).toHaveLength(1);
   });
 
   it("should rate limit after the max requests in the window and not send anything", async () => {

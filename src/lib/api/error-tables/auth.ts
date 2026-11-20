@@ -1,12 +1,11 @@
 import type { UseCaseErrorTable } from "@/lib/api/map-use-case-error";
 
-export const FORGOT_PASSWORD_ERRORS: UseCaseErrorTable<"EMAIL_NOT_CONFIGURED" | "EMAIL_SEND_FAILED"> = {
+export const FORGOT_PASSWORD_ERRORS: UseCaseErrorTable<"EMAIL_NOT_CONFIGURED"> = {
   EMAIL_NOT_CONFIGURED: {
     status: 503,
     errorCode: "SERVICE_UNAVAILABLE",
     messageKey: "errors.passwordResetNotConfigured",
   },
-  EMAIL_SEND_FAILED: { status: 500, errorCode: "EMAIL_SEND_FAILED", messageKey: "errors.emailSendFailedGeneric" },
 };
 
 export const RESET_PASSWORD_ERRORS: UseCaseErrorTable<

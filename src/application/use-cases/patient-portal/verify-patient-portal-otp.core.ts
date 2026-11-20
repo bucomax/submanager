@@ -22,12 +22,21 @@ export type VerifyPatientPortalOtpDeps = {
   >;
 };
 
+/** Id que nunca existe: faz a consulta de desafio do "paciente inexistente" custar o mesmo que a de um real. */
+const UNKNOWN_CLIENT_ID = "";
+
 export async function verifyPatientPortalOtp(
-  params: { tenant: { id: string; slug: string }; client: PortalClientForLogin; code: string },
+  params: { tenant: { id: string; slug: string }; client: PortalClientForLogin | null; code: string },
   deps: VerifyPatientPortalOtpDeps,
 ): Promise<VerifyPatientPortalOtpResult> {
   const { tenant, client, code } = params;
   const { otp } = deps;
+
+  // Paciente inexistente segue o mesmo caminho (consulta ao banco) e responde igual a "sem desafio ativo".
+  if (!client) {
+    await otp.findLatestActiveChallenge(UNKNOWN_CLIENT_ID, tenant.id);
+    return { ok: false, code: "invalid" };
+  }
 
   const challenge = await otp.findLatestActiveChallenge(client.id, tenant.id);
   if (!challenge) {

@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { hashRateLimitKey, rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
@@ -56,6 +58,9 @@ export async function POST(request: Request, ctx: RouteCtx) {
   if (result.kind === "service_unavailable") {
     return jsonError("SERVICE_UNAVAILABLE", apiT("errors.patientPortalMisconfigured"), 503);
   }
+
+  // Envio depois da resposta: o tempo não distingue CPF existente de inexistente; `after()` sobrevive em serverless.
+  if (result.kind === "sent") after(result.deliver);
 
   return jsonSuccessOpaque();
 }

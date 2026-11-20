@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakePortalLoginClientFinder, InMemoryLoginLockout } from "@/application/testing/in-memory-patient-portal";
 import { verifyPatientPortalPassword } from "@/application/use-cases/patient-portal/verify-patient-portal-password.core";
@@ -77,5 +77,43 @@ describe("verifyPatientPortalPassword", () => {
 
   it("should include the client in failure results for auditing but never in not found", async () => {
     expect(await login("wrong")).toMatchObject({ client: { id: "client-1" } });
+  });
+
+  describe("timing parity (no CPF existence oracle)", () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it("should run a dummy bcrypt compare when the client does not exist", async () => {
+      const compare = vi.spyOn(bcrypt, "compare");
+      clients.client = null;
+
+      expect(await login("whatever")).toEqual({ ok: false, reason: "client_not_found" });
+      expect(compare).toHaveBeenCalledTimes(1);
+      expect(compare.mock.calls[0]![0]).toBe("whatever");
+    });
+
+    it("should run a dummy bcrypt compare when the client has no password", async () => {
+      const compare = vi.spyOn(bcrypt, "compare");
+      clients.client = { ...clients.client!, portalPasswordHash: null };
+
+      expect(await login("whatever")).toMatchObject({ reason: "password_not_set" });
+      expect(compare).toHaveBeenCalledTimes(1);
+    });
+
+    it("should run a dummy bcrypt compare (never the real hash) while the client is locked", async () => {
+      const compare = vi.spyOn(bcrypt, "compare");
+      lockout.lockedUntil = new Date(Date.now() + 60_000);
+
+      expect(await login("correct-pass")).toMatchObject({ reason: "locked" });
+      expect(compare).toHaveBeenCalledTimes(1);
+      expect(compare.mock.calls[0]![1]).not.toBe(clients.client!.portalPasswordHash);
+    });
+
+    it("should still compare against the real hash for an existing client with a password", async () => {
+      const compare = vi.spyOn(bcrypt, "compare");
+
+      await login("wrong");
+      expect(compare).toHaveBeenCalledTimes(1);
+      expect(compare.mock.calls[0]![1]).toBe(clients.client!.portalPasswordHash);
+    });
   });
 });

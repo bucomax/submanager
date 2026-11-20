@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InMemoryPatientPortalOtpRepository } from "@/application/testing/in-memory-patient-portal";
 import { verifyPatientPortalOtp } from "@/application/use-cases/patient-portal/verify-patient-portal-otp.core";
@@ -61,6 +61,20 @@ describe("verifyPatientPortalOtp", () => {
   it("should let exactly one of two parallel correct submissions consume the challenge", async () => {
     const results = await Promise.all([verify(CORRECT_CODE), verify(CORRECT_CODE)]);
     expect(results.filter((r) => r.ok)).toHaveLength(1);
+  });
+
+  it("should answer exactly like an invalid code when the client does not exist, touching only the challenge lookup", async () => {
+    const lookup = vi.spyOn(otp, "findLatestActiveChallenge");
+    const reserve = vi.spyOn(otp, "reserveChallengeAttempt");
+
+    const missing = await verifyPatientPortalOtp({ tenant: TENANT, client: null, code: CORRECT_CODE }, { otp });
+    const wrongCode = await verify("000000");
+
+    expect(missing).toEqual(wrongCode);
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(lookup.mock.calls[0]![0]).not.toBe(CLIENT.id);
+    expect(reserve).toHaveBeenCalledTimes(1); // só a tentativa do paciente real
+    expect(otp.challenges[0]!.attempts).toBe(1);
   });
 
   it("should reject when there is no active challenge (expired or other tenant)", async () => {

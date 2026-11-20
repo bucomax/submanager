@@ -48,10 +48,8 @@ export async function POST(request: Request, ctx: RouteCtx) {
   );
   if (identityLimited) return identityLimited;
 
+  // `client` nulo segue pelo use case (mesmo custo/resposta de código inválido): sem oráculo de CPF por tempo.
   const client = await findClientForPortalLogin(tenant.id, identifier);
-  if (!client) {
-    return jsonError("UNAUTHORIZED", apiT("errors.patientPortalOtpInvalid"), 401);
-  }
 
   const result = await runVerifyPatientPortalOtp({
     tenant: { id: tenant.id, slug: tenant.slug },
@@ -59,7 +57,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
     code: parsed.data.code,
   });
 
-  if (!result.ok) {
+  if (!result.ok || !client) {
     return jsonError("UNAUTHORIZED", apiT("errors.patientPortalOtpInvalid"), 401);
   }
 

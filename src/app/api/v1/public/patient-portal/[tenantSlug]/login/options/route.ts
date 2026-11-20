@@ -3,6 +3,7 @@ import { hashRateLimitKey, rateLimit } from "@/lib/api/rate-limit";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { findClientForPortalLogin } from "@/application/use-cases/client/find-client-for-portal-login";
+import { resolvePortalLoginHasPassword } from "@/domain/auth/patient-portal-login-options";
 import {
   parsePortalLoginInput,
   portalLoginRateKey,
@@ -42,5 +43,5 @@ export async function POST(request: Request, ctx: RouteCtx) {
 
   const client = await findClientForPortalLogin(tenant.id, identifier);
 
-  return jsonSuccess({ hasPassword: Boolean(client?.portalPasswordHash) });
+  return jsonSuccess({ hasPassword: resolvePortalLoginHasPassword(client) });
 }
