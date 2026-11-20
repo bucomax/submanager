@@ -9,6 +9,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
+# Node 24 = mesma major do Dockerfile (node:24-slim) e do "engines" do package.json.
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -84,3 +89,80 @@ jobs:
           --from-url "$DATABASE_URL"
           --to-schema-datamodel packages/prisma/schema.prisma
           --exit-code
+
+  # `next build` em CI: pega erro de bundling/rotas que tsc e lint não pegam. Envs fictícias, só para
+  # o build compilar; nenhum segredo real e nenhuma conexão com banco (o build não consulta o DB).
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+      NEXTAUTH_SECRET: ci-build-only-nextauth-secret
+      NEXTAUTH_URL: http://localhost:3000
+      APP_PUBLIC_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_PERSIST_SECRET: ci-build-only-persist-secret-minimum-32-chars
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Turbopack + Sentry passam de 2 GB de heap no build de produção (ver Dockerfile).
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate + patches
+        run: npm run db:generate && npx patch-package
+
+      - name: Restore Next build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'next.config.ts') }}
+          restore-keys: |
+            next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-build-${{ runner.os }}-
+
+      - name: Next build
+        run: npm run build
+
+  # Advisories de dependências de runtime. Só `high`+ reprova: moderate/low ficam visíveis no log.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  # Smoke da imagem de produção (Cloud Run): garante que Dockerfile + output standalone continuam
+  # buildando. Sem push e sem segredos; os build-args são fictícios.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        run: >-
+          docker buildx build
+          --load
+          --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000
+          --build-arg NEXT_PUBLIC_APP_PERSIST_SECRET=ci-build-only-persist-secret-minimum-32-chars
+          --build-arg ALLOWED_IFRAME_ORIGINS=
+          -t submanager:ci
+          .
