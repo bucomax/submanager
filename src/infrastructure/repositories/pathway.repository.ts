@@ -105,8 +105,10 @@ export class PathwayPrismaRepository implements IPathwayRepository {
       return { ok: false, code: "STAGE_NOT_FOUND" };
     }
 
+    // `clientId: null` = só biblioteca do tenant. Arquivo de paciente (exame/termo) nunca entra no pacote da etapa,
+    // que é enviado a todos os pacientes da jornada.
     const file = await prisma.fileAsset.findFirst({
-      where: { id: fileAssetId, tenantId },
+      where: { id: fileAssetId, tenantId, clientId: null },
       select: { id: true },
     });
     if (!file) {

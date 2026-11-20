@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { checkStageTransitionPreconditions, evaluateChecklistGate } from "./stage-transition-rules";
+import {
+  OVERRIDE_REASON_MIN_LENGTH,
+  checkStageTransitionPreconditions,
+  evaluateChecklistGate,
+} from "./stage-transition-rules";
 
 const fresh = { currentStageId: "s1", pathwayVersionId: "v1", completedAt: null };
 const base = { expectedPathwayVersionId: "v1", toStageId: "s2" };
@@ -45,20 +49,27 @@ describe("evaluateChecklistGate", () => {
   });
 
   it("should proceed as forced override with the trimmed reason", () => {
-    expect(evaluateChecklistGate({ pending, force: true, overrideReason: "  motivo " })).toEqual({
+    expect(evaluateChecklistGate({ pending, force: true, overrideReason: "  motivo valido " })).toEqual({
       kind: "proceed",
       forcedOverride: true,
-      overrideReason: "motivo",
+      overrideReason: "motivo valido",
     });
   });
 
-  it("should store a null reason when the forced override has a blank or missing reason", () => {
-    expect(evaluateChecklistGate({ pending, force: true, overrideReason: "  " })).toMatchObject({
-      overrideReason: null,
-    });
-    expect(evaluateChecklistGate({ pending, force: true })).toMatchObject({
-      forcedOverride: true,
-      overrideReason: null,
-    });
+  it("should require a reason of at least OVERRIDE_REASON_MIN_LENGTH chars (trimmed) when forcing", () => {
+    const required = { kind: "override_reason_required" };
+    expect(evaluateChecklistGate({ pending, force: true })).toEqual(required);
+    expect(evaluateChecklistGate({ pending, force: true, overrideReason: null })).toEqual(required);
+    expect(evaluateChecklistGate({ pending, force: true, overrideReason: "   " })).toEqual(required);
+    expect(
+      evaluateChecklistGate({ pending, force: true, overrideReason: ` ${"x".repeat(OVERRIDE_REASON_MIN_LENGTH - 1)} ` }),
+    ).toEqual(required);
+    expect(
+      evaluateChecklistGate({ pending, force: true, overrideReason: "x".repeat(OVERRIDE_REASON_MIN_LENGTH) }),
+    ).toMatchObject({ kind: "proceed", forcedOverride: true });
+  });
+
+  it("should not demand a reason without force: the transition stays blocked", () => {
+    expect(evaluateChecklistGate({ pending, overrideReason: "" })).toEqual({ kind: "blocked", pending });
   });
 });

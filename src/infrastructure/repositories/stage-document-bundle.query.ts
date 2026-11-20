@@ -2,13 +2,17 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 
 import type { StageDocumentBundleItem } from "@/domain/pathway/stage-document-bundle";
 
-/** Documentos da etapa em ordem de `sortOrder` (pacote entregue ao paciente ao entrar na etapa). */
+/**
+ * Documentos da etapa em ordem de `sortOrder` (pacote entregue ao paciente ao entrar na etapa).
+ * Ignora `FileAsset` de paciente (`clientId` preenchido): o pacote só carrega arquivos da biblioteca do tenant,
+ * mesmo que um vínculo antigo/forjado exista.
+ */
 export async function getStageDocumentBundleFrom(
   db: PrismaClient | Prisma.TransactionClient,
   pathwayStageId: string,
 ): Promise<StageDocumentBundleItem[]> {
   const rows = await db.stageDocument.findMany({
-    where: { pathwayStageId },
+    where: { pathwayStageId, fileAsset: { clientId: null } },
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,

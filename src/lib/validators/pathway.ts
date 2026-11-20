@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { OVERRIDE_REASON_MIN_LENGTH } from "@/domain/pathway/stage-transition-rules";
 import { zodApiMsg } from "@/lib/api/zod-i18n";
 
 export const postPathwayBodySchema = z.object({
@@ -42,7 +43,7 @@ export const postStageTransitionBodySchema = z
   .superRefine((data, ctx) => {
     if (!data.force) return;
     const trimmed = data.overrideReason?.trim() ?? "";
-    if (trimmed.length < 10) {
+    if (trimmed.length < OVERRIDE_REASON_MIN_LENGTH) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: zodApiMsg("errors.validationOverrideReasonMin"),

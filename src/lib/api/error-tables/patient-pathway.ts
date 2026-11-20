@@ -19,6 +19,7 @@ export const TRANSITION_STAGE_ERRORS: UseCaseErrorTable<
   | "ALREADY_IN_TARGET_STAGE"
   | "LOCK_CONFLICT"
   | "STAGE_CONFLICT"
+  | "OVERRIDE_REASON_REQUIRED"
 > = {
   PATIENT_PATHWAY_NOT_FOUND: {
     status: 404,
@@ -30,6 +31,11 @@ export const TRANSITION_STAGE_ERRORS: UseCaseErrorTable<
   ALREADY_IN_TARGET_STAGE: { status: 422, errorCode: "VALIDATION_ERROR", messageKey: "errors.patientAlreadyInStage" },
   LOCK_CONFLICT: STAGE_CONFLICT,
   STAGE_CONFLICT,
+  OVERRIDE_REASON_REQUIRED: {
+    status: 422,
+    errorCode: "VALIDATION_ERROR",
+    messageKey: "errors.validationOverrideReasonMin",
+  },
 };
 
 export const COMPLETE_PATIENT_PATHWAY_ERRORS: UseCaseErrorTable<"NOT_FOUND" | "ALREADY_COMPLETED"> = {

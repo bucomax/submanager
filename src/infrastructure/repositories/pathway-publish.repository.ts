@@ -15,6 +15,9 @@ const STAGE_HISTORY_COUNT = {
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
+/** Publicar grafo grande (diff de etapas/checklists/documentos) excede o timeout padrão de 5s do Prisma. */
+const PUBLISH_TX_OPTIONS = { timeout: 30_000, maxWait: 5_000 } as const;
+
 /** Outra versão publicada do pathway, com contagem de pacientes por etapa (ordenada por `sortOrder`). */
 function findOtherPublishedVersion(db: Db): IPublishPreflightReader["findOtherPublishedVersion"] {
   return async (pathwayId, excludeVersionId) => {
@@ -120,13 +123,14 @@ function createTx(tx: Prisma.TransactionClient): IPublishTx {
       });
     },
 
+    // Só itens removidos do grafo (checklist-diff); o cascade apaga o progresso dos pacientes nesses itens, por design.
     async deleteChecklistItems(itemIds) {
       await tx.pathwayStageChecklistItem.deleteMany({ where: { id: { in: itemIds } } });
     },
 
     async findTenantFileIds(tenantId, fileAssetIds) {
       const rows = await tx.fileAsset.findMany({
-        where: { id: { in: fileAssetIds }, tenantId },
+        where: { id: { in: fileAssetIds }, tenantId, clientId: null },
         select: { id: true },
       });
       return rows.map((f) => f.id);
@@ -175,5 +179,5 @@ export const pathwayPublishPrismaStore: IPathwayPublishStore = {
       include: { stages: { orderBy: { sortOrder: "asc" } } },
     }),
 
-  runInTransaction: (fn) => prisma.$transaction((tx) => fn(createTx(tx))),
+  runInTransaction: (fn) => prisma.$transaction((tx) => fn(createTx(tx)), PUBLISH_TX_OPTIONS),
 };

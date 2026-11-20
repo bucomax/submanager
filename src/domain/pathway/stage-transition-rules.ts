@@ -25,12 +25,18 @@ export function checkStageTransitionPreconditions(input: {
   return null;
 }
 
+/** Mínimo de caracteres (após `trim`) da justificativa de um override forçado; igual ao validator da rota e à UI. */
+export const OVERRIDE_REASON_MIN_LENGTH = 10;
+
 export type ChecklistGateDecision =
   | { kind: "blocked"; pending: PendingChecklistItem[] }
+  /** `force` com checklist obrigatório incompleto, mas sem justificativa suficiente: override inválido. */
+  | { kind: "override_reason_required" }
   | { kind: "proceed"; forcedOverride: boolean; overrideReason: string | null };
 
 /**
  * Itens obrigatórios pendentes bloqueiam a transição, exceto com `force` (override registrado).
+ * O override exige justificativa (`OVERRIDE_REASON_MIN_LENGTH`) — invariante do domínio, independente do validator HTTP.
  * O motivo só é guardado quando houve override de fato.
  */
 export function evaluateChecklistGate(input: {
@@ -39,11 +45,10 @@ export function evaluateChecklistGate(input: {
   overrideReason?: string | null;
 }): ChecklistGateDecision {
   const { pending, force, overrideReason } = input;
-  if (pending.length > 0 && !force) return { kind: "blocked", pending };
-  const forcedOverride = pending.length > 0 && Boolean(force);
-  return {
-    kind: "proceed",
-    forcedOverride,
-    overrideReason: forcedOverride ? (overrideReason?.trim() ?? "") || null : null,
-  };
+  if (pending.length === 0) return { kind: "proceed", forcedOverride: false, overrideReason: null };
+  if (!force) return { kind: "blocked", pending };
+
+  const reason = overrideReason?.trim() ?? "";
+  if (reason.length < OVERRIDE_REASON_MIN_LENGTH) return { kind: "override_reason_required" };
+  return { kind: "proceed", forcedOverride: true, overrideReason: reason };
 }
