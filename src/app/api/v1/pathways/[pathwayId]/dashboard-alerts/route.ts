@@ -1,6 +1,7 @@
 import { logger } from "@/lib/observability/logger";
 import { actorFromSession } from "@/lib/auth/actor";
 import { withTenantRoute } from "@/lib/api/route-handler";
+import { createProcessThrottle } from "@/lib/api/process-throttle";
 import { formatZodIssues } from "@/lib/api/zod-error";
 import { resolvePublishedPathwayVersion } from "@/infrastructure/database/pathway-published";
 import { checkAndEmitSlaNotifications } from "@/infrastructure/notifications/sla-notification-check";
@@ -12,6 +13,10 @@ import { after } from "next/server";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const SLA_CHECK_THROTTLE_SECONDS = 60;
+/** Sem Redis o lock distribuído é no-op; este throttle por processo evita varrer a cada GET. */
+const slaCheckProcessThrottle = createProcessThrottle(SLA_CHECK_THROTTLE_SECONDS * 1000);
 
 const querySchema = dashboardPathwayOpmeQuerySchema.extend({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -42,7 +47,8 @@ export const GET = withTenantRoute(async ({ request, session, tenantId, apiT, pa
 
   const { tryAcquire } = await import("@/lib/api/distributed-lock");
   const slaThrottleKey = `sla-check:${pathwayId}:${version.id}`;
-  const canRun = await tryAcquire(slaThrottleKey, 60);
+  const canRun =
+    slaCheckProcessThrottle.tryRun(slaThrottleKey) && (await tryAcquire(slaThrottleKey, SLA_CHECK_THROTTLE_SECONDS));
   if (canRun) {
     after(() =>
       checkAndEmitSlaNotifications({

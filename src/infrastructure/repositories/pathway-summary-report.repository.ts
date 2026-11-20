@@ -8,12 +8,15 @@ export class PathwaySummaryReportPrismaRepository {
   async fetchScanData(input: {
     tenantId: string;
     periodStart: Date;
+    /** Fim exclusivo do período; sem ele, o período é aberto (até agora). */
+    periodEnd?: Date;
     pathwayId?: string;
     opmeSupplierId?: string;
     /** Filtro de visibilidade de pacientes (RBAC) aplicado ao `client`. */
     clientVisibilityWhere: Prisma.ClientWhereInput;
   }) {
-    const { tenantId, periodStart, pathwayId, opmeSupplierId, clientVisibilityWhere } = input;
+    const { tenantId, periodStart, periodEnd, pathwayId, opmeSupplierId, clientVisibilityWhere } = input;
+    const createdInPeriod = { gte: periodStart, ...(periodEnd ? { lt: periodEnd } : {}) };
     const clientWhere: Prisma.ClientWhereInput = {
       AND: [
         {
@@ -26,7 +29,7 @@ export class PathwaySummaryReportPrismaRepository {
 
     const patientPathwayWhere = {
       tenantId,
-      createdAt: { gte: periodStart },
+      createdAt: createdInPeriod,
       ...(pathwayId ? { pathwayId } : {}),
       client: clientWhere,
     };
@@ -70,7 +73,7 @@ export class PathwaySummaryReportPrismaRepository {
       }),
       prisma.stageTransition.count({
         where: {
-          createdAt: { gte: periodStart },
+          createdAt: createdInPeriod,
           patientPathway: {
             tenantId,
             ...(pathwayId ? { pathwayId } : {}),

@@ -19,7 +19,9 @@ async function processNotificationJob(payload: NotificationJobPayload): Promise<
       title: payload.title,
       body: payload.body ?? null,
       metadata: metadataJson,
+      dedupeKey: payload.dedupeKey ?? null,
     })),
+    skipDuplicates: true,
     select: {
       id: true,
       userId: true,

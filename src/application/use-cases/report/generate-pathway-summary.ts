@@ -12,6 +12,8 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export type GeneratePathwaySummaryInput = {
   tenantId: string;
   periodDays: number;
+  /** Intervalo explícito `[start, end)`; quando presente, tem precedência sobre `periodDays` (janela de "agora - N dias"). */
+  period?: { start: Date; end: Date };
   pathwayId?: string;
   opmeSupplierId?: string;
   page: number;
@@ -26,13 +28,14 @@ export type GeneratePathwaySummaryInput = {
 export async function generatePathwaySummary(
   input: GeneratePathwaySummaryInput,
 ): Promise<ReportsSummaryResponseData> {
-  const { tenantId, periodDays, pathwayId, opmeSupplierId, page, limit, scope, viewerUserId } = input;
+  const { tenantId, periodDays, period, pathwayId, opmeSupplierId, page, limit, scope, viewerUserId } = input;
   const now = new Date();
-  const periodStart = new Date(now.getTime() - periodDays * MS_PER_DAY);
+  const periodStart = period?.start ?? new Date(now.getTime() - periodDays * MS_PER_DAY);
 
   const { rows, transitionsInPeriod } = await pathwaySummaryReportPrismaRepository.fetchScanData({
     tenantId,
     periodStart,
+    periodEnd: period?.end,
     pathwayId,
     opmeSupplierId,
     clientVisibilityWhere: buildClientVisibilityWhereInput(scope, viewerUserId),

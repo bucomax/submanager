@@ -8,8 +8,16 @@ export type EmitNotificationInput = {
   metadata?: Record<string, unknown>;
   /** When empty, notifies all members of the tenant. */
   targetUserIds?: string[];
-  /** Deterministic key for BullMQ jobId deduplication (e.g. patientPathwayId, transitionId). */
+  /**
+   * Deterministic key for deduplication (e.g. patientPathwayId, transitionId): BullMQ jobId and,
+   * when `dedupeKey` is omitted, also the per-user `Notification.dedupeKey` (`<type>|<correlationId>`).
+   */
   correlationId?: string;
+  /**
+   * Atomic per-user dedupe (`Notification @@unique([userId, dedupeKey])`): a user never gets two
+   * notifications with the same key, in queue or inline mode. Overrides the key derived from `correlationId`.
+   */
+  dedupeKey?: string;
   /**
    * Quando true, ignora preferências do tenant (`notifyNewPatients`, etc.) para este envio.
    * Usar só em eventos críticos explícitos (ex.: auto-cadastro pelo link/QR).

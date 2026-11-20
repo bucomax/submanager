@@ -44,12 +44,19 @@ async function resolveUserIds(input: EmitNotificationInput): Promise<string[]> {
   return memberships.map((m) => m.userId);
 }
 
+/** Chave de dedupe por usuário: explícita, ou derivada do `correlationId` (que já era a chave do jobId na fila). */
+function resolveDedupeKey(input: EmitNotificationInput): string | null {
+  if (input.dedupeKey) return input.dedupeKey;
+  return input.correlationId ? `${input.type}|${input.correlationId}` : null;
+}
+
 /** Inline mode: write directly to Postgres (no fila, no pub/sub). Used on Vercel / without Redis. */
 async function emitInline(input: EmitNotificationInput, userIds: string[]): Promise<void> {
   const metadataJson = input.metadata
     ? (JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue)
     : undefined;
 
+  const dedupeKey = resolveDedupeKey(input);
   await prisma.notification.createMany({
     data: userIds.map((userId) => ({
       tenantId: input.tenantId,
@@ -58,7 +65,10 @@ async function emitInline(input: EmitNotificationInput, userIds: string[]): Prom
       title: input.title,
       body: input.body ?? null,
       metadata: metadataJson,
+      dedupeKey,
     })),
+    // (userId, dedupeKey) é único: repetição da mesma chave vira no-op atômico.
+    skipDuplicates: true,
   });
 }
 
@@ -77,9 +87,10 @@ async function tryEnqueueNotification(input: EmitNotificationInput, userIds: str
     body: input.body,
     metadata: input.metadata,
     userIds,
+    dedupeKey: resolveDedupeKey(input) ?? undefined,
   };
 
-  const deduplicationKey = input.correlationId ?? Date.now().toString();
+  const deduplicationKey = input.correlationId ?? input.dedupeKey ?? Date.now().toString();
   const rawJobId = `${input.tenantId}|${input.type}|${deduplicationKey}`;
   const jobId = rawJobId.replace(/:/g, "_");
 

@@ -7,4 +7,6 @@ export type NotificationJobPayload = {
   body?: string;
   metadata?: Record<string, unknown>;
   userIds: string[];
+  /** Gravada em cada `Notification`; `createMany({ skipDuplicates })` descarta repetidas por usuário. */
+  dedupeKey?: string;
 };
