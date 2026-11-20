@@ -10,3 +10,19 @@ export function parseUserProfileImageGcsKey(image: string | null | undefined): s
   const key = image.slice(USER_PROFILE_IMAGE_GCS_PREFIX.length).trim();
   return key.length > 0 ? key : null;
 }
+
+/** Fotos de perfil ficam só em `tenants/{tenantId}/avatars/{arquivo}` (ver `buildUploadObjectKey` com categoria `avatars`). */
+const USER_AVATAR_OBJECT_KEY = /^tenants\/([^/]+)\/avatars\/([^/]+)$/;
+
+/**
+ * `true` quando a chave é uma foto de perfil de usuário. Com `tenantId`, exige que seja desse tenant.
+ * Qualquer outro prefixo (`clients/`, `library/`, `exports/`…) é rejeitado: evita transformar `User.image`
+ * em URL assinada de exame/documento.
+ */
+export function isUserAvatarObjectKey(key: string, tenantId?: string): boolean {
+  const match = USER_AVATAR_OBJECT_KEY.exec(key);
+  if (!match) return false;
+  const [, keyTenantId, fileName] = match;
+  if (fileName === "." || fileName === "..") return false;
+  return tenantId === undefined || keyTenantId === tenantId;
+}

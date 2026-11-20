@@ -2,13 +2,12 @@ import { withSessionRoute } from "@/lib/api/route-handler";
 import { mapUseCaseError } from "@/lib/api/map-use-case-error";
 import { PATCH_ME_ERRORS } from "@/lib/api/error-tables/auth";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
-import { keyBelongsToTenant } from "@/infrastructure/storage/gcs-storage";
 import { resolveUserProfileImageUrl } from "@/infrastructure/storage/resolve-user-profile-image-url";
 import { getApiT } from "@/lib/api/i18n";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { getActiveTenantIdOr400 } from "@/lib/auth/guards";
 import { getSession } from "@/lib/auth/session";
-import { parseUserProfileImageGcsKey } from "@/lib/utils/user-profile-image-ref";
+import { isUserAvatarObjectKey, parseUserProfileImageGcsKey } from "@/lib/utils/user-profile-image-ref";
 import { patchMeBodySchema } from "@/lib/validators/profile";
 import { runDeleteMeAccount } from "@/application/use-cases/me/delete-me-account";
 import { getMeProfile } from "@/application/use-cases/me/get-me-profile";
@@ -56,7 +55,8 @@ export const PATCH = withSessionRoute(async ({ request, session, apiT }) => {
   if (gcsKey) {
     const tenantCtx = await getActiveTenantIdOr400(session, request, apiT);
     if (tenantCtx.response) return tenantCtx.response;
-    if (!keyBelongsToTenant(gcsKey, tenantCtx.tenantId!)) {
+    // Foto de perfil só pode apontar para avatar do tenant ativo (nunca clients/, library/, exports/…).
+    if (!isUserAvatarObjectKey(gcsKey, tenantCtx.tenantId!)) {
       return jsonError("VALIDATION_ERROR", apiT("errors.invalidObjectKey"), 422);
     }
   }
