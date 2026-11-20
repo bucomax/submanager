@@ -88,7 +88,7 @@ Perfil em settings (conta legada `/dashboard/account` redireciona), wizard pacie
 |------|----------|--------|
 | I1 | WhatsApp (dispatch real) | ⬜ congelado |
 | I2 | IA + webhooks | ⬜ congelado |
-| I3 | Filas / retries **operacionais** (dispatch, exports pesados, jobs clínicos) | 🟨 **parcial:** BullMQ + Redis para **notificações in-app, e-mail e WhatsApp**. Na Vercel não há worker: emissores executam inline, salvo `QUEUE_EXTERNAL_WORKER=1` (worker em outro host). SLA via cron `GET /api/cron/sla-check` (`CRON_SECRET`). Restante conforme produto |
+| I3 | Filas / retries **operacionais** (dispatch, exports pesados, jobs clínicos) | 🟨 **parcial:** BullMQ + Redis para **notificações in-app, e-mail e WhatsApp**. Na Vercel não há worker: emissores executam inline, salvo `QUEUE_EXTERNAL_WORKER=1` (worker em outro host). SLA via cron `GET /api/cron/sla-check`; lembrete de cirurgia `GET /api/cron/surgery-reminders` e resumo semanal `GET /api/cron/weekly-report` (todos com `CRON_SECRET`). Restante conforme produto |
 
 **Nota:** O que está implementado (B12) não substitui I1/I2; documentação de contratos e stubs permanece até reabertura do escopo.
 

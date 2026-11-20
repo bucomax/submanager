@@ -540,7 +540,7 @@ O **núcleo já implementado** é: **jornada + versão + etapas + checklist/docu
 | `Message` | `conversationId`, `direction` (inbound/outbound), `type`, `body?`, `status` (sent/delivered/read/failed), `actorUserId?`, `createdAt` | Mensagem individual; envio outbound real via `IWhatsAppOutbound` (Cloud API), com persistência sempre, mesmo se o disparo externo falhar (`status: failed`). |
 | `QuickPhrase` | `tenantId`, `slug` (único por tenant), `title`, `body`, `attachment?`, `createdById`, `usageCount` | Frases prontas ("/atalho") do composer, compartilhadas por toda a equipe do tenant. |
 | `LeadNote` | `tenantId`, `conversationId`, `clientId?`, `authorId`, `text`, `color` (amber/sky/emerald/violet), `pinned`, `editedAt?` | Nota interna sobre o lead/conversa — nunca enviada ao contato; pode ser fixada no topo do chat. |
-| `AgendaEvent` | `tenantId`, `conversationId?`, `clientId?`, `title`, `type` (consulta/retorno/exame/ligacao), `startsAt`, `durationMin`, `ownerUserId`, `notes?` | Compromisso da tela `/dashboard/agenda`; criado via `/agendar` no chat ou diretamente na Agenda. |
+| `AgendaEvent` | `tenantId`, `conversationId?`, `clientId?`, `title`, `type` (consulta/retorno/exame/ligacao/cirurgia; `cirurgia` gera lembrete na véspera), `startsAt`, `durationMin`, `ownerUserId`, `notes?` | Compromisso da tela `/dashboard/agenda`; criado via `/agendar` no chat ou diretamente na Agenda. |
 
 Auth/plataforma (`User.globalRole`, `TenantMembership`, `UserAuthToken`, …) permanece como já descrito nas secções anteriores. **Auditoria de ficha:** `AuditEvent` (não confundir com um “audit log” genérico de plataforma).
 
