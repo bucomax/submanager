@@ -50,7 +50,7 @@ function tryLoadEnvFromDotEnv() {
 
 function sessionCookieName(): string {
   const url = process.env.NEXTAUTH_URL ?? "";
-  const secure = url.startsWith("https://") || process.env.VERCEL === "1";
+  const secure = url.startsWith("https://");
   return secure ? "__Secure-next-auth.session-token" : "next-auth.session-token";
 }
 

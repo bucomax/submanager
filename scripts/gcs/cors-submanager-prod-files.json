@@ -5,9 +5,7 @@
     "origin": [
       "https://*.bucomax.com.br",
       "https://bucomax.com.br",
-      "https://submanager.vercel.app",
-      "https://submanager-dashboard.vercel.app",
-      "https://bucomax-dashboard.vercel.app"
+      "https://submanager-714014611104.us-east4.run.app"
     ],
     "responseHeader": ["Content-Type", "Content-Length", "x-goog-resumable"]
   }

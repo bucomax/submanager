@@ -63,7 +63,7 @@ export function useNotificationStream(handlers: StreamHandlers): { polling: bool
       }
     });
 
-    // Servidor sem tempo real (ex.: Vercel/modo inline): troca para polling imediatamente.
+    // Servidor sem tempo real (ex.: modo inline/sem Redis): troca para polling imediatamente.
     es.addEventListener("mode", (e) => {
       try {
         const data = JSON.parse(e.data) as { mode?: string };

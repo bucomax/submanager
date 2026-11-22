@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Cria/atualiza os jobs do Cloud Scheduler que substituem os crons do vercel.json no Cloud Run.
+# Cria/atualiza os jobs do Cloud Scheduler que disparam os crons do app no Cloud Run.
 #
-# Fonte única: lê `crons[]` (path + schedule) do vercel.json — a Vercel interpreta o schedule em UTC,
-# então os jobs usam time-zone UTC e os mesmos horários. Idempotente: roda quantas vezes quiser
-# (cria o job se não existe, atualiza se existe — útil também para rotacionar o CRON_SECRET).
+# Fonte única: a lista CRONS abaixo (path + schedule, em UTC). Idempotente: roda quantas vezes quiser
+# (cria o job se não existe, atualiza se existe, retoma se estiver PAUSED — útil também para
+# rotacionar o CRON_SECRET).
 #
 # Uso:
 #   APP_URL=https://submanager-714014611104.us-east4.run.app PROJECT_ID=bucomax-497005 \
@@ -16,7 +16,7 @@
 #   CRON_SECRET_NAME  secret no Secret Manager com o CRON_SECRET; default CRON_SECRET.
 #   JOB_PREFIX        prefixo do nome dos jobs; default submanager.
 #
-# Pré-requisitos: gcloud autenticado, node (lê o vercel.json), API cloudscheduler.googleapis.com
+# Pré-requisitos: gcloud autenticado, API cloudscheduler.googleapis.com
 # habilitada e permissão para ler o secret (roles/secretmanager.secretAccessor) e administrar jobs
 # (roles/cloudscheduler.admin). A rota autentica por `Authorization: Bearer <CRON_SECRET>`
 # (src/lib/auth/cron-auth.ts); o serviço é público, então não há OIDC.
@@ -43,8 +43,14 @@ fail() {
 [[ "$APP_URL" == https://* ]] || fail "APP_URL deve começar com https://"
 APP_URL="${APP_URL%/}"
 
+# "<path>|<schedule UTC>"
+CRONS=(
+  "/api/cron/sla-check|0 11 * * *"
+  "/api/cron/surgery-reminders|0 21 * * *"
+  "/api/cron/weekly-report|0 11 * * 1"
+)
+
 command -v gcloud >/dev/null || fail "gcloud não encontrado no PATH"
-command -v node >/dev/null || fail "node não encontrado no PATH (necessário para ler o vercel.json)"
 
 # O valor entra em `--headers/--update-headers KEY=VALUE[,KEY=VALUE]`: vírgula quebraria o parse (hex/base64 não têm).
 CRON_SECRET_VALUE="$(gcloud secrets versions access latest --secret="$CRON_SECRET_NAME" --project="$PROJECT_ID")"
@@ -80,12 +86,17 @@ upsert_job() {
     --quiet
 
   echo "ok: ${action} ${name} (${schedule} UTC) -> ${url}"
+
+  local state
+  state="$(gcloud scheduler jobs describe "$name" --location="$REGION" --project="$PROJECT_ID" --format='value(state)')"
+  if [[ "$state" == "PAUSED" ]]; then
+    gcloud scheduler jobs resume "$name" --location="$REGION" --project="$PROJECT_ID" --format=none --quiet
+    echo "ok: resume ${name}"
+  fi
 }
 
-crons="$(node -e 'for (const c of require("./vercel.json").crons ?? []) console.log(`${c.path}\t${c.schedule}`)')"
-[[ -n "$crons" ]] || fail "nenhum cron encontrado em vercel.json"
-
-while IFS=$'\t' read -r path schedule; do
-  [[ -n "$path" ]] || continue
+for entry in "${CRONS[@]}"; do
+  path="${entry%%|*}"
+  schedule="${entry#*|}"
   upsert_job "${JOB_PREFIX}-$(basename "$path")" "$schedule" "${APP_URL}${path}"
-done <<<"$crons"
+done

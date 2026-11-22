@@ -14,12 +14,10 @@ describe("resolveQueueConsumerAvailable", () => {
     expect(resolveQueueConsumerAvailable(REDIS)).toBe(true);
   });
 
-  it("should be false on Vercel or with the worker disabled unless an external worker exists", () => {
-    expect(resolveQueueConsumerAvailable({ ...REDIS, VERCEL: "1" })).toBe(false);
+  it("should be false with the worker disabled unless an external worker exists", () => {
     expect(resolveQueueConsumerAvailable({ ...REDIS, DISABLE_NOTIFICATION_WORKER: "true" })).toBe(false);
     expect(
       resolveQueueConsumerAvailable({ ...REDIS, DISABLE_NOTIFICATION_WORKER: "true", QUEUE_EXTERNAL_WORKER: "1" }),
     ).toBe(true);
-    expect(resolveQueueConsumerAvailable({ ...REDIS, VERCEL: "1", QUEUE_EXTERNAL_WORKER: "1" })).toBe(true);
   });
 });

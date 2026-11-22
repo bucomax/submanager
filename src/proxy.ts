@@ -77,5 +77,5 @@ export const config = {
   // fora do matcher, não em PUBLIC_EXACT: liberar a rota ainda a entregaria ao
   // middleware do next-intl, que a trata como página e responde 404. O rewrite do
   // Sentry só é alcançado quando o proxy não toca na requisição.
-  matcher: ["/((?!api|_next|_vercel|monitoring|.*\\..*).*)"],
+  matcher: ["/((?!api|_next|monitoring|.*\\..*).*)"],
 };

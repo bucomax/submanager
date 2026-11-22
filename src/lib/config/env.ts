@@ -62,8 +62,7 @@ function isLocalUrl(rawUrl: string): boolean {
 
 export function inspectEnv(env: Record<string, string | undefined>): EnvReport {
   const missingRequired = missingNames(requiredEnvSchema, env);
-  // NextAuth v4 deriva a URL de `VERCEL_URL` na Vercel (previews), então lá a ausência não derruba o boot.
-  const hasPublicUrl = [env.NEXTAUTH_URL, env.APP_PUBLIC_URL, env.VERCEL_URL].some((value) => value?.trim());
+  const hasPublicUrl = [env.NEXTAUTH_URL, env.APP_PUBLIC_URL].some((value) => value?.trim());
   if (!hasPublicUrl) {
     missingRequired.push("NEXTAUTH_URL (or APP_PUBLIC_URL)");
   }

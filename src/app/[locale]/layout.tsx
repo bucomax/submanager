@@ -1,4 +1,3 @@
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { routing } from "@/i18n/routing";
 import { AuthSessionProvider } from "@/shared/components/providers/session-provider";
 import { ThemeBlockingScript } from "@/shared/components/providers/theme-blocking-script";
@@ -74,8 +73,6 @@ export default async function LocaleLayout({
                 <LocalePreferenceBridge />
                 {children}
                 <Toaster position="top-right" richColors closeButton />
-                {/* Só existe na Vercel: no Cloud Run o script /_vercel/speed-insights responde 404. */}
-                {process.env.VERCEL ? <SpeedInsights /> : null}
               </TooltipProvider>
             </ThemeProvider>
           </AuthSessionProvider>

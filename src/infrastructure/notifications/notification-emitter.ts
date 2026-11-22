@@ -50,7 +50,7 @@ function resolveDedupeKey(input: EmitNotificationInput): string | null {
   return input.correlationId ? `${input.type}|${input.correlationId}` : null;
 }
 
-/** Inline mode: write directly to Postgres (no fila, no pub/sub). Used on Vercel / without Redis. */
+/** Inline mode: write directly to Postgres (no fila, no pub/sub). Used without Redis. */
 async function emitInline(input: EmitNotificationInput, userIds: string[]): Promise<void> {
   const metadataJson = input.metadata
     ? (JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue)

@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     );
   }
 
-  // Sem worker que publique no pub/sub (modo inline/Vercel) o stream nunca receberia eventos:
+  // Sem worker que publique no pub/sub (modo inline/sem Redis) o stream nunca receberia eventos:
   // avisa o cliente para usar polling e encerra, em vez de segurar a função.
   if (!isQueueConsumerAvailable()) {
     const count = await countUnreadNotificationsWithClientScope(actorFromSession(session), tenantId, userId);

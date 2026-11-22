@@ -2040,7 +2040,7 @@
         "security": [{ "cookieAuth": [] }],
         "responses": {
           "200": {
-            "description": "Stream SSE. Eventos: `unread-count` (data: { count }), `notification` (data: NotificationDto), `mode` (data: { mode: \"polling\" }) — sem tempo real disponível (ex.: Vercel sem worker), envia `mode` e encerra; o cliente passa a fazer polling"
+            "description": "Stream SSE. Eventos: `unread-count` (data: { count }), `notification` (data: NotificationDto), `mode` (data: { mode: \"polling\" }) — sem tempo real disponível (ex.: modo inline/sem Redis), envia `mode` e encerra; o cliente passa a fazer polling"
           },
           "401": { "description": "Não autenticado" },
           "429": { "description": "Rate limit de reconexão (3 por 10s por usuário)" }

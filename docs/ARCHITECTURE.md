@@ -121,11 +121,11 @@ Objetivo: ao **criar um novo tenant**, o sistema passa a responder em `https://<
 **Ideia central:** um único registro DNS “catch-all” na zona do domínio raiz; cada novo subdomínio **não** exige um novo registro A manual se você usar **wildcard**.
 
 1. **DNS (Cloudflare ou outro provedor)**
-   - Criar **`*.idoctor.app`** (wildcard) apontando para o mesmo destino da aplicação (ex.: load balancer, Netlify, Vercel, Cloudflare Workers/Pages, IP do cluster).
+   - Criar **`*.idoctor.app`** (wildcard) apontando para o mesmo destino da aplicação (ex.: load balancer / Cloud Run domain mapping, IP do cluster).
    - Opcional: **`idoctor.app`** (apex) para marketing; **`app.idoctor.app`** para o painel admin geral.
 
 2. **TLS (HTTPS)**
-   - Em Vercel/Netlify/Cloudflare Pages: certificados **wildcard** `*.idoctor.app` (muitos provedores emitem automaticamente ao validar o domínio raiz).
+   - Em load balancer / Cloud Run domain mapping: certificados **wildcard** `*.idoctor.app` (muitos provedores emitem automaticamente ao validar o domínio raiz).
    - Sem wildcard, seria necessário emitir certificado por host (viável via API — ex.: Cloudflare SSL for SaaS — mas é mais complexo).
 
 3. **O que “automatizar” no código ao criar o tenant**
@@ -331,7 +331,7 @@ O sistema de notificações persiste registros por usuário com status `read/unr
 | `PATCH` | `/api/v1/notifications/:id/read` | Marca como lida |
 | `POST` | `/api/v1/notifications/read-all` | Marca todas como lidas |
 
-**Frontend:** `<NotificationBell />` no header tenta `EventSource` para `/stream`; reconexão automática em 5 s. Após 3 falhas consecutivas (ex.: sem Redis / Vercel), degrada para **polling** de `unread-count` a cada 30 s. Lista no painel com scroll infinito (cursor pagination) e deep link via `metadata`.
+**Frontend:** `<NotificationBell />` no header tenta `EventSource` para `/stream`; reconexão automática em 5 s. Após 3 falhas consecutivas (ex.: sem Redis), degrada para **polling** de `unread-count` a cada 30 s. Lista no painel com scroll infinito (cursor pagination) e deep link via `metadata`.
 
 ### 7.5 BullMQ + Redis (opcional — ativado por `REDIS_URL`)
 
@@ -452,7 +452,7 @@ A aplicação suporta dois modos de operação controlados pela presença (ou au
 | **Rate limiting** | Redis `INCR`/`EXPIRE` | **Desativado** (fail-open) |
 | **Locks distribuídos** | `SET NX EX` no Redis | **Desativado** (sempre concede) |
 | **Worker BullMQ** | Iniciado via `instrumentation.ts` | **Não inicia** |
-| **Ideal para** | Docker local, VPS, servidor dedicado | **Vercel**, serverless, protótipo rápido |
+| **Ideal para** | Docker local, VPS, servidor dedicado | Cloud Run sem Redis, protótipo rápido |
 
 **Como funciona internamente:**
 
@@ -463,11 +463,11 @@ A aplicação suporta dois modos de operação controlados pela presença (ou au
 - O hook `useNotifications` tenta SSE; após 3 falhas consecutivas, degrada automaticamente para polling via `GET /notifications/unread-count`.
 - `instrumentation.ts` só importa e inicia o worker quando `REDIS_URL` existe.
 
-**Deploy na Vercel (sem Redis):**
+**Deploy no Cloud Run (sem Redis):**
 
-1. Não definir `REDIS_URL` nas environment variables.
-2. `vercel.json` já configurado com framework `nextjs`.
-3. `postinstall` executa `prisma generate` automaticamente.
+1. Build e deploy via `cloudbuild.yaml` (imagem `standalone` do Next.js).
+2. Não definir `REDIS_URL` nas variáveis do serviço (segredos no Secret Manager).
+3. Crons (`sla-check`, `surgery-reminders`, `weekly-report`) rodam no Cloud Scheduler: `APP_URL=<url> ./scripts/cloud-scheduler-setup.sh`.
 4. Todas as features funcionam — sem tempo real (SSE) e sem proteções Redis, mas com notificações persistidas e polling.
 
 **Deploy local / VPS (com Redis):**

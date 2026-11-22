@@ -81,7 +81,7 @@ describe("rateLimit (Redis path)", () => {
   });
 });
 
-const base = { forwardedFor: null, vercelForwardedFor: null, onVercel: false, trustedProxyHops: 1 };
+const base = { forwardedFor: null, trustedProxyHops: 1 };
 
 describe("resolveClientIp", () => {
   it("should take the last XFF entry on Cloud Run so a forged first entry is ignored", () => {
@@ -107,14 +107,6 @@ describe("resolveClientIp", () => {
 
   it("should accept IPv6 addresses", () => {
     expect(resolveClientIp({ ...base, forwardedFor: "2001:db8::1" })).toBe("2001:db8::1");
-  });
-
-  it("should prefer x-vercel-forwarded-for on Vercel and fall back to the first XFF entry", () => {
-    expect(resolveClientIp({ ...base, onVercel: true, vercelForwardedFor: "198.51.100.4", forwardedFor: "1.1.1.1, 2.2.2.2" })).toBe(
-      "198.51.100.4",
-    );
-    expect(resolveClientIp({ ...base, onVercel: true, forwardedFor: "198.51.100.9, 76.76.21.21" })).toBe("198.51.100.9");
-    expect(resolveClientIp({ ...base, onVercel: true })).toBe("unknown");
   });
 
   it("should treat an invalid hop count as 1", () => {

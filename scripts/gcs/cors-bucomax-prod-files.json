@@ -4,8 +4,7 @@
     "method": ["GET", "PUT", "HEAD"],
     "origin": [
       "https://*.bucomax.com.br",
-      "https://bucomax.com.br",
-      "https://bucomax-dashboard.vercel.app"
+      "https://bucomax.com.br"
     ],
     "responseHeader": ["Content-Type", "Content-Length", "x-goog-resumable"]
   }

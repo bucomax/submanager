@@ -79,13 +79,13 @@ export function isRedisEnabled(): boolean {
 
 /**
  * Decide se algum worker consumirá as filas BullMQ, espelhando `src/instrumentation.ts`:
- * o worker local só sobe sem `VERCEL=1` e sem `DISABLE_NOTIFICATION_WORKER=true`.
+ * o worker local só sobe sem `DISABLE_NOTIFICATION_WORKER=true`.
  * `QUEUE_EXTERNAL_WORKER=1` declara um worker em outro host (vale em qualquer ambiente).
  */
 export function resolveQueueConsumerAvailable(env: Record<string, string | undefined>): boolean {
   if (!env.REDIS_URL?.trim()) return false;
   if (env.QUEUE_EXTERNAL_WORKER === "1") return true;
-  const localWorkerRuns = env.VERCEL !== "1" && env.DISABLE_NOTIFICATION_WORKER !== "true";
+  const localWorkerRuns = env.DISABLE_NOTIFICATION_WORKER !== "true";
   return localWorkerRuns;
 }
 

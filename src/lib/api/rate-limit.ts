@@ -83,9 +83,6 @@ return {count, ttl}
 
 type ClientIpInput = {
   forwardedFor: string | null;
-  vercelForwardedFor: string | null;
-  /** `true` quando rodando na Vercel (`process.env.VERCEL`). */
-  onVercel: boolean;
   /** Quantos proxies confiáveis anexam IP ao fim do `X-Forwarded-For` (Cloud Run = 1). */
   trustedProxyHops: number;
 };
@@ -97,21 +94,14 @@ function validIpOrNull(candidate: string | null | undefined): string | null {
 
 /**
  * IP do cliente sem confiar em entrada forjável.
- *
- * - Vercel: o edge sobrescreve `x-vercel-forwarded-for` / `x-forwarded-for`; o primeiro valor é confiável.
- * - Demais (Cloud Run, self-hosted): o cliente consegue enviar um `X-Forwarded-For` próprio e o proxy
+ * O cliente consegue enviar um `X-Forwarded-For` próprio e o proxy
  *   confiável apenas ANEXA o IP real no fim. Por isso o IP vem da posição `length - hops`, nunca do início.
  */
 export function resolveClientIp(input: ClientIpInput): string {
   const chain = (input.forwardedFor ?? "").split(",").map((part) => part.trim()).filter(Boolean);
-
-  if (input.onVercel) {
-    return validIpOrNull(input.vercelForwardedFor?.split(",")[0]) ?? validIpOrNull(chain[0]) ?? "unknown";
-  }
-
   const hops = Number.isInteger(input.trustedProxyHops) && input.trustedProxyHops > 0 ? input.trustedProxyHops : 1;
   const index = chain.length - hops;
-  // Sem fallback para `x-real-ip`: fora da Vercel o header é forjável pelo cliente.
+  // Sem fallback para `x-real-ip`: o header é forjável pelo cliente.
   return validIpOrNull(index >= 0 ? chain[index] : null) ?? "unknown";
 }
 
@@ -124,8 +114,6 @@ async function getClientIp(): Promise<string> {
   const h = await headers();
   return resolveClientIp({
     forwardedFor: h.get("x-forwarded-for"),
-    vercelForwardedFor: h.get("x-vercel-forwarded-for"),
-    onVercel: Boolean(process.env.VERCEL),
     trustedProxyHops: parseTrustedProxyHops(process.env.TRUSTED_PROXY_HOPS),
   });
 }

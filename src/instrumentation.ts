@@ -31,15 +31,12 @@ export async function register() {
     return;
   }
 
-  // BullMQ worker is long-running; Vercel serverless não mantém processo dedicado.
+  // BullMQ worker is long-running.
   // Use Redis na API (filas) e rode o worker em outro host, ou DISABLE_NOTIFICATION_WORKER=true
   // (ex.: serviço web do Cloud Run com worker separado).
-  // Emitters só enfileiram na Vercel com QUEUE_EXTERNAL_WORKER=1 (ver `isQueueConsumerAvailable`).
-  if (
-    process.env.VERCEL === "1" ||
-    process.env.DISABLE_NOTIFICATION_WORKER === "true"
-  ) {
-    logger.info("[instrumentation] BullMQ worker skipped (Vercel/serverless or DISABLE_NOTIFICATION_WORKER).");
+  // Emitters só enfileiram com o worker desabilitado se QUEUE_EXTERNAL_WORKER=1 (ver `isQueueConsumerAvailable`).
+  if (process.env.DISABLE_NOTIFICATION_WORKER === "true") {
+    logger.info("[instrumentation] BullMQ worker skipped (DISABLE_NOTIFICATION_WORKER).");
     return;
   }
 

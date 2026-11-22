@@ -10,7 +10,7 @@ export const maxDuration = 300;
 const SWEEP_BUDGET_MS = 240_000;
 
 /**
- * Vercel Cron (GET): emite alertas SLA para todos os tenants ativos e expurga chaves de envio antigas
+ * Cron (GET, Cloud Scheduler): emite alertas SLA para todos os tenants ativos e expurga chaves de envio antigas
  * (`DispatchKey`). Fail-closed sem `CRON_SECRET`.
  */
 export async function GET(request: Request) {

@@ -13,7 +13,7 @@ const isProduction = process.env.NODE_ENV === "production";
  * Hosts que o browser realmente chama (fora `self`):
  * - storage.googleapis.com: PUT em URL pré-assinada v4 do GCS (uploads);
  * - viacep.com.br: busca de CEP no formulário (`src/lib/utils/cep-lookup.ts`).
- * O Sentry passa pelo túnel `/monitoring` (self) e o Speed Insights por `/_vercel/*` (self).
+ * O Sentry passa pelo túnel `/monitoring` (self).
  * Novo `fetch` do browser para outro host exige entrada aqui.
  */
 const connectSrc = [
@@ -51,7 +51,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // Cloud Run: imagem enxuta com `server.js` + só o node_modules rastreado. Vercel ignora.
+  // Cloud Run: imagem enxuta com `server.js` + só o node_modules rastreado.
   output: "standalone",
   async headers() {
     return [

@@ -47,11 +47,6 @@ describe("validateRuntimeEnv", () => {
     expect(() => validateRuntimeEnv(env)).not.toThrow();
   });
 
-  it("should not require a public URL variable on Vercel, where NextAuth derives it from VERCEL_URL", () => {
-    const env = { ...COMPLETE_ENV, NEXTAUTH_URL: undefined, VERCEL_URL: "my-app.vercel.app" };
-    expect(() => validateRuntimeEnv(env)).not.toThrow();
-  });
-
   it("should only warn (with names, never values) for missing recommended variables", () => {
     const env = { ...COMPLETE_ENV, CRON_SECRET: undefined, GCS_BUCKET_NAME: "  " };
 

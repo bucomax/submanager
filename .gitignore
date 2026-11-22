@@ -39,9 +39,6 @@ yarn-error.log*
 # gerado por `npm run test:session-cookie` (não commitar)
 .load-test-cookie.export.sh
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts

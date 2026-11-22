@@ -18,7 +18,7 @@ function isValidDate(d: unknown): d is Date {
   return d instanceof Date && Number.isFinite(d.getTime());
 }
 
-/** Evita `RangeError` se `Date` vier inválido após cache/JSON (ex.: Vercel + `unstable_cache`). */
+/** Evita `RangeError` se `Date` vier inválido após cache/JSON (ex.: `unstable_cache`). */
 function toIsoSafe(d: Date): string {
   return isValidDate(d) ? d.toISOString() : new Date(0).toISOString();
 }
