@@ -10,17 +10,14 @@
 # daqui. Crie o secret (gcloud secrets create ...) e conecte-o ao serviço, uma vez, com:
 #
 #   gcloud run services update submanager --region=us-east4 \
-#     --update-secrets=WHATSAPP_ENCRYPTION_KEY=WHATSAPP_ENCRYPTION_KEY:latest,\
-#   WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,\
+#     --update-secrets=WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,\
 #   WHATSAPP_WEBHOOK_VERIFY_TOKEN=WHATSAPP_WEBHOOK_VERIFY_TOKEN:latest,\
-#   RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest,\
 #   PATIENT_PORTAL_SECRET=PATIENT_PORTAL_SECRET:latest,\
 #   REDIS_URL=REDIS_URL:latest
 #
-#   WHATSAPP_ENCRYPTION_KEY        AES-256-GCM (64 hex) do access token do tenant. Sem ele, WhatsApp não opera.
+#   (WHATSAPP_ENCRYPTION_KEY e RESEND_WEBHOOK_SECRET já são montados no --update-secrets do deploy.)
 #   WHATSAPP_APP_SECRET            valida x-hub-signature-256 do webhook; vazio = webhook responde 503.
 #   WHATSAPP_WEBHOOK_VERIFY_TOKEN  handshake GET do webhook da Meta.
-#   RESEND_WEBHOOK_SECRET          signing secret (Svix) do webhook do Resend.
 #   PATIENT_PORTAL_SECRET          cookie do portal do paciente; vazio = reutiliza NEXTAUTH_SECRET.
 #   REDIS_URL                      filas BullMQ, SSE, rate limit e locks. Sem ele tudo roda inline/em memória
 #                                  (rate limit por instância!). Upstash (rediss://) é público; Memorystore exige
@@ -34,10 +31,10 @@
 # DISABLE_NOTIFICATION_WORKER=true (não sobe worker BullMQ neste serviço), SENTRY_ENVIRONMENT.
 #
 # ── Credencial do GCS ───────────────────────────────────────────────────────────────────────────
-# Hoje usa GCS_SERVICE_ACCOUNT_JSON (chave de service account em secret). Alternativa sem chave
-# (ADC): remover esse secret, usar a runtime SA (_RUNTIME_SA) com roles/storage.objectAdmin no bucket
-# e roles/iam.serviceAccountTokenCreator nela mesma (assinar URL v4 via signBlob), e definir
-# GOOGLE_CLOUD_PROJECT=<id do projeto>. Troca exige testar upload/download antes de apagar a chave.
+# Sem chave JSON: o serviço usa ADC (runtime SA, _RUNTIME_SA) e GCS_PROJECT_ID. A runtime SA precisa de
+# roles/storage.objectAdmin no bucket e roles/iam.serviceAccountTokenCreator nela mesma (assinar URL v4
+# via signBlob; API iamcredentials habilitada). Ambos já aplicados em submanager-prod-files.
+# Teste upload/download na primeira revisão: validar o upload antes de abrir tráfego.
 
 substitutions:
   _REGION: us-east4
@@ -156,7 +153,7 @@ steps:
       - --startup-probe=httpGet.path=/api/v1/health,httpGet.port=8080,periodSeconds=5,timeoutSeconds=3,failureThreshold=12
       # update (merge) em vez de set: preserva envs adicionadas manualmente no console/CLI.
       - --update-env-vars=NEXTAUTH_URL=${_APP_URL},APP_PUBLIC_URL=${_APP_URL},NEXT_PUBLIC_APP_URL=${_APP_URL}
-      - --update-secrets=DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest,APP_TOKEN_SECRET=APP_TOKEN_SECRET:latest,CRON_SECRET=CRON_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest,EMAIL_FROM=EMAIL_FROM:latest,GCS_BUCKET_NAME=GCS_BUCKET_NAME:latest,GCS_PROJECT_ID=GCS_PROJECT_ID:latest,GCS_SERVICE_ACCOUNT_JSON=GCS_SERVICE_ACCOUNT_JSON:latest
+      - --update-secrets=DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest,APP_TOKEN_SECRET=APP_TOKEN_SECRET:latest,CRON_SECRET=CRON_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest,EMAIL_FROM=EMAIL_FROM:latest,GCS_BUCKET_NAME=GCS_BUCKET_NAME:latest,GCS_PROJECT_ID=GCS_PROJECT_ID:latest,RESEND_WEBHOOK_SECRET=RESEND_WEBHOOK_SECRET:latest,WHATSAPP_ENCRYPTION_KEY=WHATSAPP_ENCRYPTION_KEY:latest
     waitFor: [push]
 
 images:
