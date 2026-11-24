@@ -118,6 +118,10 @@
   --sidebar-ring: #1d5878;
   --avatar: #dcebf3;
   --row-hover: #f6f8f9;
+  /* Símbolo da marca (BrandMark). */
+  --mark-tile: #0e1d29;
+  --mark-line: #eef1f3;
+  --mark-now: #8ec3db;
 }
 
 .dark {
@@ -166,6 +170,16 @@
   --sidebar-ring: #7cc0de;
   --avatar: #16313f;
   --row-hover: #111b23;
+  --mark-tile: #16313f;
+  --mark-line: #8ec3db;
+  --mark-now: #eef1f3;
+}
+
+/* BrandMark tone="dark": versão escura em superfícies sempre escuras, nos dois temas. */
+.brand-mark-dark {
+  --mark-tile: #16313f;
+  --mark-line: #8ec3db;
+  --mark-now: #eef1f3;
 }
 
 @layer base {

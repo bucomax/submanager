@@ -44,6 +44,7 @@ Comandos úteis: `npm run db:studio`, `npm run build`, `npm run lint`.
 | [docs/PRODUCT-SCOPE.md](docs/PRODUCT-SCOPE.md) | Produto, jornada, limites do escopo |
 | [docs/DEV-PHASES.md](docs/DEV-PHASES.md) | Ordem sugerida de implementação |
 | [docs/API-DOCS.md](docs/API-DOCS.md) | API REST v1 (Scalar + `public/openapi.json`) |
+| [docs/BRAND.md](docs/BRAND.md) | Manual de marca: logo, cor, tipografia, voz e tom |
 | [AGENTS.md](AGENTS.md) | Guia para assistentes / regras do repositório |
 
 Regras do Cursor: [`.cursor/rules/`](.cursor/rules/).

@@ -35,7 +35,6 @@ import {
   MessageCircle,
   Settings,
   Store,
-  Stethoscope,
   UserPen,
   Users,
   type LucideIcon,
@@ -45,6 +44,7 @@ import { signOut } from "next-auth/react";
 import { useEffect } from "react";
 import { useActiveApps } from "@/features/apps/app/hooks/use-active-apps";
 import { AppIcon } from "@/features/apps/app/components/app-icon";
+import { BrandMark } from "@/shared/components/brand/brand-mark";
 
 type NavItem = {
   href: string;
@@ -146,9 +146,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           onClick={closeMobileNav}
           className="text-sidebar-accent-foreground flex h-12 w-full items-center gap-2.5 rounded-lg px-1 text-[17px] font-extrabold tracking-tight outline-none ring-sidebar-ring focus-visible:ring-2 group-data-[collapsible=icon]:justify-center"
         >
-          <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-9 shrink-0 place-items-center rounded-[11px]">
-            <Stethoscope className="size-[18px]" aria-hidden />
-          </span>
+          <BrandMark className="size-9" />
           <span className="group-data-[collapsible=icon]:hidden">{tBrand("brand")}</span>
         </Link>
       </SidebarHeader>

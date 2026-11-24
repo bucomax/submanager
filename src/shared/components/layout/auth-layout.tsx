@@ -1,7 +1,8 @@
 import { Link } from "@/i18n/navigation";
+import { BrandMark } from "@/shared/components/brand/brand-mark";
 import { LocaleSwitcher } from "@/shared/components/layout/locale-switcher";
 import { cn } from "@/lib/utils";
-import { Clock, GitBranch, Stethoscope, UserRound } from "lucide-react";
+import { Clock, GitBranch, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -36,9 +37,7 @@ export function AuthLayout({ children, variant = "default" }: AuthLayoutProps) {
           href="/"
           className="text-foreground flex w-fit items-center gap-2.5 rounded-lg text-[19px] font-extrabold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="bg-primary text-sky grid size-10 place-items-center rounded-xl dark:bg-accent">
-            <Stethoscope className="size-5" aria-hidden />
-          </span>
+          <BrandMark className="size-10" />
           {tBrand("brand")}
         </Link>
         <LocaleSwitcher />
@@ -64,7 +63,7 @@ export function AuthLayout({ children, variant = "default" }: AuthLayoutProps) {
               backgroundSize: "22px 22px",
             }}
           />
-          <span className="relative text-xs font-semibold tracking-[0.14em] text-[#8ec3db] uppercase">{t("eyebrow")}</span>
+          <BrandMark tone="dark" className="relative size-14" title={t("eyebrow")} />
           <div className="relative flex flex-col gap-6">
             <p className="max-w-[14ch] text-4xl leading-[1.05] font-extrabold tracking-[-0.035em] text-[#edf3f6] xl:text-[40px]">
               {t("title")}
